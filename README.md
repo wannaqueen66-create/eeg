@@ -1,37 +1,77 @@
 # EEG Bandpower Pipeline
 
-A MATLAB/EEGLAB pipeline for **VR 场景观看实验 EEG 频段功率分析**。
+MATLAB/EEGLAB pipeline for **VR 场景观看实验 EEG 频段功率分析**。
+
+---
+
+## 目录
+- [功能概览](#功能概览)
+- [运行环境](#运行环境)
+- [快速开始](#快速开始)
+- [完整使用教程](#完整使用教程)
+- [配置文件](#配置文件)
+- [输出结果](#输出结果)
+- [常见问题](#常见问题)
+
+---
 
 ## 功能概览
 - Marker 状态机分段（adapt / transition / eyes_closed / eyes_open / view / questionnaire / gray / rest）
 - ROI 频段功率（theta / alpha / beta / low/high beta）
-- 视图/灰屏配对分析 + QC 质量检查
+- view-gray 配对分析 + QC 质量检查
 - 自动输出 CSV 与图表
 
-## 依赖
-- MATLAB
-- EEGLAB（已加入路径）
+## 运行环境
+- MATLAB (R2018a 及以上建议)
+- EEGLAB 已加入 MATLAB 路径
 
-## 使用方法
+---
 
-### 1) 单文件
+## 快速开始
 ```matlab
 run_eeg_bandpower_pipeline('path/to/data.set');
 ```
 
-### 2) 批量处理文件夹
+---
+
+## 完整使用教程
+
+### 1) 准备数据
+- EEG 数据需为 **EEGLAB .set** 格式
+- Marker 需符合实验流程（1~9）
+
+### 2) 加载 EEGLAB
+在 MATLAB 中确保 EEGLAB 已加入路径，例如：
+```matlab
+addpath('/path/to/eeglab');
+```
+
+### 3) 单文件分析（无 GUI）
+```matlab
+run_eeg_bandpower_pipeline('path/to/data.set');
+```
+
+### 4) GUI 模式（弹窗选择）
+直接运行：
+```matlab
+run_eeg_bandpower_pipeline();
+```
+
+### 5) 批量分析（文件夹）
 ```matlab
 run_eeg_bandpower_pipeline('path/to/folder');
 ```
+脚本会自动遍历目录下所有 `.set` 文件并依次处理。
 
-### 3) 使用配置文件
+### 6) 使用配置文件
 ```matlab
-run_eeg_bandpower_pipeline('path/to/data.set', 'config.json');
+run_eeg_bandpower_pipeline('path/to/data.set','config.json');
 ```
 
-> 若不传参数，将弹窗选择 `.set` 文件。
+---
 
-## 配置文件（config.json）
+## 配置文件
+配置文件为 `config.json`，用于覆盖默认参数：
 ```json
 {
   "gray_dur_min": 3,
@@ -44,10 +84,47 @@ run_eeg_bandpower_pipeline('path/to/data.set', 'config.json');
 }
 ```
 
-## 输出
-- CSV：bandpower_roi / bandpower_summary / bandpower_tests / scene_level / pairs_check / qc
-- 图表：ROI 条件柱状、配对散点、topoplot、PSD、block 对比、QC 分布等
+参数说明：
+- `gray_dur_min/max`：灰屏时间合理范围（秒）
+- `quest_dur_min/max`：问卷时间合理范围（秒）
+- `pairing_mode`：`strict` 或 `lenient`
+- `verbose`：是否输出详细日志
+- `log_file`：日志文件路径（空则不写日志）
 
-## 提示
-- `pairing_mode` 支持 `strict` 或 `lenient`
-- `log_file` 可设置日志文件路径，留空则不写日志
+---
+
+## 输出结果
+脚本会在数据文件同目录输出：
+
+### CSV
+- `*_bandpower_roi.csv`
+- `*_bandpower_summary.csv`
+- `*_bandpower_tests.csv`
+- `*_scene_level.csv`
+- `*_pairs_check.csv`
+- `*_qc.csv`
+
+### 图表
+- ROI 条件柱状图
+- view-gray 配对散点图
+- PSD 曲线
+- Topoplot（theta/alpha/beta）
+- Block 对比图
+- QC 分布图等
+
+---
+
+## 常见问题
+
+### Q1: 提示找不到通道 O1/OZ/O2
+请确认通道命名是否一致，或修改 ROI 定义。
+
+### Q2: 没有生成图表/CSV
+检查 `.set` 文件是否包含正确 marker，以及是否有足够长度的片段。
+
+### Q3: 如何关闭 GUI
+直接传入文件路径即可。
+
+---
+
+如需更多定制（ROI/频段可配置、总表汇总、自动打包输出），欢迎提需求。
