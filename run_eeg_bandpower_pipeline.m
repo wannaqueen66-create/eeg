@@ -78,6 +78,7 @@ if isfield(cfg, 'log_file') && ~isempty(cfg.log_file)
 end
 
 %% ===== 0.5) 批量处理 =====
+summary_files = {};
 for fi = 1:numel(files)
     this_file = files{fi};
     [fp, name, ext] = fileparts(this_file);
@@ -91,6 +92,15 @@ for fi = 1:numel(files)
 
     fs = EEG.srate;
 
+    % 输出目录
+    fp_out = fp;
+    if isfield(cfg, 'output_dir') && ~isempty(cfg.output_dir)
+        fp_out = resolve_output_dir(fp, cfg.output_dir);
+        if ~exist(fp_out, 'dir')
+            mkdir(fp_out);
+        end
+    end
+
 %% ===== 1) 频段、ROI、Welch 参数 =====
 bands.theta = [4 7];
 bands.alpha = [8 12];
@@ -99,6 +109,18 @@ bands.low_beta  = [13 20];  % low-beta（较少受肌电影响）
 bands.high_beta = [20 30];  % high-beta（容易受肌电影响）
 totalBand40 = [1 40];  % 原始分母（1-40Hz）
 totalBand30 = [1 30];  % 推荐分母（1-30Hz，避免高频噪声影响）
+
+% 可选：用配置覆盖频段
+if isfield(cfg, 'bands')
+    b = cfg.bands;
+    if isfield(b, 'theta'); bands.theta = b.theta; end
+    if isfield(b, 'alpha'); bands.alpha = b.alpha; end
+    if isfield(b, 'beta');  bands.beta  = b.beta; end
+    if isfield(b, 'low_beta');  bands.low_beta  = b.low_beta; end
+    if isfield(b, 'high_beta'); bands.high_beta = b.high_beta; end
+    if isfield(b, 'totalBand40'); totalBand40 = b.totalBand40; end
+    if isfield(b, 'totalBand30'); totalBand30 = b.totalBand30; end
+end
 
 %% ===== 1.5) 可配置参数 (QC 阈值 / 配对模式) =====
 if ~exist('cfg', 'var') || isempty(cfg)
@@ -116,9 +138,19 @@ if ~isfield(cfg,'pairing_mode'); cfg.pairing_mode = 'strict'; end  % 推荐 stri
 if ~isfield(cfg,'verbose'); cfg.verbose = true; end
 
 labels = upper(string({EEG.chanlocs.labels}));
-roi.front = find(ismember(labels, ["F3","F4"]));
-roi.par   = find(ismember(labels, ["P3","PZ","P4"]));
-roi.occ   = find(ismember(labels, ["O1","OZ","O2"]));
+% ROI 可配置
+front_labels = ["F3","F4"];
+par_labels   = ["P3","PZ","P4"];
+occ_labels   = ["O1","OZ","O2"];
+if isfield(cfg, 'roi')
+    r = cfg.roi;
+    if isfield(r, 'front'); front_labels = string(r.front); end
+    if isfield(r, 'par');   par_labels   = string(r.par); end
+    if isfield(r, 'occ');   occ_labels   = string(r.occ); end
+end
+roi.front = find(ismember(labels, upper(front_labels)));
+roi.par   = find(ismember(labels, upper(par_labels)));
+roi.occ   = find(ismember(labels, upper(occ_labels)));
 assert(~isempty(roi.occ), 'Occipital channels not found. Check channel labels.');
 
 % Welch（2秒窗）
@@ -466,7 +498,7 @@ fprintf('Assigned pair_id to %d view-gray pairs.\n', pair_counter);
 
 % CSV 输出文件名（保证不空）
 [base,~,~] = fileparts(fn);
-csvfile = fullfile(fp, sprintf('%s_bandpower_roi.csv', base));
+csvfile = fullfile(fp_out, sprintf('%s_bandpower_roi.csv', base));
 writetable(T, csvfile);
 fprintf('Saved CSV: %s\n', csvfile);
 
@@ -480,52 +512,58 @@ fprintf('Occipital relative alpha mean: eyes_closed=%.4f, eyes_open=%.4f\n', m_c
 fprintf('Occipital relative alpha mean: view=%.4f, gray=%.4f\n', m_view, m_gray);
 
 %% ===== 7) 可视化图：ROI 条件均值±SEM（θ/α/β） =====
-plot_roi_bars(T, fp, base);
+plot_roi_bars(T, fp_out, base);
 
 %% ===== 8) 可视化图：Occ α view-gray 配对差值（按时间顺序配对） =====
-plot_paired_gray_minus_view(T, fp, base);
+plot_paired_gray_minus_view(T, fp_out, base);
 
 %% ===== 9) 可视化图：Occ PSD 曲线（各条件均值） =====
-plot_occ_psd(EEG, T, roi, fs, wlen, nover, nfft, fp, base);
+plot_occ_psd(EEG, T, roi, fs, wlen, nover, nfft, fp_out, base);
 
 %% ===== 10) view-gray 地形图（theta/alpha/beta） =====
-plot_topoplot_view_minus_gray(EEG, T, bands, totalBand30, fs, wlen, nover, nfft, fp, base);
+plot_topoplot_view_minus_gray(EEG, T, bands, totalBand30, fs, wlen, nover, nfft, fp_out, base);
 
 %% ===== 11) 导出论文级汇总表 =====
-export_summary_tables(T, fp, base);
+export_summary_tables(T, fp_out, base);
 
 %% ===== 12) 导出 scene_level.csv 用于回归分析 =====
-export_scene_level(T, fp, base);
+export_scene_level(T, fp_out, base);
 
 %% ===== 13) 导出配对检查清单（用于审核配对是否正确） =====
-export_pairs_check(T, fp, base, cfg);
+export_pairs_check(T, fp_out, base, cfg);
 
 %% ===== 14) 导出 QC 质量指标表 =====
-export_qc_table(T, fp, base);
+export_qc_table(T, fp_out, base);
+export_marker_report(segs, fp_out, base);
 
 %% ===== 15) 配对散点+连线图（view vs gray） =====
-plot_paired_scatter(T, fp, base, cfg);
+plot_paired_scatter(T, fp_out, base, cfg);
 
 %% ===== 16) Block1 vs Block2 稳定性图 =====
-plot_block_comparison(T, fp, base);
+plot_block_comparison(T, fp_out, base);
 
 %% ===== 17) QC 分布图 =====
-plot_qc_distributions(T, fp, base, cfg);
+plot_qc_distributions(T, fp_out, base, cfg);
 
 %% ===== 18) Low-beta vs High-beta 对比图 =====
-plot_beta_split(T, fp, base);
+plot_beta_split(T, fp_out, base);
 
 %% ===== 19) 三阶段时间链图（view → quest → gray） =====
-plot_three_stage_chain(T, fp, base);
+plot_three_stage_chain(T, fp_out, base);
 
 %% ===== 20) Scene 序列曲线 =====
-plot_scene_sequence(T, fp, base);
+plot_scene_sequence(T, fp_out, base);
 
 % NOTE: Topoplot with 8 channels is illustrative only (limited spatial resolution).
 fprintf('\nNote: Topoplot with %d channels is illustrative only.\n', EEG.nbchan);
 
 disp('Done.');
 % end single-file processing
+end
+
+% 生成全局汇总表（批量模式）
+if isfield(cfg, 'global_summary') && cfg.global_summary
+    export_global_summary(summary_files, cfg);
 end
 
 end
@@ -1630,4 +1668,69 @@ if ~isfield(cfg, 'quest_dur_max'); if ~isfield(cfg,'quest_dur_max'); cfg.quest_d
 if ~isfield(cfg, 'pairing_mode'); cfg.pairing_mode = 'strict'; end
 if ~isfield(cfg, 'verbose'); if ~isfield(cfg,'verbose'); cfg.verbose = true; end end
 if ~isfield(cfg, 'log_file'); cfg.log_file = ''; end
+if ~isfield(cfg, 'output_dir'); cfg.output_dir = ''; end
+if ~isfield(cfg, 'zip_output'); cfg.zip_output = false; end
+if ~isfield(cfg, 'global_summary'); cfg.global_summary = false; end
+if ~isfield(cfg, 'global_summary_path'); cfg.global_summary_path = ''; end
+end
+
+
+function fp_out = resolve_output_dir(fp, output_dir)
+% 解析输出目录（支持相对/绝对路径）
+if startsWith(output_dir, filesep) || (~isempty(regexp(output_dir,'^[A-Za-z]:', 'once')))
+    fp_out = output_dir;
+else
+    fp_out = fullfile(fp, output_dir);
+end
+end
+
+function export_marker_report(segs, fp, base)
+% 输出非法转移报告
+idx = arrayfun(@(s) isfield(s,'is_valid') && ~s.is_valid, segs);
+if any(idx)
+    bad = segs(idx);
+    T = table([bad.seg_idx]', [bad.m0]', [bad.m1]', [bad.start_s]', [bad.end_s]', [bad.dur_s]', ...
+        'VariableNames', {'seg_idx','m0','m1','start_s','end_s','dur_s'});
+else
+    T = table('Size',[0 6],'VariableTypes',{'double','double','double','double','double','double'}, ...
+        'VariableNames', {'seg_idx','m0','m1','start_s','end_s','dur_s'});
+end
+csvfile = fullfile(fp, sprintf('%s_marker_report.csv', base));
+writetable(T, csvfile);
+end
+
+function zip_output_files(fp, base)
+try
+    d = dir(fullfile(fp, [base '*']));
+    files = arrayfun(@(x) fullfile(x.folder, x.name), d, 'UniformOutput', false);
+    if ~isempty(files)
+        zip(fullfile(fp, sprintf('%s_outputs.zip', base)), files);
+    end
+catch
+end
+end
+
+function export_global_summary(summary_files, cfg)
+% 汇总所有 summary csv 到一个总表
+allT = [];
+for i = 1:numel(summary_files)
+    f = summary_files{i};
+    if exist(f, 'file')
+        try
+            T = readtable(f);
+            [~, name, ~] = fileparts(f);
+            T.source_file = repmat(string(name), height(T), 1);
+            allT = [allT; T]; %#ok<AGROW>
+        catch
+        end
+    end
+end
+if ~isempty(allT)
+    % 默认输出到第一个 summary 所在目录
+    out = fullfile(fileparts(summary_files{1}), 'global_bandpower_summary.csv');
+    if isfield(cfg, 'global_summary_path') && ~isempty(cfg.global_summary_path)
+        out = cfg.global_summary_path;
+    end
+    writetable(allT, out);
+end
 end

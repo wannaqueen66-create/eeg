@@ -81,7 +81,25 @@ run_eeg_bandpower_pipeline('path/to/data.set','config.json');
   "quest_dur_max": 120,
   "pairing_mode": "strict",
   "verbose": true,
-  "log_file": ""
+  "log_file": "",
+  "output_dir": "",
+  "zip_output": false,
+  "global_summary": false,
+  "global_summary_path": "",
+  "roi": {
+    "front": ["F3","F4"],
+    "par": ["P3","PZ","P4"],
+    "occ": ["O1","OZ","O2"]
+  },
+  "bands": {
+    "theta": [4,7],
+    "alpha": [8,12],
+    "beta": [13,30],
+    "low_beta": [13,20],
+    "high_beta": [20,30],
+    "totalBand40": [1,40],
+    "totalBand30": [1,30]
+  }
 }
 ```
 
@@ -91,11 +109,17 @@ run_eeg_bandpower_pipeline('path/to/data.set','config.json');
 - `pairing_mode`：`strict` 或 `lenient`
 - `verbose`：是否输出详细日志
 - `log_file`：日志文件路径（空则不写日志）
+- `output_dir`：输出目录（相对路径或绝对路径）
+- `zip_output`：是否打包输出为 zip
+- `global_summary`：是否生成批量总表
+- `global_summary_path`：总表保存路径（可选）
+- `roi`：ROI 通道列表
+- `bands`：频段配置
 
 ---
 
 ## 输出结果
-脚本会在数据文件同目录输出：
+脚本会在数据文件同目录输出（或 output_dir 指定目录）：
 
 ### CSV
 - `*_bandpower_roi.csv`
@@ -104,6 +128,11 @@ run_eeg_bandpower_pipeline('path/to/data.set','config.json');
 - `*_scene_level.csv`
 - `*_pairs_check.csv`
 - `*_qc.csv`
+- `*_marker_report.csv`
+
+### 其他
+- `global_bandpower_summary.csv`（当 global_summary=true）
+- `*_outputs.zip`（当 zip_output=true）
 
 ### 图表
 - ROI 条件柱状图

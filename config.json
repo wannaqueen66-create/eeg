@@ -5,5 +5,23 @@
   "quest_dur_max": 120,
   "pairing_mode": "strict",
   "verbose": true,
-  "log_file": ""
+  "log_file": "",
+  "output_dir": "",
+  "zip_output": false,
+  "global_summary": false,
+  "global_summary_path": "",
+  "roi": {
+    "front": ["F3","F4"],
+    "par": ["P3","PZ","P4"],
+    "occ": ["O1","OZ","O2"]
+  },
+  "bands": {
+    "theta": [4,7],
+    "alpha": [8,12],
+    "beta": [13,30],
+    "low_beta": [13,20],
+    "high_beta": [20,30],
+    "totalBand40": [1,40],
+    "totalBand30": [1,30]
+  }
 }
