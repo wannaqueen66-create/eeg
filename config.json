@@ -1,0 +1,9 @@
+{
+  "gray_dur_min": 3,
+  "gray_dur_max": 15,
+  "quest_dur_min": 5,
+  "quest_dur_max": 120,
+  "pairing_mode": "strict",
+  "verbose": true,
+  "log_file": ""
+}

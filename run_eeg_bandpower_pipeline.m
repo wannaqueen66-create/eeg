@@ -1,4 +1,4 @@
-function run_eeg_bandpower_pipeline()
+function run_eeg_bandpower_pipeline(input_path, config_path)
 % RUN_EEG_BANDPOWER_PIPELINE
 % VR 场景观看实验 EEG 频段功率分析流水线
 %
@@ -15,13 +15,66 @@ function run_eeg_bandpower_pipeline()
 %         paired_scatter, block_comparison, qc_distributions, beta_split, 
 %         three_stage_chain, scene_sequence
 
-%% ===== 0) 选择数据 =====
-[fn, fp] = uigetfile('*.set', 'Select 129-1_filt_notch.set');
-if isequal(fn,0); error('No file selected'); end
-EEG = pop_loadset('filename', fn, 'filepath', fp);
-EEG = eeg_checkset(EEG);
 
-fs = EEG.srate;
+%% ===== 0) 输入与配置 =====
+% 支持：
+%   - 不传参：弹窗选择 .set
+%   - 传文件路径：处理单个 .set
+%   - 传文件夹路径：批量处理该目录下全部 .set
+%   - 可选传入 config.json 路径覆盖参数
+
+if nargin < 1 || isempty(input_path)
+    input_path = '';
+end
+if nargin < 2 || isempty(config_path)
+    % 默认同目录下的 config.json
+    config_path = fullfile(fileparts(mfilename('fullpath')), 'config.json');
+end
+
+cfg = load_cfg(config_path);
+
+% 解析输入路径
+files = {};
+if isempty(input_path)
+    [fn, fp] = uigetfile('*.set', 'Select 129-1_filt_notch.set');
+    if isequal(fn,0)
+        error('No file selected');
+    end
+    files = {fullfile(fp, fn)};
+elseif isfolder(input_path)
+    d = dir(fullfile(input_path, '*.set'));
+    if isempty(d)
+        error('No .set files found in folder: %s', input_path);
+    end
+    files = arrayfun(@(x) fullfile(x.folder, x.name), d, 'UniformOutput', false);
+else
+    if ~endsWith(lower(input_path), '.set')
+        error('Input file must be a .set file');
+    end
+    files = {input_path};
+end
+
+% 可选日志输出
+if isfield(cfg, 'log_file') && ~isempty(cfg.log_file)
+    try
+        diary(cfg.log_file);
+    catch
+    end
+end
+
+%% ===== 0.5) 批量处理 =====
+for fi = 1:numel(files)
+    this_file = files{fi};
+    [fp, name, ext] = fileparts(this_file);
+    fn = [name ext];
+    fprintf('
+=== Processing %s (%d/%d) ===
+', fn, fi, numel(files));
+
+    EEG = pop_loadset('filename', fn, 'filepath', fp);
+    EEG = eeg_checkset(EEG);
+
+    fs = EEG.srate;
 
 %% ===== 1) 频段、ROI、Welch 参数 =====
 bands.theta = [4 7];
@@ -33,17 +86,19 @@ totalBand40 = [1 40];  % 原始分母（1-40Hz）
 totalBand30 = [1 30];  % 推荐分母（1-30Hz，避免高频噪声影响）
 
 %% ===== 1.5) 可配置参数 (QC 阈值 / 配对模式) =====
-cfg = struct();
+if ~exist('cfg', 'var') || isempty(cfg)
+    cfg = struct();
+end
 % QC 阈值：灰屏时长合理范围（秒）
-cfg.gray_dur_min = 3;     % 太短可能是 marker 抖动
-cfg.gray_dur_max = 15;    % 太长可能是异常
+if ~isfield(cfg,'gray_dur_min'); cfg.gray_dur_min = 3; end     % 太短可能是 marker 抖动
+if ~isfield(cfg,'gray_dur_max'); cfg.gray_dur_max = 15; end    % 太长可能是异常
 % QC 阈值：问卷时长合理范围（秒）
-cfg.quest_dur_min = 5;    % 太短可能是漏填/误触发
-cfg.quest_dur_max = 120;  % 太长可能是异常
+if ~isfield(cfg,'quest_dur_min'); cfg.quest_dur_min = 5; end    % 太短可能是漏填/误触发
+if ~isfield(cfg,'quest_dur_max'); cfg.quest_dur_max = 120; end  % 太长可能是异常
 % 配对模式：'strict' = 多 gray 时排除该对; 'lenient' = 多 gray 取第一个
-cfg.pairing_mode = 'strict';  % 推荐 strict，避免异常数据污染主结果
+if ~isfield(cfg,'pairing_mode'); cfg.pairing_mode = 'strict'; end  % 推荐 strict，避免异常数据污染主结果
 % 输出详细日志
-cfg.verbose = true;
+if ~isfield(cfg,'verbose'); cfg.verbose = true; end
 
 labels = upper(string({EEG.chanlocs.labels}));
 roi.front = find(ismember(labels, ["F3","F4"]));
@@ -455,6 +510,9 @@ plot_scene_sequence(T, fp, base);
 fprintf('\nNote: Topoplot with %d channels is illustrative only.\n', EEG.nbchan);
 
 disp('Done.');
+% end single-file processing
+end
+
 end
 
 %% ================== helper functions ==================
@@ -1534,4 +1592,27 @@ end
 figFile = fullfile(fp, sprintf('%s_scene_sequence.png', base));
 saveas(fig, figFile);
 fprintf('Saved figure: %s\n', figFile);
+end
+
+
+function cfg = load_cfg(config_path)
+% 读取 JSON 配置（可选）并返回 cfg 结构体
+cfg = struct();
+try
+    if exist(config_path, 'file')
+        raw = fileread(config_path);
+        cfg = jsondecode(raw);
+    end
+catch
+    cfg = struct();
+end
+
+% 默认值
+if ~isfield(cfg, 'gray_dur_min'); if ~isfield(cfg,'gray_dur_min'); cfg.gray_dur_min = 3; end end
+if ~isfield(cfg, 'gray_dur_max'); if ~isfield(cfg,'gray_dur_max'); cfg.gray_dur_max = 15; end end
+if ~isfield(cfg, 'quest_dur_min'); if ~isfield(cfg,'quest_dur_min'); cfg.quest_dur_min = 5; end end
+if ~isfield(cfg, 'quest_dur_max'); if ~isfield(cfg,'quest_dur_max'); cfg.quest_dur_max = 120; end end
+if ~isfield(cfg, 'pairing_mode'); cfg.pairing_mode = 'strict'; end
+if ~isfield(cfg, 'verbose'); if ~isfield(cfg,'verbose'); cfg.verbose = true; end end
+if ~isfield(cfg, 'log_file'); cfg.log_file = ''; end
 end
