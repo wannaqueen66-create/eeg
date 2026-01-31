@@ -3,10 +3,10 @@ function run_eeg_bandpower_pipeline(input_path, config_path)
 % VR 场景观看实验 EEG 频段功率分析流水线
 %
 % 状态机分段规则：
-%   1→2: adapt（VR适应）| 2→3: transition（过渡）| 3→4: eyes_closed（闭眼基线）
-%   4→7: eyes_open（睁眼基线）| 7→8: view（观看场景）
+%   1→2: adapt（VR适应）| 2→3: intro（实验介绍）| 3→4: eyes_closed（闭眼基线）
+%   4→9: eyes_open（睁眼基线）| 7→8: view（观看场景）
 %   8→9: questionnaire_small（小问卷）| 8→5/6: questionnaire_big（大问卷）
-%   9→7/8: gray_to_next | 9→5: gray_to_rest | 9→6: gray_to_end
+%   9→7: gray_to_next
 %   5→7: rest（组间休息）
 %
 % 输出文件：
@@ -161,13 +161,13 @@ nfft  = 2^nextpow2(wlen);
 %% ===== 2) 状态机分段逻辑 =====
 % 核心规则（完全按实验流程）：
 % - 1→2 = adapt
+% - 2→3 = intro（实验介绍）
 % - 3→4 = eyes_closed  
-% - 4→7 = eyes_open
+% - 4→9 = eyes_open（睁眼基线）
 % - 7→8 = view（每次进入新 scene）
 % - 8→9 = questionnaire_small（正常循环）
-% - 8→5 或 8→6 = questionnaire_big（block 结束，跳过灰屏）
+% - 8→5 或 8→6 = questionnaire_big（block 结束）
 % - 9→7 = gray（继续下一个 scene）
-% - 9→5 或 9→6 = gray（block 结束前的灰屏）
 % - 5→7 = rest（进入下一个 block）
 
 % ---- 收集 marker 事件 (type + latency) ----
@@ -221,19 +221,19 @@ for i = 1:nSeg
     is_valid_transition = true;  % 转移合法性
 
     % === 允许的转移表 ===
-    % 1→2, 3→4, 4→7, 7→8, 8→9, 8→5, 8→6, 9→7, 9→8, 9→5, 9→6, 5→7
+    % 1→2, 2→3, 3→4, 4→9, 7→8, 8→9, 8→5, 8→6, 9→7, 5→7
     
     % === 状态机规则 ===
     if m0==1 && m1==2
         cond = "adapt";
         
     elseif m0==2 && m1==3
-        % adapt 结束后到基线开始前的过渡段（VR/实验员操作）
-        cond = "transition";
+        % 实验介绍
+        cond = "intro";
     elseif m0==3 && m1==4
         cond = "eyes_closed";
         
-    elseif m0==4 && m1==7
+    elseif m0==4 && m1==9
         cond = "eyes_open";
         
     elseif m0==7 && m1==8
@@ -247,17 +247,10 @@ for i = 1:nSeg
     elseif m0==8 && (m1==5 || m1==6)
         cond = "questionnaire_big";
         
-    elseif m0==9 && ismember(m1, [7, 8, 5, 6])
-        % 9→X 灰屏，只允许 7/8/5/6 作为后继
+    elseif m0==9 && m1==7
+        % 9→7 灰屏，只允许进入下一轮
         cond = "gray";
-        % 细分子类型
-        if m1==7 || m1==8
-            gray_subtype = "gray_to_next";  % 灰屏后进入下一轮
-        elseif m1==5
-            gray_subtype = "gray_to_rest";  % 灰屏后进入休息
-        elseif m1==6
-            gray_subtype = "gray_to_end";   % 灰屏后结束
-        end
+        gray_subtype = "gray_to_next";
         
     elseif m0==5 && m1==7
         cond = "rest";
@@ -278,7 +271,7 @@ for i = 1:nSeg
     % 段长度检查（太短的跳过，但灰屏/休息/适应/过渡段保留）
     minLen = 1.0; % 秒
     if dur_s < minLen
-        if ~ismember(cond, ["gray", "rest", "adapt", "transition", "INVALID"])
+        if ~ismember(cond, ["gray", "rest", "adapt", "intro", "INVALID"])
             continue;
         end
     end
