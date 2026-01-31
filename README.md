@@ -51,11 +51,12 @@ addpath('/path/to/eeglab');
 run_eeg_bandpower_pipeline('path/to/data.set');
 ```
 
-### 4) GUI 模式（弹窗选择）
+### 4) GUI 模式（弹窗选择文件/文件夹）
 直接运行：
 ```matlab
 run_eeg_bandpower_pipeline();
 ```
+弹窗可选择 **单个 .set 文件** 或 **包含 .set 的文件夹**。
 
 ### 5) 批量分析（文件夹）
 ```matlab
