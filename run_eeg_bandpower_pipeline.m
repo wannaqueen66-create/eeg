@@ -100,6 +100,25 @@ for fi = 1:numel(files)
             mkdir(fp_out);
         end
     end
+    % 按被试分目录（默认：文件名作为被试ID）
+    subject_id = base;
+    fp_sub = fullfile(fp_out, subject_id);
+    if ~exist(fp_sub, 'dir')
+        mkdir(fp_sub);
+    end
+    % 子目录
+    fp_csv = fullfile(fp_sub, 'csv');
+    fp_fig = fullfile(fp_sub, 'fig');
+    fp_qc  = fullfile(fp_sub, 'qc');
+    if ~exist(fp_csv, 'dir'); mkdir(fp_csv); end
+    if ~exist(fp_fig, 'dir'); mkdir(fp_fig); end
+    if ~exist(fp_qc,  'dir'); mkdir(fp_qc); end
+
+    % 保存配置快照
+    try
+        write_config_snapshot(cfg, fp_sub);
+    catch
+    end
 
 %% ===== 1) 频段、ROI、Welch 参数 =====
 bands.theta = [4 7];
@@ -491,7 +510,7 @@ fprintf('Assigned pair_id to %d view-gray pairs.\n', pair_counter);
 
 % CSV 输出文件名（保证不空）
 [base,~,~] = fileparts(fn);
-csvfile = fullfile(fp_out, sprintf('%s_bandpower_roi.csv', base));
+csvfile = fullfile(fp_csv, sprintf('%s_bandpower_roi.csv', base));
 writetable(T, csvfile);
 fprintf('Saved CSV: %s\n', csvfile);
 
@@ -505,47 +524,47 @@ fprintf('Occipital relative alpha mean: eyes_closed=%.4f, eyes_open=%.4f\n', m_c
 fprintf('Occipital relative alpha mean: view=%.4f, gray=%.4f\n', m_view, m_gray);
 
 %% ===== 7) 可视化图：ROI 条件均值±SEM（θ/α/β） =====
-plot_roi_bars(T, fp_out, base);
+plot_roi_bars(T, fp_fig, base);
 
 %% ===== 8) 可视化图：Occ α view-gray 配对差值（按时间顺序配对） =====
-plot_paired_gray_minus_view(T, fp_out, base);
+plot_paired_gray_minus_view(T, fp_fig, base);
 
 %% ===== 9) 可视化图：Occ PSD 曲线（各条件均值） =====
-plot_occ_psd(EEG, T, roi, fs, wlen, nover, nfft, fp_out, base);
+plot_occ_psd(EEG, T, roi, fs, wlen, nover, nfft, fp_fig, base);
 
 %% ===== 10) view-gray 地形图（theta/alpha/beta） =====
-plot_topoplot_view_minus_gray(EEG, T, bands, totalBand30, fs, wlen, nover, nfft, fp_out, base);
+plot_topoplot_view_minus_gray(EEG, T, bands, totalBand30, fs, wlen, nover, nfft, fp_fig, base);
 
 %% ===== 11) 导出论文级汇总表 =====
-export_summary_tables(T, fp_out, base);
+export_summary_tables(T, fp_csv, base);
 
 %% ===== 12) 导出 scene_level.csv 用于回归分析 =====
-export_scene_level(T, fp_out, base);
+export_scene_level(T, fp_csv, base);
 
 %% ===== 13) 导出配对检查清单（用于审核配对是否正确） =====
-export_pairs_check(T, fp_out, base, cfg);
+export_pairs_check(T, fp_qc, base, cfg);
 
 %% ===== 14) 导出 QC 质量指标表 =====
-export_qc_table(T, fp_out, base);
-export_marker_report(segs, fp_out, base);
+export_qc_table(T, fp_qc, base);
+export_marker_report(segs, fp_qc, base);
 
 %% ===== 15) 配对散点+连线图（view vs gray） =====
-plot_paired_scatter(T, fp_out, base, cfg);
+plot_paired_scatter(T, fp_fig, base, cfg);
 
 %% ===== 16) Block1 vs Block2 稳定性图 =====
-plot_block_comparison(T, fp_out, base);
+plot_block_comparison(T, fp_fig, base);
 
 %% ===== 17) QC 分布图 =====
-plot_qc_distributions(T, fp_out, base, cfg);
+plot_qc_distributions(T, fp_fig, base, cfg);
 
 %% ===== 18) Low-beta vs High-beta 对比图 =====
-plot_beta_split(T, fp_out, base);
+plot_beta_split(T, fp_fig, base);
 
 %% ===== 19) 三阶段时间链图（view → quest → gray） =====
-plot_three_stage_chain(T, fp_out, base);
+plot_three_stage_chain(T, fp_fig, base);
 
 %% ===== 20) Scene 序列曲线 =====
-plot_scene_sequence(T, fp_out, base);
+plot_scene_sequence(T, fp_fig, base);
 
 % NOTE: Topoplot with 8 channels is illustrative only (limited spatial resolution).
 fprintf('\nNote: Topoplot with %d channels is illustrative only.\n', EEG.nbchan);
@@ -1725,5 +1744,40 @@ if ~isempty(allT)
         out = cfg.global_summary_path;
     end
     writetable(allT, out);
+end
+end
+
+
+function validate_cycle_counts(segs)
+% 检查 7→8→9 循环次数是否为 6
+conds = string({segs.cond});
+view_count = sum(conds=="view");
+quest_small_count = sum(conds=="questionnaire_small");
+gray_count = sum(conds=="gray");
+if view_count ~= 12
+    fprintf('
+[WARN] view count = %d (expected 12)
+', view_count);
+end
+if quest_small_count ~= 12
+    fprintf('[WARN] questionnaire_small count = %d (expected 12)
+', quest_small_count);
+end
+if gray_count ~= 12
+    fprintf('[WARN] gray count = %d (expected 12)
+', gray_count);
+end
+end
+
+function write_config_snapshot(cfg, fp)
+% 保存 config 快照
+try
+    raw = jsonencode(cfg);
+    fid = fopen(fullfile(fp, 'config_used.json'), 'w');
+    if fid ~= -1
+        fwrite(fid, raw);
+        fclose(fid);
+    end
+catch
 end
 end

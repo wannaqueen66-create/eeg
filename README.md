@@ -132,7 +132,16 @@ run_eeg_bandpower_pipeline('path/to/data.set','config.json');
 ---
 
 ## 输出结果
-脚本会在数据文件同目录输出（或 output_dir 指定目录）：
+
+目录结构示例：
+```
+output_dir/subject_id/
+  ├─ csv/
+  ├─ fig/
+  └─ qc/
+```
+
+脚本会在数据文件同目录输出（或 output_dir 指定目录），并按被试分子目录：
 
 ### CSV
 - `*_bandpower_roi.csv`
@@ -144,6 +153,7 @@ run_eeg_bandpower_pipeline('path/to/data.set','config.json');
 - `*_marker_report.csv`
 
 ### 其他
+- `config_used.json`（每次运行的配置快照）
 - `global_bandpower_summary.csv`（当 global_summary=true）
 - `*_outputs.zip`（当 zip_output=true）
 
