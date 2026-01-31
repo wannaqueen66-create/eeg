@@ -6,7 +6,7 @@ function run_eeg_bandpower_pipeline(input_path, config_path)
 %   1→2: adapt（VR适应）| 2→3: intro（实验介绍）| 3→4: eyes_closed（闭眼基线）
 %   4→9: eyes_open（睁眼基线）| 7→8: view（观看场景）
 %   8→9: questionnaire_small（小问卷）| 8→5/6: questionnaire_big（大问卷）
-%   9→7: gray_to_next
+%   9→7/8: gray_to_next
 %   5→7: rest（组间休息）
 %
 % 输出文件：
@@ -167,7 +167,7 @@ nfft  = 2^nextpow2(wlen);
 % - 7→8 = view（每次进入新 scene）
 % - 8→9 = questionnaire_small（正常循环）
 % - 8→5 或 8→6 = questionnaire_big（block 结束）
-% - 9→7 = gray（继续下一个 scene）
+% - 9→7/8 = gray（继续下一个 scene）
 % - 5→7 = rest（进入下一个 block）
 
 % ---- 收集 marker 事件 (type + latency) ----
@@ -221,7 +221,7 @@ for i = 1:nSeg
     is_valid_transition = true;  % 转移合法性
 
     % === 允许的转移表 ===
-    % 1→2, 2→3, 3→4, 4→9, 7→8, 8→9, 8→5, 8→6, 9→7, 5→7
+    % 1→2, 2→3, 3→4, 4→9, 7→8, 8→9, 8→5, 8→6, 9→7, 9→8, 5→7
     
     % === 状态机规则 ===
     if m0==1 && m1==2
@@ -247,8 +247,8 @@ for i = 1:nSeg
     elseif m0==8 && (m1==5 || m1==6)
         cond = "questionnaire_big";
         
-    elseif m0==9 && m1==7
-        % 9→7 灰屏，只允许进入下一轮
+    elseif m0==9 && ismember(m1, [7,8])
+        % 9→7/8 灰屏，只允许进入下一轮
         cond = "gray";
         gray_subtype = "gray_to_next";
         
