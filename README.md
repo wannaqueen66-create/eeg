@@ -45,6 +45,25 @@ MATLAB/EEGLAB pipeline for **VR 场景观看实验 EEG 频段功率分析**。
 run_eeg_bandpower_pipeline('path/to/data.set');
 ```
 
+### Marker 间隔统计（用于手动修正 marker 结构）
+
+新增脚本：`marker_interval_stats.m`
+
+**单文件：**
+```matlab
+marker_interval_stats('path/to/data.set');
+```
+
+**批量（文件夹内所有 .set）：**
+```matlab
+marker_interval_stats('path/to/folder');
+```
+
+输出（每个数据集）：
+- `<base>_marker_intervals.csv`：逐条列出相邻 marker 对（m0→m1）及间隔 `dt_s`
+- `<base>_marker_transition_summary.csv`：按转移（m0→m1）汇总 count/mean/median/std/min/max
+- 若输入为文件夹：额外输出 `ALL_marker_transition_summary.csv`（跨文件汇总）
+
 ---
 
 ## 完整使用教程
