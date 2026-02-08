@@ -51,10 +51,12 @@ for fi = 1:numel(files)
     [fp, name, ext] = fileparts(this_file);
     fn = [name ext];
     base = name;
+    stage = 'load_eeg';
     fprintf('
 === Processing %s (%d/%d) ===
 ', fn, fi, numel(files));
 
+    try
     EEG = pop_loadset('filename', fn, 'filepath', fp);
     EEG = eeg_checkset(EEG);
 
@@ -63,6 +65,7 @@ for fi = 1:numel(files)
     % 输出目录与配置快照
     [fp_sub, fp_csv, fp_fig, fp_qc] = pipeline.prepare_output(fp, base, cfg);
 
+stage = 'setup_bands_roi';
 %% ===== 1) 频段、ROI、Welch 参数 =====
 bands.theta = [4 7];
 bands.alpha = [8 12];
@@ -120,6 +123,7 @@ wlen  = round(fs*2);
 nover = round(wlen/2);
 nfft  = 2^nextpow2(wlen);
 
+stage = 'segment_state_machine';
 %% ===== 2) 状态机分段逻辑 =====
 % 核心规则（完全按实验流程）：
 % - 1→2 = adapt
@@ -339,6 +343,7 @@ end
 % 保存质量标记到工作区（供后续使用）
 segs(1).data_quality = data_quality;
 
+stage = 'compute_bandpower_qc';
 %% ===== 4) 计算每段 ROI 频段功率 + QC指标 =====
 Nseg = numel(segs);
 % 相对功率（1-30Hz 和 1-40Hz 两个版本）
@@ -358,6 +363,7 @@ for i=1:Nseg
     out_qc(i,:) = compute_qc_metrics(seg, P, F, segs(i), EEG.pnts, fs);
 end
 
+stage = 'build_tables_export_csv';
 %% ===== 5) 生成表 & 导出CSV =====
 T = struct2table(segs);
 
@@ -465,6 +471,7 @@ m_gray   = mean(T.O_alpha(T.cond=="gray"),        'omitnan');
 fprintf('Occipital relative alpha mean: eyes_closed=%.4f, eyes_open=%.4f\n', m_closed, m_open);
 fprintf('Occipital relative alpha mean: view=%.4f, gray=%.4f\n', m_view, m_gray);
 
+stage = 'plot_figures';
 %% ===== 7) 可视化图：ROI 条件均值±SEM（θ/α/β） =====
 plot_roi_bars(T, fp_fig, base);
 
@@ -511,8 +518,17 @@ plot_scene_sequence(T, fp_fig, base);
 % NOTE: Topoplot with 8 channels is illustrative only (limited spatial resolution).
 fprintf('\nNote: Topoplot with %d channels is illustrative only.\n', EEG.nbchan);
 
+stage = 'done';
+
 disp('Done.');
 % end single-file processing
+    catch ME
+        fprintf(2, '[ERROR] Failed processing %s at stage=%s: %s\n', this_file, stage, ME.message);
+        if isfield(cfg,'verbose') && cfg.verbose
+            fprintf(2, '%s\n', getReport(ME, 'extended', 'hyperlinks', 'off'));
+        end
+        continue;
+    end
 end
 
 % 生成全局汇总表（批量模式）
