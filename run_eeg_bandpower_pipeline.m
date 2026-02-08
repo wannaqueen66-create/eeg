@@ -31,43 +31,10 @@ if nargin < 2 || isempty(config_path)
     config_path = fullfile(fileparts(mfilename('fullpath')), 'config.json');
 end
 
-cfg = load_cfg(config_path);
+cfg = pipeline.load_config(config_path);
 
 % 解析输入路径
-files = {};
-if isempty(input_path)
-    choice = questdlg('Select input type', 'EEG Pipeline', 'File', 'Folder', 'Cancel', 'File');
-    if strcmp(choice,'File')
-        [fn, fp] = uigetfile('*.set', 'Select .set file');
-        if isequal(fn,0)
-            error('No file selected');
-        end
-        files = {fullfile(fp, fn)};
-    elseif strcmp(choice,'Folder')
-        fp = uigetdir(pwd, 'Select folder containing .set files');
-        if isequal(fp,0)
-            error('No folder selected');
-        end
-        d = dir(fullfile(fp, '*.set'));
-        if isempty(d)
-            error('No .set files found in folder: %s', fp);
-        end
-        files = arrayfun(@(x) fullfile(x.folder, x.name), d, 'UniformOutput', false);
-    else
-        error('No input selected');
-    end
-elseif isfolder(input_path)
-    d = dir(fullfile(input_path, '*.set'));
-    if isempty(d)
-        error('No .set files found in folder: %s', input_path);
-    end
-    files = arrayfun(@(x) fullfile(x.folder, x.name), d, 'UniformOutput', false);
-else
-    if ~endsWith(lower(input_path), '.set')
-        error('Input file must be a .set file');
-    end
-    files = {input_path};
-end
+files = pipeline.parse_input(input_path);
 
 % 可选日志输出
 if isfield(cfg, 'log_file') && ~isempty(cfg.log_file)
@@ -93,33 +60,8 @@ for fi = 1:numel(files)
 
     fs = EEG.srate;
 
-    % 输出目录
-    fp_out = fp;
-    if isfield(cfg, 'output_dir') && ~isempty(cfg.output_dir)
-        fp_out = resolve_output_dir(fp, cfg.output_dir);
-        if ~exist(fp_out, 'dir')
-            mkdir(fp_out);
-        end
-    end
-    % 按被试分目录（默认：文件名作为被试ID）
-    subject_id = base;
-    fp_sub = fullfile(fp_out, subject_id);
-    if ~exist(fp_sub, 'dir')
-        mkdir(fp_sub);
-    end
-    % 子目录
-    fp_csv = fullfile(fp_sub, 'csv');
-    fp_fig = fullfile(fp_sub, 'fig');
-    fp_qc  = fullfile(fp_sub, 'qc');
-    if ~exist(fp_csv, 'dir'); mkdir(fp_csv); end
-    if ~exist(fp_fig, 'dir'); mkdir(fp_fig); end
-    if ~exist(fp_qc,  'dir'); mkdir(fp_qc); end
-
-    % 保存配置快照
-    try
-        write_config_snapshot(cfg, fp_sub);
-    catch
-    end
+    % 输出目录与配置快照
+    [fp_sub, fp_csv, fp_fig, fp_qc] = pipeline.prepare_output(fp, base, cfg);
 
 %% ===== 1) 频段、ROI、Welch 参数 =====
 bands.theta = [4 7];
