@@ -83,6 +83,7 @@ for fi = 1:numel(files)
     this_file = files{fi};
     [fp, name, ext] = fileparts(this_file);
     fn = [name ext];
+    base = name;
     fprintf('
 === Processing %s (%d/%d) ===
 ', fn, fi, numel(files));
@@ -509,7 +510,6 @@ end
 fprintf('Assigned pair_id to %d view-gray pairs.\n', pair_counter);
 
 % CSV 输出文件名（保证不空）
-[base,~,~] = fileparts(fn);
 csvfile = fullfile(fp_csv, sprintf('%s_bandpower_roi.csv', base));
 writetable(T, csvfile);
 fprintf('Saved CSV: %s\n', csvfile);
