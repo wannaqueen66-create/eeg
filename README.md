@@ -6,11 +6,13 @@ MATLAB/EEGLAB pipeline for **VR 场景观看实验 EEG 频段功率分析**。
 
 ## 目录
 - [功能概览](#功能概览)
+- [架构概览](#架构概览)
 - [运行环境](#运行环境)
 - [快速开始](#快速开始)
 - [完整使用教程](#完整使用教程)
 - [配置文件](#配置文件)
 - [输出结果](#输出结果)
+- [测试](#测试)
 - [常见问题](#常见问题)
 
 ---
@@ -33,6 +35,15 @@ MATLAB/EEGLAB pipeline for **VR 场景观看实验 EEG 频段功率分析**。
 (7→8→9) × 6  第二组
 8→6  大问卷（终止）
 ```
+
+
+## 架构概览
+- 入口编排：`run_eeg_bandpower_pipeline.m`（按阶段执行并提供错误上下文）
+- 输入解析：`+pipeline/parse_input.m`
+- 配置加载：`+pipeline/load_config.m`
+- 输出目录准备：`+pipeline/prepare_output.m`
+- 路径解析：`+pipeline/resolve_output_dir.m`
+- 配置快照：`+pipeline/write_config_snapshot.m`
 
 ## 运行环境
 - MATLAB (R2018a 及以上建议)
@@ -183,6 +194,19 @@ output_dir/subject_id/
 - Topoplot（theta/alpha/beta）
 - Block 对比图
 - QC 分布图等
+
+---
+
+
+## 测试
+轻量 smoke tests 位于 `tests/`：
+
+```matlab
+addpath(genpath(pwd));
+run('tests/run_smoke_tests.m');
+```
+
+说明：当前为快速结构/接口检查，完整数值回归（基于真实 `.set`）可在后续补充。
 
 ---
 
