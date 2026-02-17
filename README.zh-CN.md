@@ -21,6 +21,7 @@
 ## 功能概览
 - Marker 状态机分段（adapt / intro / eyes_closed / eyes_open / view / questionnaire / gray / rest）
 - ROI 频段功率分析（theta / alpha / beta / low_beta / high_beta / low_gamma）
+- 相对功率说明：`low_gamma` 使用高频分母路径导出（默认会在需要时自动扩展 high-band 分母上界以覆盖 gamma）
 - view-gray 配对分析 + QC 质量控制
 - 自动导出 CSV、图表、汇总表
 

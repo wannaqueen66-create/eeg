@@ -49,8 +49,13 @@ for i = 1:numel(requiredFields)
     assert(contains(mainScript, requiredFields{i}), ['Missing scene_level field marker: ' requiredFields{i}]);
 end
 assert(contains(mainScript, 'bands.low_gamma'), 'low_gamma band support is expected in main pipeline');
-fprintf('[OK] scene_level schema + low_gamma static checks
-');
+fprintf('[OK] scene_level schema + low_gamma static checks\n');
+
+% Test 5: low_gamma should be exported from out_rel40 (not out_rel30)
+assert(contains(mainScript, 'T.F_low_gamma = out_rel40(:,6);'), 'F_low_gamma should use out_rel40 denominator');
+assert(contains(mainScript, 'T.P_low_gamma = out_rel40(:,12);'), 'P_low_gamma should use out_rel40 denominator');
+assert(contains(mainScript, 'T.O_low_gamma = out_rel40(:,18);'), 'O_low_gamma should use out_rel40 denominator');
+fprintf('[OK] low_gamma denominator mapping checks\n');
 
 fprintf('All smoke tests passed.\n');
 end

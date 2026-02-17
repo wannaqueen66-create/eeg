@@ -25,6 +25,7 @@ MATLAB/EEGLAB pipeline for **VR scene-viewing EEG bandpower analysis**.
 **English**
 - Marker-state-machine segmentation (`adapt / intro / eyes_closed / eyes_open / view / questionnaire / gray / rest`)
 - ROI bandpower extraction (`theta / alpha / beta / low_beta / high_beta / low_gamma`)
+- Relative-power note: `low_gamma` is exported from the high-band denominator path (default high-band adjusted to include gamma upper bound when needed)
 - View-gray pairing analysis + quality control (QC)
 - Automatic CSV/table/figure export
 

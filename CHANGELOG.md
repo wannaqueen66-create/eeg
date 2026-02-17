@@ -1,6 +1,10 @@
 # Changelog
 
 ## 2026-02-17
+- fix: correct low-gamma relative-power export to use high-band denominator path (`out_rel40`) instead of 1-30Hz path.
+- fix: auto-expand high-band denominator upper bound when `bands.low_gamma` exceeds configured `totalBand40`.
+- harden: add denominator-coverage guards in `band_power_v2` (return NaN when denominator does not cover target band).
+- test: add smoke checks for low-gamma denominator mapping.
 - test: add smoke check for scene_level schema fields and low_gamma support markers.
 - docs: add statistical interpretation notes (gamma vs EMG artifact risk) to README and README.zh-CN.
 - release: prepare reproducibility tag `v0.3.0`.

@@ -89,6 +89,11 @@ if isfield(cfg, 'bands')
     if isfield(b, 'totalBand30'); totalBand30 = b.totalBand30; end
 end
 
+% 若启用 gamma 且上界超过 totalBand40，上调分母上界避免相对功率失真
+if bands.low_gamma(2) > totalBand40(2)
+    totalBand40 = [totalBand40(1), bands.low_gamma(2)];
+end
+
 labels = upper(string({EEG.chanlocs.labels}));
 % ROI 可配置
 front_labels = ["F3","F4"];
@@ -357,13 +362,13 @@ T = struct2table(segs);
 % === 相对功率 (1-30Hz 分母，推荐使用) ===
 % Front
 T.F_theta = out_rel30(:,1); T.F_alpha = out_rel30(:,2); T.F_beta = out_rel30(:,3);
-T.F_low_beta = out_rel30(:,4); T.F_high_beta = out_rel30(:,5); T.F_low_gamma = out_rel30(:,6);
+T.F_low_beta = out_rel30(:,4); T.F_high_beta = out_rel30(:,5); T.F_low_gamma = out_rel40(:,6);
 % Parietal
 T.P_theta = out_rel30(:,7); T.P_alpha = out_rel30(:,8); T.P_beta = out_rel30(:,9);
-T.P_low_beta = out_rel30(:,10); T.P_high_beta = out_rel30(:,11); T.P_low_gamma = out_rel30(:,12);
+T.P_low_beta = out_rel30(:,10); T.P_high_beta = out_rel30(:,11); T.P_low_gamma = out_rel40(:,12);
 % Occipital
 T.O_theta = out_rel30(:,13); T.O_alpha = out_rel30(:,14); T.O_beta = out_rel30(:,15);
-T.O_low_beta = out_rel30(:,16); T.O_high_beta = out_rel30(:,17); T.O_low_gamma = out_rel30(:,18);
+T.O_low_beta = out_rel30(:,16); T.O_high_beta = out_rel30(:,17); T.O_low_gamma = out_rel40(:,18);
 
 % === 相对功率 (1-40Hz 分母，作为对照) ===
 T.F_theta_40 = out_rel40(:,1); T.F_alpha_40 = out_rel40(:,2); T.F_beta_40 = out_rel40(:,3);
@@ -562,8 +567,18 @@ absPwr = trapz(F(idx_band), Px(idx_band));  % 绝对功率 (µV²)
 totalPwr30 = trapz(F(idx_total30), Px(idx_total30));
 totalPwr40 = trapz(F(idx_total40), Px(idx_total40));
 
-rel30 = absPwr / totalPwr30;  % 相对功率 (1-30Hz 分母)
-rel40 = absPwr / totalPwr40;  % 相对功率 (1-40Hz 分母)
+% 仅当分母频段覆盖当前 band 时，relative power 才有意义
+if band(2) <= totalBand30(2) && totalPwr30 > 0
+    rel30 = absPwr / totalPwr30;  % 相对功率 (1-30Hz 分母)
+else
+    rel30 = NaN;
+end
+
+if band(2) <= totalBand40(2) && totalPwr40 > 0
+    rel40 = absPwr / totalPwr40;  % 相对功率 (high-band 分母)
+else
+    rel40 = NaN;
+end
 end
 
 function [rel, absPwr] = band_power(Px, F, band, totalBand)
