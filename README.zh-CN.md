@@ -7,6 +7,7 @@
 - [功能概览](#功能概览)
 - [实验 Marker 流程](#实验-marker-流程)
 - [运行环境](#运行环境)
+- [预处理流水线](#预处理流水线)
 - [快速开始](#快速开始)
 - [完整教程](#完整教程)
 - [配置文件说明](#配置文件说明)
@@ -40,6 +41,26 @@
 ## 运行环境
 - MATLAB（建议 R2018a 及以上）
 - EEGLAB 已安装并加入 MATLAB 路径
+
+
+## 预处理流水线
+
+已新增预处理脚本：`run_eeg_preprocess_pipeline.m`，默认配置文件：`preprocess_config.json`。
+
+支持步骤：
+- 带通滤波
+- 陷波（50Hz）
+- 重参考（平均参考或指定通道）
+- ICA
+- （可选）ICLabel 自动剔除伪迹 IC
+
+示例：
+```matlab
+run_eeg_preprocess_pipeline('path/to/raw_or_folder');
+run_eeg_preprocess_pipeline('path/to/raw_or_folder','preprocess_config.json');
+```
+
+默认输出目录：`preprocessed/`，结果文件：`*_preproc.set`。
 
 ## 快速开始
 ```matlab

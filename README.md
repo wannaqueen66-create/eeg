@@ -10,13 +10,14 @@ MATLAB/EEGLAB pipeline for **VR scene-viewing EEG bandpower analysis**.
 - [2. Marker Protocol / Marker 实验流程](#2-marker-protocol--marker-实验流程)
 - [3. Architecture / 架构概览](#3-architecture--架构概览)
 - [4. Requirements / 运行环境](#4-requirements--运行环境)
-- [5. Quick Start / 快速开始](#5-quick-start--快速开始)
-- [6. Full Tutorial / 完整使用教程](#6-full-tutorial--完整使用教程)
-- [7. Configuration / 配置文件](#7-configuration--配置文件)
-- [8. Outputs / 输出结果](#8-outputs--输出结果)
-- [9. Tests / 测试](#9-tests--测试)
-- [10. Statistical Notes / 统计解释建议](#10-statistical-notes--统计解释建议)
-- [11. FAQ / 常见问题](#11-faq--常见问题)
+- [5. Preprocessing Pipeline / 预处理流水线](#5-preprocessing-pipeline--预处理流水线)
+- [6. Quick Start / 快速开始](#6-quick-start--快速开始)
+- [7. Full Tutorial / 完整使用教程](#7-full-tutorial--完整使用教程)
+- [8. Configuration / 配置文件](#8-configuration--配置文件)
+- [9. Outputs / 输出结果](#9-outputs--输出结果)
+- [10. Tests / 测试](#10-tests--测试)
+- [11. Statistical Notes / 统计解释建议](#11-statistical-notes--统计解释建议)
+- [12. FAQ / 常见问题](#12-faq--常见问题)
 
 ---
 
@@ -70,7 +71,42 @@ MATLAB/EEGLAB pipeline for **VR scene-viewing EEG bandpower analysis**.
 
 ---
 
-## 5. Quick Start / 快速开始
+
+## 5. Preprocessing Pipeline / 预处理流水线
+
+**English**
+This repo now includes a preprocessing entrypoint:
+- `run_eeg_preprocess_pipeline.m`
+- default config: `preprocess_config.json`
+
+It can perform: bandpass, notch, re-reference, ICA, and optional ICLabel-based auto IC rejection.
+
+Example:
+```matlab
+run_eeg_preprocess_pipeline('path/to/raw_or_folder');
+run_eeg_preprocess_pipeline('path/to/raw_or_folder','preprocess_config.json');
+```
+
+Output defaults to `preprocessed/` with `*_preproc.set`.
+
+**中文**
+本仓库已新增预处理入口：
+- `run_eeg_preprocess_pipeline.m`
+- 默认配置：`preprocess_config.json`
+
+支持：带通、陷波、重参考、ICA，以及可选 ICLabel 自动剔除伪迹 IC。
+
+示例：
+```matlab
+run_eeg_preprocess_pipeline('path/to/raw_or_folder');
+run_eeg_preprocess_pipeline('path/to/raw_or_folder','preprocess_config.json');
+```
+
+默认输出到 `preprocessed/`，文件名为 `*_preproc.set`。
+
+---
+
+## 6. Quick Start / 快速开始
 
 ```matlab
 run_eeg_bandpower_pipeline('path/to/data.set');
@@ -93,7 +129,7 @@ Outputs:
 
 ---
 
-## 6. Full Tutorial / 完整使用教程
+## 7. Full Tutorial / 完整使用教程
 
 1) Prepare `.set` data with valid markers 1~9  
 2) Add EEGLAB path
@@ -119,7 +155,7 @@ run_eeg_bandpower_pipeline('path/to/data.set','config.json');
 
 ---
 
-## 7. Configuration / 配置文件
+## 8. Configuration / 配置文件
 
 Use `config.json` to override defaults.
 
@@ -156,7 +192,7 @@ Use `config.json` to override defaults.
 
 ---
 
-## 8. Outputs / 输出结果
+## 9. Outputs / 输出结果
 
 Typical structure:
 
@@ -183,7 +219,7 @@ Also:
 
 ---
 
-## 9. Tests / 测试
+## 10. Tests / 测试
 
 ```matlab
 addpath(genpath(pwd));
@@ -193,7 +229,7 @@ run('tests/run_smoke_tests.m');
 ---
 
 
-## 10. Statistical Notes / 统计解释建议
+## 11. Statistical Notes / 统计解释建议
 
 **English**
 - `low_gamma (30–45 Hz)` is informative for immersion/arousal hypotheses, but also sensitive to muscle artifacts (jaw/forehead/neck EMG).
@@ -207,7 +243,7 @@ run('tests/run_smoke_tests.m');
 
 ---
 
-## 11. FAQ / 常见问题
+## 12. FAQ / 常见问题
 
 **Q1: Missing O1/OZ/O2 channels?**  
 Check channel names or edit ROI labels in config.

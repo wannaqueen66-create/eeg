@@ -1,6 +1,9 @@
 # Changelog
 
 ## 2026-02-17
+- feat: add preprocessing entry script `run_eeg_preprocess_pipeline.m` (bandpass, notch, reref, ICA, optional ICLabel reject).
+- feat: add default preprocessing config `preprocess_config.json`.
+- docs: update README/README.zh-CN with preprocessing usage.
 - fix: correct low-gamma relative-power export to use high-band denominator path (`out_rel40`) instead of 1-30Hz path.
 - fix: auto-expand high-band denominator upper bound when `bands.low_gamma` exceeds configured `totalBand40`.
 - harden: add denominator-coverage guards in `band_power_v2` (return NaN when denominator does not cover target band).
