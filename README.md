@@ -1,121 +1,126 @@
-# EEG Bandpower Pipeline
+# EEG Bandpower Pipeline / EEG 频段功率分析流水线
 
-MATLAB/EEGLAB pipeline for **VR 场景观看实验 EEG 频段功率分析**。
-
----
-
-## 目录
-- [功能概览](#功能概览)
-- [架构概览](#架构概览)
-- [运行环境](#运行环境)
-- [快速开始](#快速开始)
-- [完整使用教程](#完整使用教程)
-- [配置文件](#配置文件)
-- [输出结果](#输出结果)
-- [测试](#测试)
-- [常见问题](#常见问题)
+MATLAB/EEGLAB pipeline for **VR scene-viewing EEG bandpower analysis**.  
+用于 **VR 场景观看实验 EEG 频段功率分析** 的 MATLAB/EEGLAB 流水线。
 
 ---
 
-## 功能概览
-- Marker 状态机分段（adapt / transition / eyes_closed / eyes_open / view / questionnaire / gray / rest）
-- ROI 频段功率（theta / alpha / beta / low/high beta）
-- view-gray 配对分析 + QC 质量检查
-- 自动输出 CSV 与图表
+## Table of Contents / 目录
+- [1. Overview / 功能概览](#1-overview--功能概览)
+- [2. Marker Protocol / Marker 实验流程](#2-marker-protocol--marker-实验流程)
+- [3. Architecture / 架构概览](#3-architecture--架构概览)
+- [4. Requirements / 运行环境](#4-requirements--运行环境)
+- [5. Quick Start / 快速开始](#5-quick-start--快速开始)
+- [6. Full Tutorial / 完整使用教程](#6-full-tutorial--完整使用教程)
+- [7. Configuration / 配置文件](#7-configuration--配置文件)
+- [8. Outputs / 输出结果](#8-outputs--输出结果)
+- [9. Tests / 测试](#9-tests--测试)
+- [10. FAQ / 常见问题](#10-faq--常见问题)
 
+---
 
-## Marker 流程（实验）
+## 1. Overview / 功能概览
+
+**English**
+- Marker-state-machine segmentation (`adapt / intro / eyes_closed / eyes_open / view / questionnaire / gray / rest`)
+- ROI bandpower extraction (`theta / alpha / beta / low_beta / high_beta / low_gamma`)
+- View-gray pairing analysis + quality control (QC)
+- Automatic CSV/table/figure export
+
+**中文**
+- 基于 Marker 状态机分段（`adapt / intro / eyes_closed / eyes_open / view / questionnaire / gray / rest`）
+- ROI 频段功率计算（`theta / alpha / beta / low_beta / high_beta / low_gamma`）
+- view-gray 配对分析与 QC 质量检查
+- 自动导出 CSV、汇总表和图像
+
+---
+
+## 2. Marker Protocol / Marker 实验流程
+
+```text
+1→2  VR adaptation / VR适应
+2→3  Intro / 实验介绍
+3→4  Eyes closed baseline / 闭眼静息
+4→9  Eyes open baseline / 睁眼基线
+(7→8→9) × 6  Scene viewing → small questionnaire → gray
+8→5  Block-end questionnaire → rest
+(7→8→9) × 6  Second block
+8→6  Final questionnaire (end)
 ```
-1→2  VR适应
-2→3  实验介绍
-3→4  闭眼静息
-4→9  睁眼基线
-(7→8→9) × 6  场景观看→小问卷→灰屏（9 是灰屏开始，9→8 仍算灰屏）
-8→5  大问卷（组末）→休息
-(7→8→9) × 6  第二组
-8→6  大问卷（终止）
-```
-
-
-## 架构概览
-- 入口编排：`run_eeg_bandpower_pipeline.m`（按阶段执行并提供错误上下文）
-- 输入解析：`+pipeline/parse_input.m`
-- 配置加载：`+pipeline/load_config.m`
-- 输出目录准备：`+pipeline/prepare_output.m`
-- 路径解析：`+pipeline/resolve_output_dir.m`
-- 配置快照：`+pipeline/write_config_snapshot.m`
-
-## 运行环境
-- MATLAB (R2018a 及以上建议)
-- EEGLAB 已加入 MATLAB 路径
 
 ---
 
-## 快速开始
+## 3. Architecture / 架构概览
+
+- Entry orchestration / 入口编排：`run_eeg_bandpower_pipeline.m`
+- Input parsing / 输入解析：`+pipeline/parse_input.m`
+- Config loading / 配置加载：`+pipeline/load_config.m`
+- Output preparation / 输出准备：`+pipeline/prepare_output.m`
+- Output path resolver / 路径解析：`+pipeline/resolve_output_dir.m`
+- Config snapshot / 配置快照：`+pipeline/write_config_snapshot.m`
+
+---
+
+## 4. Requirements / 运行环境
+
+- MATLAB (recommended R2018a+)
+- EEGLAB installed and added to MATLAB path
+
+---
+
+## 5. Quick Start / 快速开始
+
 ```matlab
 run_eeg_bandpower_pipeline('path/to/data.set');
 ```
 
-### Marker 间隔统计（用于手动修正 marker 结构）
+### Marker interval statistics / Marker 间隔统计（用于人工核查）
 
-新增脚本：`marker_interval_stats.m`
-
-**单文件：**
 ```matlab
+% single file / 单文件
 marker_interval_stats('path/to/data.set');
-```
 
-**批量（文件夹内所有 .set）：**
-```matlab
+% folder batch / 文件夹批量
 marker_interval_stats('path/to/folder');
 ```
 
-输出（每个数据集）：
-- `<base>_marker_intervals.csv`：逐条列出相邻 marker 对（m0→m1）及间隔 `dt_s`
-- `<base>_marker_transition_summary.csv`：按转移（m0→m1）汇总 count/mean/median/std/min/max
-- 若输入为文件夹：额外输出 `ALL_marker_transition_summary.csv`（跨文件汇总）
+Outputs:
+- `<base>_marker_intervals.csv`
+- `<base>_marker_transition_summary.csv`
+- `ALL_marker_transition_summary.csv` (folder mode)
 
 ---
 
-## 完整使用教程
+## 6. Full Tutorial / 完整使用教程
 
-### 1) 准备数据
-- EEG 数据需为 **EEGLAB .set** 格式
-- Marker 需符合实验流程（1~9）
-
-### 2) 加载 EEGLAB
-在 MATLAB 中确保 EEGLAB 已加入路径，例如：
+1) Prepare `.set` data with valid markers 1~9  
+2) Add EEGLAB path
 ```matlab
 addpath('/path/to/eeglab');
 ```
-
-### 3) 单文件分析（无 GUI）
+3) Single-file run
 ```matlab
 run_eeg_bandpower_pipeline('path/to/data.set');
 ```
-
-### 4) GUI 模式（弹窗选择文件/文件夹）
-直接运行：
+4) GUI mode
 ```matlab
 run_eeg_bandpower_pipeline();
 ```
-弹窗可选择 **单个 .set 文件** 或 **包含 .set 的文件夹**。
-
-### 5) 批量分析（文件夹）
+5) Folder batch mode
 ```matlab
 run_eeg_bandpower_pipeline('path/to/folder');
 ```
-脚本会自动遍历目录下所有 `.set` 文件并依次处理。
-
-### 6) 使用配置文件
+6) Use custom config
 ```matlab
 run_eeg_bandpower_pipeline('path/to/data.set','config.json');
 ```
 
 ---
 
-## 配置文件
-配置文件为 `config.json`，用于覆盖默认参数：
+## 7. Configuration / 配置文件
+
+Use `config.json` to override defaults.
+
 ```json
 {
   "gray_dur_min": 3,
@@ -140,40 +145,27 @@ run_eeg_bandpower_pipeline('path/to/data.set','config.json');
     "beta": [13,30],
     "low_beta": [13,20],
     "high_beta": [20,30],
+    "low_gamma": [30,45],
     "totalBand40": [1,40],
     "totalBand30": [1,30]
   }
 }
 ```
 
-参数说明：
-- `gray_dur_min/max`：灰屏时间合理范围（秒）
-- `quest_dur_min/max`：问卷时间合理范围（秒）
-- `pairing_mode`：`strict` 或 `lenient`
-- `verbose`：是否输出详细日志
-- `log_file`：日志文件路径（空则不写日志）
-- `output_dir`：输出目录（相对路径或绝对路径）
-- `zip_output`：是否打包输出为 zip
-- `global_summary`：是否生成批量总表
-- `global_summary_path`：总表保存路径（可选）
-- `roi`：ROI 通道列表
-- `bands`：频段配置
-
 ---
 
-## 输出结果
+## 8. Outputs / 输出结果
 
-目录结构示例：
-```
+Typical structure:
+
+```text
 output_dir/subject_id/
   ├─ csv/
   ├─ fig/
   └─ qc/
 ```
 
-脚本会在数据文件同目录输出（或 output_dir 指定目录），并按被试分子目录：
-
-### CSV
+CSV includes:
 - `*_bandpower_roi.csv`
 - `*_bandpower_summary.csv`
 - `*_bandpower_tests.csv`
@@ -182,46 +174,30 @@ output_dir/subject_id/
 - `*_qc.csv`
 - `*_marker_report.csv`
 
-### 其他
-- `config_used.json`（每次运行的配置快照）
-- `global_bandpower_summary.csv`（当 global_summary=true）
-- `*_outputs.zip`（当 zip_output=true）
-
-### 图表
-- ROI 条件柱状图
-- view-gray 配对散点图
-- PSD 曲线
-- Topoplot（theta/alpha/beta）
-- Block 对比图
-- QC 分布图等
+Also:
+- `config_used.json`
+- `global_bandpower_summary.csv` (if `global_summary=true`)
+- `*_outputs.zip` (if `zip_output=true`)
 
 ---
 
-
-## 测试
-轻量 smoke tests 位于 `tests/`：
+## 9. Tests / 测试
 
 ```matlab
 addpath(genpath(pwd));
 run('tests/run_smoke_tests.m');
 ```
 
-说明：当前为快速结构/接口检查，完整数值回归（基于真实 `.set`）可在后续补充。
-
 ---
 
-## 常见问题
+## 10. FAQ / 常见问题
 
-### Q1: 提示找不到通道 O1/OZ/O2
-请确认通道命名是否一致，或修改 ROI 定义。
+**Q1: Missing O1/OZ/O2 channels?**  
+Check channel names or edit ROI labels in config.
 
-### Q2: 没有生成图表/CSV
-检查 `.set` 文件是否包含正确 marker，以及是否有足够长度的片段。
+**Q2: No CSV/figures generated?**  
+Check marker quality and whether segments are long enough.
 
-### Q3: 如何关闭 GUI
-直接传入文件路径即可。
-
----
-
-如需更多定制（ROI/频段可配置、总表汇总、自动打包输出），欢迎提需求。
+**Q3: How to avoid GUI popups?**  
+Pass file/folder path directly as the first argument.
 

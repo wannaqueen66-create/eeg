@@ -21,6 +21,7 @@
     "beta": [13,30],
     "low_beta": [13,20],
     "high_beta": [20,30],
+    "low_gamma": [30,45],
     "totalBand40": [1,40],
     "totalBand30": [1,30]
   }

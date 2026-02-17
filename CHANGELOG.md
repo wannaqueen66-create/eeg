@@ -1,6 +1,9 @@
 # Changelog
 
 ## 2026-02-17
+- feat: add low-gamma band support (`bands.low_gamma`, default `[30,45]`) and export ROI low-gamma columns (`F/P/O_low_gamma`).
+- feat: enrich `scene_level.csv` with `block_id`, `cycle_in_block`, `pair_id`, low/high beta + low-gamma columns, and TAR/TBR/BA ratio metrics.
+- docs: rewrite `README.md` as bilingual (EN+ZH) with TOC; add dedicated Chinese doc `README.zh-CN.md`.
 - fix: remove duplicated in-script config-default block; defaults now come from `pipeline.load_config` only.
 - fix: correct view-gray pairing in `export_summary_tables` by using table-row indices (via shared helper), avoiding condition-index mismatch.
 - fix: wire `summary_files` collection during batch run so `global_summary=true` can generate `global_bandpower_summary.csv`.

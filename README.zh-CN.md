@@ -1,0 +1,117 @@
+# EEG 频段功率分析流水线（中文说明）
+
+> 该文件为纯中文文档；英文+中文双语请见 `README.md`。
+
+## 目录
+- [项目简介](#项目简介)
+- [功能概览](#功能概览)
+- [实验 Marker 流程](#实验-marker-流程)
+- [运行环境](#运行环境)
+- [快速开始](#快速开始)
+- [完整教程](#完整教程)
+- [配置文件说明](#配置文件说明)
+- [输出结果](#输出结果)
+- [测试](#测试)
+- [常见问题](#常见问题)
+
+## 项目简介
+本项目用于 VR 场景观看实验中的 EEG 频段功率分析，基于 MATLAB + EEGLAB。
+
+## 功能概览
+- Marker 状态机分段（adapt / intro / eyes_closed / eyes_open / view / questionnaire / gray / rest）
+- ROI 频段功率分析（theta / alpha / beta / low_beta / high_beta / low_gamma）
+- view-gray 配对分析 + QC 质量控制
+- 自动导出 CSV、图表、汇总表
+
+## 实验 Marker 流程
+```text
+1→2  VR适应
+2→3  实验介绍
+3→4  闭眼静息
+4→9  睁眼基线
+(7→8→9) × 6  场景观看→小问卷→灰屏
+8→5  组末大问卷→休息
+(7→8→9) × 6  第二组
+8→6  终止大问卷
+```
+
+## 运行环境
+- MATLAB（建议 R2018a 及以上）
+- EEGLAB 已安装并加入 MATLAB 路径
+
+## 快速开始
+```matlab
+run_eeg_bandpower_pipeline('path/to/data.set');
+```
+
+### Marker 间隔统计
+```matlab
+marker_interval_stats('path/to/data.set');          % 单文件
+marker_interval_stats('path/to/folder');            % 文件夹批量
+```
+
+## 完整教程
+1. 准备 `.set` 数据并确认 marker 结构正常（1~9）
+2. 添加 EEGLAB 路径：
+```matlab
+addpath('/path/to/eeglab');
+```
+3. 运行单文件：
+```matlab
+run_eeg_bandpower_pipeline('path/to/data.set');
+```
+4. GUI 模式：
+```matlab
+run_eeg_bandpower_pipeline();
+```
+5. 文件夹批量：
+```matlab
+run_eeg_bandpower_pipeline('path/to/folder');
+```
+6. 使用配置文件：
+```matlab
+run_eeg_bandpower_pipeline('path/to/data.set', 'config.json');
+```
+
+## 配置文件说明
+`config.json` 关键项：
+- `pairing_mode`：`strict` 或 `lenient`
+- `zip_output`：是否打包输出 zip
+- `global_summary`：是否导出批量汇总
+- `roi`：ROI 通道定义
+- `bands`：频段定义（已支持 `low_gamma`）
+
+## 输出结果
+目录结构：
+```text
+output_dir/subject_id/
+  ├─ csv/
+  ├─ fig/
+  └─ qc/
+```
+
+主要文件：
+- `*_bandpower_roi.csv`
+- `*_bandpower_summary.csv`
+- `*_bandpower_tests.csv`
+- `*_scene_level.csv`
+- `*_pairs_check.csv`
+- `*_qc.csv`
+- `*_marker_report.csv`
+- `config_used.json`
+- `global_bandpower_summary.csv`（当 `global_summary=true`）
+- `*_outputs.zip`（当 `zip_output=true`）
+
+## 测试
+```matlab
+addpath(genpath(pwd));
+run('tests/run_smoke_tests.m');
+```
+
+## 常见问题
+1. **缺少 O1/OZ/O2 通道？**
+   - 检查通道命名，或在配置中修改 ROI。
+2. **没有导出图表/CSV？**
+   - 检查 marker 结构是否正确、片段是否足够长。
+3. **如何关闭 GUI？**
+   - 直接传入文件或文件夹路径。

@@ -72,6 +72,7 @@ bands.alpha = [8 12];
 bands.beta  = [13 30];
 bands.low_beta  = [13 20];  % low-beta（较少受肌电影响）
 bands.high_beta = [20 30];  % high-beta（容易受肌电影响）
+bands.low_gamma = [30 45]; % low-gamma（需结合QC谨慎解释）
 totalBand40 = [1 40];  % 原始分母（1-40Hz）
 totalBand30 = [1 30];  % 推荐分母（1-30Hz，避免高频噪声影响）
 
@@ -83,6 +84,7 @@ if isfield(cfg, 'bands')
     if isfield(b, 'beta');  bands.beta  = b.beta; end
     if isfield(b, 'low_beta');  bands.low_beta  = b.low_beta; end
     if isfield(b, 'high_beta'); bands.high_beta = b.high_beta; end
+    if isfield(b, 'low_gamma'); bands.low_gamma = b.low_gamma; end
     if isfield(b, 'totalBand40'); totalBand40 = b.totalBand40; end
     if isfield(b, 'totalBand30'); totalBand30 = b.totalBand30; end
 end
@@ -332,9 +334,9 @@ stage = 'compute_bandpower_qc';
 %% ===== 4) 计算每段 ROI 频段功率 + QC指标 =====
 Nseg = numel(segs);
 % 相对功率（1-30Hz 和 1-40Hz 两个版本）
-out_rel30 = nan(Nseg, 15);  % 1-30Hz 版本: 3 ROI x 5 频段 (theta/alpha/beta/low_beta/high_beta)
-out_rel40 = nan(Nseg, 15);  % 1-40Hz 版本
-out_abs   = nan(Nseg, 15);  % 绝对功率
+out_rel30 = nan(Nseg, 18);  % 1-30Hz 版本: 3 ROI x 6 频段 (theta/alpha/beta/low/high beta/low gamma)
+out_rel40 = nan(Nseg, 18);  % 1-40Hz 版本
+out_abs   = nan(Nseg, 18);  % 绝对功率
 out_qc    = nan(Nseg, 4);   % QC指标
 
 for i=1:Nseg
@@ -355,29 +357,29 @@ T = struct2table(segs);
 % === 相对功率 (1-30Hz 分母，推荐使用) ===
 % Front
 T.F_theta = out_rel30(:,1); T.F_alpha = out_rel30(:,2); T.F_beta = out_rel30(:,3);
-T.F_low_beta = out_rel30(:,4); T.F_high_beta = out_rel30(:,5);
+T.F_low_beta = out_rel30(:,4); T.F_high_beta = out_rel30(:,5); T.F_low_gamma = out_rel30(:,6);
 % Parietal
-T.P_theta = out_rel30(:,6); T.P_alpha = out_rel30(:,7); T.P_beta = out_rel30(:,8);
-T.P_low_beta = out_rel30(:,9); T.P_high_beta = out_rel30(:,10);
+T.P_theta = out_rel30(:,7); T.P_alpha = out_rel30(:,8); T.P_beta = out_rel30(:,9);
+T.P_low_beta = out_rel30(:,10); T.P_high_beta = out_rel30(:,11); T.P_low_gamma = out_rel30(:,12);
 % Occipital
-T.O_theta = out_rel30(:,11); T.O_alpha = out_rel30(:,12); T.O_beta = out_rel30(:,13);
-T.O_low_beta = out_rel30(:,14); T.O_high_beta = out_rel30(:,15);
+T.O_theta = out_rel30(:,13); T.O_alpha = out_rel30(:,14); T.O_beta = out_rel30(:,15);
+T.O_low_beta = out_rel30(:,16); T.O_high_beta = out_rel30(:,17); T.O_low_gamma = out_rel30(:,18);
 
 % === 相对功率 (1-40Hz 分母，作为对照) ===
 T.F_theta_40 = out_rel40(:,1); T.F_alpha_40 = out_rel40(:,2); T.F_beta_40 = out_rel40(:,3);
-T.P_theta_40 = out_rel40(:,6); T.P_alpha_40 = out_rel40(:,7); T.P_beta_40 = out_rel40(:,8);
-T.O_theta_40 = out_rel40(:,11); T.O_alpha_40 = out_rel40(:,12); T.O_beta_40 = out_rel40(:,13);
+T.P_theta_40 = out_rel40(:,7); T.P_alpha_40 = out_rel40(:,8); T.P_beta_40 = out_rel40(:,9);
+T.O_theta_40 = out_rel40(:,13); T.O_alpha_40 = out_rel40(:,14); T.O_beta_40 = out_rel40(:,15);
 
 % === log10 绝对功率 ===
 T.F_theta_logabs = log10(out_abs(:,1) + eps);
 T.F_alpha_logabs = log10(out_abs(:,2) + eps);
 T.F_beta_logabs  = log10(out_abs(:,3) + eps);
-T.P_theta_logabs = log10(out_abs(:,6) + eps);
-T.P_alpha_logabs = log10(out_abs(:,7) + eps);
-T.P_beta_logabs  = log10(out_abs(:,8) + eps);
-T.O_theta_logabs = log10(out_abs(:,11) + eps);
-T.O_alpha_logabs = log10(out_abs(:,12) + eps);
-T.O_beta_logabs  = log10(out_abs(:,13) + eps);
+T.P_theta_logabs = log10(out_abs(:,7) + eps);
+T.P_alpha_logabs = log10(out_abs(:,8) + eps);
+T.P_beta_logabs  = log10(out_abs(:,9) + eps);
+T.O_theta_logabs = log10(out_abs(:,13) + eps);
+T.O_alpha_logabs = log10(out_abs(:,14) + eps);
+T.O_beta_logabs  = log10(out_abs(:,15) + eps);
 
 % === QC 指标 ===
 T.qc_rms_mean   = out_qc(:,1);  % 平均 RMS 振幅
@@ -518,11 +520,11 @@ end
 function [out_rel30, out_rel40, out_abs] = compute_roi_power_v2(P, F, roi, bands, totalBand30, totalBand40)
 % 同时返回两个版本的相对功率（1-30Hz 和 1-40Hz 分母）和绝对功率
 % P: freq x chan
-% 每个 ROI 输出 5 个频段: theta, alpha, beta, low_beta, high_beta
+% 每个 ROI 输出 6 个频段: theta, alpha, beta, low_beta, high_beta, low_gamma
 roiList = {roi.front, roi.par, roi.occ};
-out_rel30 = nan(1,15);  % 3 ROI x 5 频段
-out_rel40 = nan(1,15);
-out_abs   = nan(1,15);
+out_rel30 = nan(1,18);  % 3 ROI x 6 频段
+out_rel40 = nan(1,18);
+out_abs   = nan(1,18);
 oi = 0;
 
 for r=1:3
@@ -544,6 +546,9 @@ for r=1:3
     % high_beta
     oi = oi + 1;
     [out_rel30(oi), out_rel40(oi), out_abs(oi)] = band_power_v2(Pm, F, bands.high_beta, totalBand30, totalBand40);
+    % low_gamma
+    oi = oi + 1;
+    [out_rel30(oi), out_rel40(oi), out_abs(oi)] = band_power_v2(Pm, F, bands.low_gamma, totalBand30, totalBand40);
 end
 end
 
@@ -891,15 +896,24 @@ Tv = Tv(ord, :);
 % 选择回归分析需要的列
 sceneTable = table( ...
     Tv.scene_id, ...
+    Tv.block_id, ...
+    Tv.cycle_in_block, ...
+    Tv.pair_id, ...
     Tv.dur_s, ...
-    Tv.F_theta, Tv.F_alpha, Tv.F_beta, ...
-    Tv.P_theta, Tv.P_alpha, Tv.P_beta, ...
-    Tv.O_theta, Tv.O_alpha, Tv.O_beta, ...
+    Tv.F_theta, Tv.F_alpha, Tv.F_beta, Tv.F_low_beta, Tv.F_high_beta, Tv.F_low_gamma, ...
+    Tv.P_theta, Tv.P_alpha, Tv.P_beta, Tv.P_low_beta, Tv.P_high_beta, Tv.P_low_gamma, ...
+    Tv.O_theta, Tv.O_alpha, Tv.O_beta, Tv.O_low_beta, Tv.O_high_beta, Tv.O_low_gamma, ...
+    Tv.F_TAR, Tv.F_TBR, Tv.F_BA, ...
+    Tv.P_TAR, Tv.P_TBR, Tv.P_BA, ...
+    Tv.O_TAR, Tv.O_TBR, Tv.O_BA, ...
     'VariableNames', { ...
-        'scene_id', 'duration_s', ...
-        'F_theta', 'F_alpha', 'F_beta', ...
-        'P_theta', 'P_alpha', 'P_beta', ...
-        'O_theta', 'O_alpha', 'O_beta' ...
+        'scene_id', 'block_id', 'cycle_in_block', 'pair_id', 'duration_s', ...
+        'F_theta', 'F_alpha', 'F_beta', 'F_low_beta', 'F_high_beta', 'F_low_gamma', ...
+        'P_theta', 'P_alpha', 'P_beta', 'P_low_beta', 'P_high_beta', 'P_low_gamma', ...
+        'O_theta', 'O_alpha', 'O_beta', 'O_low_beta', 'O_high_beta', 'O_low_gamma', ...
+        'F_TAR', 'F_TBR', 'F_BA', ...
+        'P_TAR', 'P_TBR', 'P_BA', ...
+        'O_TAR', 'O_TBR', 'O_BA' ...
     });
 
 % 保存
