@@ -1,6 +1,9 @@
 # Changelog
 
 ## 2026-02-17
+- test: add smoke check for scene_level schema fields and low_gamma support markers.
+- docs: add statistical interpretation notes (gamma vs EMG artifact risk) to README and README.zh-CN.
+- release: prepare reproducibility tag `v0.3.0`.
 - feat: add low-gamma band support (`bands.low_gamma`, default `[30,45]`) and export ROI low-gamma columns (`F/P/O_low_gamma`).
 - feat: enrich `scene_level.csv` with `block_id`, `cycle_in_block`, `pair_id`, low/high beta + low-gamma columns, and TAR/TBR/BA ratio metrics.
 - docs: rewrite `README.md` as bilingual (EN+ZH) with TOC; add dedicated Chinese doc `README.zh-CN.md`.

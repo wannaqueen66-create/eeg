@@ -34,6 +34,24 @@ assert(exist(fp_qc,'dir')==7);
 assert(exist(fullfile(fp_sub,'config_used.json'),'file')==2);
 fprintf('[OK] prepare_output directory + config snapshot\n');
 
+
+% Test 4: scene_level export schema fields are present in pipeline script (static smoke check)
+mainScript = fileread(fullfile(fileparts(mfilename('fullpath')), '..', 'run_eeg_bandpower_pipeline.m'));
+requiredFields = {
+    "'block_id'", "'cycle_in_block'", "'pair_id'", ...
+    "'F_low_beta'", "'F_high_beta'", "'F_low_gamma'", ...
+    "'P_low_beta'", "'P_high_beta'", "'P_low_gamma'", ...
+    "'O_low_beta'", "'O_high_beta'", "'O_low_gamma'", ...
+    "'F_TAR'", "'F_TBR'", "'F_BA'", ...
+    "'P_TAR'", "'P_TBR'", "'P_BA'", ...
+    "'O_TAR'", "'O_TBR'", "'O_BA'"};
+for i = 1:numel(requiredFields)
+    assert(contains(mainScript, requiredFields{i}), ['Missing scene_level field marker: ' requiredFields{i}]);
+end
+assert(contains(mainScript, 'bands.low_gamma'), 'low_gamma band support is expected in main pipeline');
+fprintf('[OK] scene_level schema + low_gamma static checks
+');
+
 fprintf('All smoke tests passed.\n');
 end
 

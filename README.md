@@ -15,7 +15,8 @@ MATLAB/EEGLAB pipeline for **VR scene-viewing EEG bandpower analysis**.
 - [7. Configuration / 配置文件](#7-configuration--配置文件)
 - [8. Outputs / 输出结果](#8-outputs--输出结果)
 - [9. Tests / 测试](#9-tests--测试)
-- [10. FAQ / 常见问题](#10-faq--常见问题)
+- [10. Statistical Notes / 统计解释建议](#10-statistical-notes--统计解释建议)
+- [11. FAQ / 常见问题](#11-faq--常见问题)
 
 ---
 
@@ -190,7 +191,22 @@ run('tests/run_smoke_tests.m');
 
 ---
 
-## 10. FAQ / 常见问题
+
+## 10. Statistical Notes / 统计解释建议
+
+**English**
+- `low_gamma (30–45 Hz)` is informative for immersion/arousal hypotheses, but also sensitive to muscle artifacts (jaw/forehead/neck EMG).
+- Prefer interpreting gamma together with QC indicators (especially high-frequency ratio and segment quality checks).
+- For confirmatory conclusions, prioritize robust paired effects across repeated scenes and subjects rather than single-segment peaks.
+
+**中文**
+- `low_gamma (30–45 Hz)` 可用于沉浸/唤醒相关探索，但对肌电伪迹（咬肌、额肌、颈部）更敏感。
+- 建议结合 QC 指标共同解读（尤其是高频占比与分段质量检查）。
+- 在正式结论中，优先看跨场景、跨被试的稳定配对效应，不建议仅依据单段峰值判断。
+
+---
+
+## 11. FAQ / 常见问题
 
 **Q1: Missing O1/OZ/O2 channels?**  
 Check channel names or edit ROI labels in config.
