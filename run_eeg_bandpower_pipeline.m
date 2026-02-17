@@ -87,21 +87,6 @@ if isfield(cfg, 'bands')
     if isfield(b, 'totalBand30'); totalBand30 = b.totalBand30; end
 end
 
-%% ===== 1.5) 可配置参数 (QC 阈值 / 配对模式) =====
-if ~exist('cfg', 'var') || isempty(cfg)
-    cfg = struct();
-end
-% QC 阈值：灰屏时长合理范围（秒）
-if ~isfield(cfg,'gray_dur_min'); cfg.gray_dur_min = 3; end     % 太短可能是 marker 抖动
-if ~isfield(cfg,'gray_dur_max'); cfg.gray_dur_max = 15; end    % 太长可能是异常
-% QC 阈值：问卷时长合理范围（秒）
-if ~isfield(cfg,'quest_dur_min'); cfg.quest_dur_min = 5; end    % 太短可能是漏填/误触发
-if ~isfield(cfg,'quest_dur_max'); cfg.quest_dur_max = 120; end  % 太长可能是异常
-% 配对模式：'strict' = 多 gray 时排除该对; 'lenient' = 多 gray 取第一个
-if ~isfield(cfg,'pairing_mode'); cfg.pairing_mode = 'strict'; end  % 推荐 strict，避免异常数据污染主结果
-% 输出详细日志
-if ~isfield(cfg,'verbose'); cfg.verbose = true; end
-
 labels = upper(string({EEG.chanlocs.labels}));
 % ROI 可配置
 front_labels = ["F3","F4"];
@@ -429,30 +414,14 @@ end
 T.pair_id = nan(height(T), 1);     % 配对编号（view 和 gray 共享）
 T.pair_gap_s = nan(height(T), 1);  % 配对间隔（仅 gray 有值）
 
-view_indices = find(conds == "view");
-gray_indices = find(conds == "gray");
-pair_counter = 0;
-
-for i = 1:numel(view_indices)
-    vi = view_indices(i);
-    view_end = T.end_s(vi);
-    
-    if i < numel(view_indices)
-        next_view_start = T.start_s(view_indices(i+1));
-    else
-        next_view_start = Inf;
-    end
-    
-    grays_in_window = gray_indices(T.start_s(gray_indices) > view_end & ...
-                                    T.start_s(gray_indices) < next_view_start);
-    
-    if ~isempty(grays_in_window)
-        gi = grays_in_window(1);  % 取第一个 gray（与配对逻辑一致）
-        pair_counter = pair_counter + 1;
-        T.pair_id(vi) = pair_counter;
-        T.pair_id(gi) = pair_counter;
-        T.pair_gap_s(gi) = T.start_s(gi) - T.end_s(vi);
-    end
+[pairs, ~, ~] = find_view_gray_pairs(T, 'lenient');
+pair_counter = size(pairs, 1);
+for i = 1:pair_counter
+    vi = pairs(i,1);
+    gi = pairs(i,2);
+    T.pair_id(vi) = i;
+    T.pair_id(gi) = i;
+    T.pair_gap_s(gi) = T.start_s(gi) - T.end_s(vi);
 end
 
 fprintf('Assigned pair_id to %d view-gray pairs.\n', pair_counter);
@@ -486,6 +455,7 @@ plot_topoplot_view_minus_gray(EEG, T, bands, totalBand30, fs, wlen, nover, nfft,
 
 %% ===== 11) 导出论文级汇总表 =====
 export_summary_tables(T, fp_csv, base);
+summary_files{end+1} = fullfile(fp_csv, sprintf('%s_bandpower_summary.csv', base)); %#ok<AGROW>
 
 %% ===== 12) 导出 scene_level.csv 用于回归分析 =====
 export_scene_level(T, fp_csv, base);
@@ -515,6 +485,11 @@ plot_three_stage_chain(T, fp_fig, base);
 %% ===== 20) Scene 序列曲线 =====
 plot_scene_sequence(T, fp_fig, base);
 
+%% ===== 21) 可选打包输出 =====
+if isfield(cfg, 'zip_output') && cfg.zip_output
+    zip_output_files(fp_sub, base);
+end
+
 % NOTE: Topoplot with 8 channels is illustrative only (limited spatial resolution).
 fprintf('\nNote: Topoplot with %d channels is illustrative only.\n', EEG.nbchan);
 
@@ -539,26 +514,6 @@ end
 end
 
 %% ================== helper functions ==================
-
-function [types, lat_samp, tsec] = get_events_sorted(EEG, fs)
-ev = EEG.event;
-n = numel(ev);
-types = strings(n,1);
-lat_samp = zeros(n,1);
-tsec = zeros(n,1);
-
-for i=1:n
-    typ = ev(i).type;
-    if iscell(typ), typ = typ{1}; end
-    types(i) = string(typ);
-    lat_samp(i) = double(ev(i).latency);
-    tsec(i) = (lat_samp(i)-1)/fs;
-end
-
-[lat_samp, idx] = sort(lat_samp);
-types = types(idx);
-tsec  = tsec(idx);
-end
 
 function [out_rel30, out_rel40, out_abs] = compute_roi_power_v2(P, F, roi, bands, totalBand30, totalBand40)
 % 同时返回两个版本的相对功率（1-30Hz 和 1-40Hz 分母）和绝对功率
@@ -697,28 +652,7 @@ end
 function plot_paired_gray_minus_view(T, fp, base)
 % 就近窗口匹配：对每个 view，在它结束后、下一个 view 开始前，找第一个 gray
 
-conds = string(T.cond);
-view_indices = find(conds == "view");
-gray_indices = find(conds == "gray");
-
-pairs = [];
-for i = 1:numel(view_indices)
-    vi = view_indices(i);
-    view_end = T.end_s(vi);
-    
-    if i < numel(view_indices)
-        next_view_start = T.start_s(view_indices(i+1));
-    else
-        next_view_start = Inf;
-    end
-    
-    grays_in_window = gray_indices(T.start_s(gray_indices) > view_end & ...
-                                    T.start_s(gray_indices) < next_view_start);
-    
-    if ~isempty(grays_in_window)
-        pairs(end+1,:) = [vi, grays_in_window(1)]; %#ok<AGROW>
-    end
-end
+pairs = find_view_gray_pairs(T, 'lenient');
 
 if isempty(pairs)
     warning('No view-gray pairs found.'); 
@@ -826,7 +760,7 @@ for bi = 1:3
     % 计算 view 段均值
     for kk = idx_view'
         seg = double(EEG.data(:, T.s0(kk):T.s1(kk)));
-        [P,F] = pwelch(seg', round(fs*2), round(fs), 2^nextpow2(round(fs*2)), fs);
+        [P,F] = pwelch(seg', wlen, nover, nfft, fs);
         for ci = 1:EEG.nbchan
             [rel, ~] = band_power(P(:,ci), F, bandRange, totalBand);
             rB_view(ci) = rB_view(ci) + rel;
@@ -838,7 +772,7 @@ for bi = 1:3
     % 计算 gray 段均值
     for kk = idx_gray'
         seg = double(EEG.data(:, T.s0(kk):T.s1(kk)));
-        [P,F] = pwelch(seg', round(fs*2), round(fs), 2^nextpow2(round(fs*2)), fs);
+        [P,F] = pwelch(seg', wlen, nover, nfft, fs);
         for ci = 1:EEG.nbchan
             [rel, ~] = band_power(P(:,ci), F, bandRange, totalBand);
             rB_gray(ci) = rB_gray(ci) + rel;
@@ -903,24 +837,7 @@ p_view_gray = NaN;
 p_close_open = NaN;
 
 if any(conds=="view") && any(conds=="gray")
-    % 就近窗口匹配
-    view_indices = find(conds == "view");
-    gray_indices = find(conds == "gray");
-    pairs = [];
-    for i = 1:numel(view_indices)
-        vi = view_indices(i);
-        view_end = T.end_s(vi);
-        if i < numel(view_indices)
-            next_view_start = T.start_s(view_indices(i+1));
-        else
-            next_view_start = Inf;
-        end
-        grays_in_window = gray_indices(T.start_s(gray_indices) > view_end & ...
-                                        T.start_s(gray_indices) < next_view_start);
-        if ~isempty(grays_in_window)
-            pairs(end+1,:) = [vi, grays_in_window(1)]; %#ok<AGROW>
-        end
-    end
+    pairs = find_view_gray_pairs(T, 'lenient');
     if ~isempty(pairs) && size(pairs,1) >= 6
         viewA = T.O_alpha(pairs(:,1));
         grayA = T.O_alpha(pairs(:,2));
@@ -1006,58 +923,10 @@ function export_pairs_check(T, fp, base, cfg)
 %   'strict' = 多 gray 时排除该对，不纳入主统计
 %   'lenient' = 多 gray 时取第一个（用于补充分析/敏感性分析）
 
-nRows = height(T);
-conds = string(T.cond);
-
-view_indices = find(conds == "view");
-gray_indices = find(conds == "gray");
-
-pairs = [];
-pair_status = {};  % 'normal' / 'no_gray' / 'multi_gray'
-anomalies = {};
-
-for i = 1:numel(view_indices)
-    vi = view_indices(i);
-    view_end = T.end_s(vi);
-    
-    if i < numel(view_indices)
-        next_view_start = T.start_s(view_indices(i+1));
-    else
-        next_view_start = Inf;
-    end
-    
-    grays_in_window = gray_indices(T.start_s(gray_indices) > view_end & ...
-                                    T.start_s(gray_indices) < next_view_start);
-    
-    if isempty(grays_in_window)
-        % 无 gray：异常
-        pair_status{end+1} = 'no_gray'; %#ok<AGROW>
-        pairs(end+1,:) = [vi, NaN]; %#ok<AGROW>
-        anomalies{end+1} = sprintf('view seg_idx=%d (scene=%d): NO GRAY found', ...
-            vi, T.scene_id(vi)); %#ok<AGROW>
-            
-    elseif numel(grays_in_window) > 1
-        % 多 gray：根据模式处理
-        if strcmp(cfg.pairing_mode, 'strict')
-            % strict 模式：排除该对
-            pair_status{end+1} = 'multi_gray_excluded'; %#ok<AGROW>
-            pairs(end+1,:) = [vi, NaN]; %#ok<AGROW>
-            anomalies{end+1} = sprintf('view seg_idx=%d (scene=%d): MULTIPLE GRAYS (%d), EXCLUDED in strict mode', ...
-                vi, T.scene_id(vi), numel(grays_in_window)); %#ok<AGROW>
-        else
-            % lenient 模式：取第一个
-            gi = grays_in_window(1);
-            pair_status{end+1} = 'multi_gray_first'; %#ok<AGROW>
-            pairs(end+1,:) = [vi, gi]; %#ok<AGROW>
-            anomalies{end+1} = sprintf('view seg_idx=%d (scene=%d): MULTIPLE GRAYS (%d), using first (lenient)', ...
-                vi, T.scene_id(vi), numel(grays_in_window)); %#ok<AGROW>
-        end
-    else
-        % 正常：刚好一个 gray
-        pair_status{end+1} = 'normal'; %#ok<AGROW>
-        pairs(end+1,:) = [vi, grays_in_window(1)]; %#ok<AGROW>
-    end
+if ~isfield(cfg, 'pairing_mode') || isempty(cfg.pairing_mode)
+    cfg.pairing_mode = 'strict';
 end
+[pairs, pair_status, anomalies] = find_view_gray_pairs(T, cfg.pairing_mode);
 
 % 统计有效配对数
 valid_pairs = ~isnan(pairs(:,2));
@@ -1203,26 +1072,7 @@ function plot_paired_scatter(T, fp, base, cfg)
 % 配对散点+连线图：view vs gray
 % 让配对差异一眼可信，能看出是否被离群点"带出来的"
 
-conds = string(T.cond);
-view_indices = find(conds == "view");
-gray_indices = find(conds == "gray");
-
-% 构建配对
-pairs = [];
-for i = 1:numel(view_indices)
-    vi = view_indices(i);
-    view_end = T.end_s(vi);
-    if i < numel(view_indices)
-        next_view_start = T.start_s(view_indices(i+1));
-    else
-        next_view_start = Inf;
-    end
-    grays_in_window = gray_indices(T.start_s(gray_indices) > view_end & ...
-                                    T.start_s(gray_indices) < next_view_start);
-    if ~isempty(grays_in_window) && numel(grays_in_window) == 1
-        pairs(end+1,:) = [vi, grays_in_window(1)]; %#ok<AGROW>
-    end
-end
+pairs = find_view_gray_pairs(T, 'strict');
 
 if isempty(pairs)
     warning('No valid pairs for scatter plot.');
@@ -1618,42 +1468,6 @@ fprintf('Saved figure: %s\n', figFile);
 end
 
 
-function cfg = load_cfg(config_path)
-% 读取 JSON 配置（可选）并返回 cfg 结构体
-cfg = struct();
-try
-    if exist(config_path, 'file')
-        raw = fileread(config_path);
-        cfg = jsondecode(raw);
-    end
-catch
-    cfg = struct();
-end
-
-% 默认值
-if ~isfield(cfg, 'gray_dur_min'); if ~isfield(cfg,'gray_dur_min'); cfg.gray_dur_min = 3; end end
-if ~isfield(cfg, 'gray_dur_max'); if ~isfield(cfg,'gray_dur_max'); cfg.gray_dur_max = 15; end end
-if ~isfield(cfg, 'quest_dur_min'); if ~isfield(cfg,'quest_dur_min'); cfg.quest_dur_min = 5; end end
-if ~isfield(cfg, 'quest_dur_max'); if ~isfield(cfg,'quest_dur_max'); cfg.quest_dur_max = 120; end end
-if ~isfield(cfg, 'pairing_mode'); cfg.pairing_mode = 'strict'; end
-if ~isfield(cfg, 'verbose'); if ~isfield(cfg,'verbose'); cfg.verbose = true; end end
-if ~isfield(cfg, 'log_file'); cfg.log_file = ''; end
-if ~isfield(cfg, 'output_dir'); cfg.output_dir = ''; end
-if ~isfield(cfg, 'zip_output'); cfg.zip_output = false; end
-if ~isfield(cfg, 'global_summary'); cfg.global_summary = false; end
-if ~isfield(cfg, 'global_summary_path'); cfg.global_summary_path = ''; end
-end
-
-
-function fp_out = resolve_output_dir(fp, output_dir)
-% 解析输出目录（支持相对/绝对路径）
-if startsWith(output_dir, filesep) || (~isempty(regexp(output_dir,'^[A-Za-z]:', 'once')))
-    fp_out = output_dir;
-else
-    fp_out = fullfile(fp, output_dir);
-end
-end
-
 function export_marker_report(segs, fp, base)
 % 输出非法转移报告
 idx = arrayfun(@(s) isfield(s,'is_valid') && ~s.is_valid, segs);
@@ -1678,6 +1492,62 @@ try
     end
 catch
 end
+end
+
+
+function [pairs, pair_status, anomalies] = find_view_gray_pairs(T, mode)
+% 通用 view-gray 配对：以 view 结束后到下一 view 开始前的 gray 为候选
+% mode: 'strict'|'lenient'
+
+if nargin < 2 || isempty(mode)
+    mode = 'strict';
+end
+
+conds = string(T.cond);
+view_indices = find(conds == "view");
+gray_indices = find(conds == "gray");
+
+pairs = [];
+pair_status = {};
+anomalies = {};
+
+for i = 1:numel(view_indices)
+    vi = view_indices(i);
+    view_end = T.end_s(vi);
+
+    if i < numel(view_indices)
+        next_view_start = T.start_s(view_indices(i+1));
+    else
+        next_view_start = Inf;
+    end
+
+    grays_in_window = gray_indices(T.start_s(gray_indices) > view_end & ...
+                                    T.start_s(gray_indices) < next_view_start);
+
+    if isempty(grays_in_window)
+        pair_status{end+1} = 'no_gray'; %#ok<AGROW>
+        pairs(end+1,:) = [vi, NaN]; %#ok<AGROW>
+        anomalies{end+1} = sprintf('view seg_idx=%d (scene=%d): NO GRAY found', ...
+            vi, T.scene_id(vi)); %#ok<AGROW>
+    elseif numel(grays_in_window) > 1
+        if strcmp(mode, 'strict')
+            pair_status{end+1} = 'multi_gray_excluded'; %#ok<AGROW>
+            pairs(end+1,:) = [vi, NaN]; %#ok<AGROW>
+            anomalies{end+1} = sprintf('view seg_idx=%d (scene=%d): MULTIPLE GRAYS (%d), EXCLUDED in strict mode', ...
+                vi, T.scene_id(vi), numel(grays_in_window)); %#ok<AGROW>
+        else
+            gi = grays_in_window(1);
+            pair_status{end+1} = 'multi_gray_first'; %#ok<AGROW>
+            pairs(end+1,:) = [vi, gi]; %#ok<AGROW>
+            anomalies{end+1} = sprintf('view seg_idx=%d (scene=%d): MULTIPLE GRAYS (%d), using first (lenient)', ...
+                vi, T.scene_id(vi), numel(grays_in_window)); %#ok<AGROW>
+        end
+    else
+        pair_status{end+1} = 'normal'; %#ok<AGROW>
+        pairs(end+1,:) = [vi, grays_in_window(1)]; %#ok<AGROW>
+    end
+end
+
 end
 
 function export_global_summary(summary_files, cfg)
@@ -1706,36 +1576,3 @@ end
 end
 
 
-function validate_cycle_counts(segs)
-% 检查 7→8→9 循环次数是否为 6
-conds = string({segs.cond});
-view_count = sum(conds=="view");
-quest_small_count = sum(conds=="questionnaire_small");
-gray_count = sum(conds=="gray");
-if view_count ~= 12
-    fprintf('
-[WARN] view count = %d (expected 12)
-', view_count);
-end
-if quest_small_count ~= 12
-    fprintf('[WARN] questionnaire_small count = %d (expected 12)
-', quest_small_count);
-end
-if gray_count ~= 12
-    fprintf('[WARN] gray count = %d (expected 12)
-', gray_count);
-end
-end
-
-function write_config_snapshot(cfg, fp)
-% 保存 config 快照
-try
-    raw = jsonencode(cfg);
-    fid = fopen(fullfile(fp, 'config_used.json'), 'w');
-    if fid ~= -1
-        fwrite(fid, raw);
-        fclose(fid);
-    end
-catch
-end
-end

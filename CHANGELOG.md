@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-02-17
+- fix: remove duplicated in-script config-default block; defaults now come from `pipeline.load_config` only.
+- fix: correct view-gray pairing in `export_summary_tables` by using table-row indices (via shared helper), avoiding condition-index mismatch.
+- fix: wire `summary_files` collection during batch run so `global_summary=true` can generate `global_bandpower_summary.csv`.
+- feat: enable optional zip packaging when `zip_output=true` by calling `zip_output_files` at end of each dataset run.
+- refactor: extract shared `find_view_gray_pairs` helper and reuse in pair-id assignment / paired plots / pairs-check / summary tests.
+- refactor: remove unused local helper functions (`get_events_sorted`, `load_cfg`, local `resolve_output_dir`, `validate_cycle_counts`, local `write_config_snapshot`).
+- improve: unify topoplot Welch parameters with pipeline-level `wlen/nover/nfft` for consistency.
+
 ## 2026-02-08
 - fix: define `base` before first use in `run_eeg_bandpower_pipeline.m`.
 - refactor: remove redundant late `fileparts(fn)` reassignment for `base`.
