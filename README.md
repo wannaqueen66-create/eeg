@@ -10,7 +10,7 @@ MATLAB/EEGLAB pipeline for **VR scene-viewing EEG bandpower analysis**.
 - [2. Marker Protocol / Marker 实验流程](#2-marker-protocol--marker-实验流程)
 - [3. Architecture / 架构概览](#3-architecture--架构概览)
 - [4. Requirements / 运行环境](#4-requirements--运行环境)
-- [5. Preprocessing Pipeline / 预处理流水线](#5-preprocessing-pipeline--预处理流水线)
+- [5. Input Data Assumptions / 输入数据约定](#5-input-data-assumptions--输入数据约定)
 - [6. Quick Start / 快速开始](#6-quick-start--快速开始)
 - [7. Full Tutorial / 完整使用教程](#7-full-tutorial--完整使用教程)
 - [8. Configuration / 配置文件](#8-configuration--配置文件)
@@ -72,37 +72,15 @@ MATLAB/EEGLAB pipeline for **VR scene-viewing EEG bandpower analysis**.
 ---
 
 
-## 5. Preprocessing Pipeline / 预处理流水线
+## 5. Input Data Assumptions / 输入数据约定
 
 **English**
-This repo now includes a preprocessing entrypoint:
-- `run_eeg_preprocess_pipeline.m`
-- default config: `preprocess_config.json`
-
-It can perform: bandpass, notch, re-reference, ICA, and optional ICLabel-based auto IC rejection.
-
-Example:
-```matlab
-run_eeg_preprocess_pipeline('path/to/raw_or_folder');
-run_eeg_preprocess_pipeline('path/to/raw_or_folder','preprocess_config.json');
-```
-
-Output defaults to `preprocessed/` with `*_preproc.set`.
+- The pipeline expects **already-preprocessed** EEGLAB `.set` files.
+- Please provide datasets with filtering / re-reference / ICA (if used) already completed.
 
 **中文**
-本仓库已新增预处理入口：
-- `run_eeg_preprocess_pipeline.m`
-- 默认配置：`preprocess_config.json`
-
-支持：带通、陷波、重参考、ICA，以及可选 ICLabel 自动剔除伪迹 IC。
-
-示例：
-```matlab
-run_eeg_preprocess_pipeline('path/to/raw_or_folder');
-run_eeg_preprocess_pipeline('path/to/raw_or_folder','preprocess_config.json');
-```
-
-默认输出到 `preprocessed/`，文件名为 `*_preproc.set`。
+- 本流水线默认输入为 **已完成预处理** 的 EEGLAB `.set` 文件。
+- 请直接提供已完成滤波 / 重参考 / ICA（如使用）等步骤的数据。
 
 ---
 
