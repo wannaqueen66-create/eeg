@@ -102,8 +102,10 @@ run_eeg_bandpower_pipeline('path/to/data.set', 'config.json');
 ```
 
 说明：
+- 每个被试的结果文件夹名 = 输入 `.set` 的**文件名（去掉扩展名）**，便于对照核对。
 - 如果在 `config.json` 里设置了 `output_dir`，输出会写到 `<output_dir>/...`。
 - 文件夹批量模式下当 `global_summary=true` 时，会生成 `summary/` 并写入全局汇总表。
+- 每个被试结果文件夹内会写入 `input_set_path.txt`，记录本次处理的输入文件路径，方便追溯。
 
 主要文件：
 - `*_bandpower_roi.csv`

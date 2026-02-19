@@ -61,7 +61,9 @@ for fi = 1:numel(files)
     fs = EEG.srate;
 
     % 输出目录与配置快照
+    % NOTE: subject folder name = base name of the .set file (no extension).
     [fp_sub, fp_csv, fp_fig, fp_qc] = pipeline.prepare_output(fp, base, cfg);
+    pipeline.write_input_snapshot(fp_sub, this_file);
 
 stage = 'setup_bands_roi';
 %% ===== 1) 频段、ROI、Welch 参数 =====

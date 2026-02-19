@@ -12,7 +12,11 @@ if ~exist(fp_out, 'dir')
     mkdir(fp_out);
 end
 
-fp_sub = fullfile(fp_out, subject_id);
+% Ensure the subject folder name matches the .set base name, but is safe on Windows.
+subject_id = string(subject_id);
+subject_id = regexprep(subject_id, '[<>:"/\\|?*]', '_');
+subject_id = regexprep(subject_id, '[\s\.]+$', ''); % strip trailing spaces/dots
+fp_sub = fullfile(fp_out, char(subject_id));
 if ~exist(fp_sub, 'dir')
     mkdir(fp_sub);
 end
