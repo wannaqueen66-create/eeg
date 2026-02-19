@@ -52,9 +52,7 @@ for fi = 1:numel(files)
     fn = [name ext];
     base = name;
     stage = 'load_eeg';
-    fprintf('
-=== Processing %s (%d/%d) ===
-', fn, fi, numel(files));
+    fprintf('\n=== Processing %s (%d/%d) ===\n', fn, fi, numel(files));
 
     try
     EEG = pop_loadset('filename', fn, 'filepath', fp);
