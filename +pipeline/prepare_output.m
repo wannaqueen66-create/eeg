@@ -1,12 +1,15 @@
 function [fp_sub, fp_csv, fp_fig, fp_qc] = prepare_output(fp, subject_id, cfg)
 %PREPARE_OUTPUT Create output directories and write config snapshot.
 
-fp_out = fp;
+% Default: place outputs in a dedicated folder under the input .set directory.
+% This avoids cluttering the raw/preprocessed data folder.
 if isfield(cfg, 'output_dir') && ~isempty(cfg.output_dir)
     fp_out = pipeline.resolve_output_dir(fp, cfg.output_dir);
-    if ~exist(fp_out, 'dir')
-        mkdir(fp_out);
-    end
+else
+    fp_out = fullfile(fp, 'bandpower_outputs');
+end
+if ~exist(fp_out, 'dir')
+    mkdir(fp_out);
 end
 
 fp_sub = fullfile(fp_out, subject_id);

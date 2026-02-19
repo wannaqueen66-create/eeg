@@ -91,13 +91,19 @@ run_eeg_bandpower_pipeline('path/to/data.set', 'config.json');
 - `bands`：频段定义（已支持 `low_gamma`）
 
 ## 输出结果
-目录结构：
+目录结构（默认）：
 ```text
-output_dir/subject_id/
-  ├─ csv/
-  ├─ fig/
-  └─ qc/
+<.set所在文件夹>/bandpower_outputs/
+  ├─ <subject_id>/
+  │   ├─ csv/
+  │   ├─ fig/
+  │   └─ qc/
+  └─ summary/
 ```
+
+说明：
+- 如果在 `config.json` 里设置了 `output_dir`，输出会写到 `<output_dir>/...`。
+- 文件夹批量模式下当 `global_summary=true` 时，会生成 `summary/` 并写入全局汇总表。
 
 主要文件：
 - `*_bandpower_roi.csv`
@@ -108,7 +114,7 @@ output_dir/subject_id/
 - `*_qc.csv`
 - `*_marker_report.csv`
 - `config_used.json`
-- `global_bandpower_summary.csv`（当 `global_summary=true`）
+- `summary/global_bandpower_summary.csv`（当 `global_summary=true`）
 - `*_outputs.zip`（当 `zip_output=true`）
 
 ## 测试

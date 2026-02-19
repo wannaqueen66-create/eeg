@@ -512,6 +512,7 @@ disp('Done.');
 end
 
 % 生成全局汇总表（批量模式）
+% Write into a dedicated summary folder under output root.
 if isfield(cfg, 'global_summary') && cfg.global_summary
     export_global_summary(summary_files, cfg);
 end
@@ -1510,12 +1511,18 @@ csvfile = fullfile(fp, sprintf('%s_marker_report.csv', base));
 writetable(T, csvfile);
 end
 
-function zip_output_files(fp, base)
+function zip_output_files(fp_sub, base)
+%ZIP_OUTPUT_FILES Zip the whole subject output folder.
+% fp_sub: <output_root>/<subject_id>
+
 try
-    d = dir(fullfile(fp, [base '*']));
+    d = dir(fullfile(fp_sub, '**', '*'));
     files = arrayfun(@(x) fullfile(x.folder, x.name), d, 'UniformOutput', false);
+    is_dir = arrayfun(@(x) x.isdir, d);
+    files = files(~is_dir);
+
     if ~isempty(files)
-        zip(fullfile(fp, sprintf('%s_outputs.zip', base)), files);
+        zip(fullfile(fp_sub, sprintf('%s_outputs.zip', base)), files);
     end
 catch
 end
@@ -1578,7 +1585,9 @@ end
 end
 
 function export_global_summary(summary_files, cfg)
-% 汇总所有 summary csv 到一个总表
+%EXPORT_GLOBAL_SUMMARY Merge per-subject summary CSVs into one global table.
+% Output: <output_root>/summary/global_bandpower_summary.csv
+
 allT = [];
 for i = 1:numel(summary_files)
     f = summary_files{i};
@@ -1592,14 +1601,27 @@ for i = 1:numel(summary_files)
         end
     end
 end
-if ~isempty(allT)
-    % 默认输出到第一个 summary 所在目录
-    out = fullfile(fileparts(summary_files{1}), 'global_bandpower_summary.csv');
-    if isfield(cfg, 'global_summary_path') && ~isempty(cfg.global_summary_path)
-        out = cfg.global_summary_path;
-    end
-    writetable(allT, out);
+
+if isempty(allT)
+    return;
 end
+
+% Derive output_root from the first summary file:
+% <output_root>/<subject_id>/csv/<base>_bandpower_summary.csv
+csv_dir = fileparts(summary_files{1});
+sub_dir = fileparts(csv_dir);
+out_root = fileparts(sub_dir);
+
+out = fullfile(out_root, 'summary', 'global_bandpower_summary.csv');
+if isfield(cfg, 'global_summary_path') && ~isempty(cfg.global_summary_path)
+    out = cfg.global_summary_path;
+else
+    % ensure summary dir exists
+    fp_summary = fullfile(out_root, 'summary');
+    if ~exist(fp_summary, 'dir'); mkdir(fp_summary); end
+end
+
+writetable(allT, out);
 end
 
 

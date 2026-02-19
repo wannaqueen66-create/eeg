@@ -172,14 +172,20 @@ Use `config.json` to override defaults.
 
 ## 9. Outputs / 输出结果
 
-Typical structure:
+Typical structure (default):
 
 ```text
-output_dir/subject_id/
-  ├─ csv/
-  ├─ fig/
-  └─ qc/
+<input_set_folder>/bandpower_outputs/
+  ├─ <subject_id>/
+  │   ├─ csv/
+  │   ├─ fig/
+  │   └─ qc/
+  └─ summary/
 ```
+
+Notes:
+- If `output_dir` is set in `config.json`, outputs go to `<output_dir>/...` instead.
+- `summary/` is created in folder-batch mode when `global_summary=true`.
 
 CSV includes:
 - `*_bandpower_roi.csv`
@@ -192,7 +198,7 @@ CSV includes:
 
 Also:
 - `config_used.json`
-- `global_bandpower_summary.csv` (if `global_summary=true`)
+- `summary/global_bandpower_summary.csv` (if `global_summary=true`)
 - `*_outputs.zip` (if `zip_output=true`)
 
 ---
