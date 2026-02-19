@@ -186,8 +186,12 @@ Typical structure (default):
 Notes:
 - Subject folder name equals the input `.set` **base filename** (without extension) for easy verification.
 - If `output_dir` is set in `config.json`, outputs go to `<output_dir>/...` instead.
-- `summary/` is created in folder-batch mode when `global_summary=true`.
-- Each subject output folder contains `input_set_path.txt` to trace back the exact input file path.
+- Each subject output folder contains:
+  - `input_set_path.txt` (exact input file path)
+  - `<base>_report.md` (human-readable summary for sharing)
+- The batch-level markdown index is always written to:
+  - `summary/summary_report.md`
+- `summary/global_bandpower_summary.csv` is created in folder-batch mode when `global_summary=true`.
 
 CSV includes:
 - `*_bandpower_roi.csv`

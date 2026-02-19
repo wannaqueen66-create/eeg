@@ -438,6 +438,9 @@ csvfile = fullfile(fp_csv, sprintf('%s_bandpower_roi.csv', base));
 writetable(T, csvfile);
 fprintf('Saved CSV: %s\n', csvfile);
 
+% Write a compact per-subject markdown report for sharing/analysis
+pipeline.write_subject_report_md(fp_sub, base, this_file, cfg, T);
+
 %% ===== 6) 你要的两行均值 =====
 m_closed = mean(T.O_alpha(T.cond=="eyes_closed"), 'omitnan');
 m_open   = mean(T.O_alpha(T.cond=="eyes_open"),   'omitnan');
@@ -517,6 +520,20 @@ end
 % Write into a dedicated summary folder under output root.
 if isfield(cfg, 'global_summary') && cfg.global_summary
     export_global_summary(summary_files, cfg);
+end
+
+% Always write a batch-level markdown index under summary/
+try
+    if ~isempty(files)
+        % If input_path is a folder, use it; otherwise use the file's folder.
+        if isfolder(input_path)
+            fp_in = input_path;
+        else
+            fp_in = fileparts(files{1});
+        end
+        pipeline.write_global_report_md(fp_in, cfg);
+    end
+catch
 end
 
 end
