@@ -24,5 +24,7 @@ if ~isfield(cfg,'zip_output'); cfg.zip_output = false; end
 if ~isfield(cfg,'global_summary'); cfg.global_summary = false; end
 if ~isfield(cfg,'global_summary_path'); cfg.global_summary_path = ''; end
 if ~isfield(cfg,'strict_structure'); cfg.strict_structure = true; end
+if ~isfield(cfg,'save_log'); cfg.save_log = true; end
+if ~isfield(cfg,'figure_visible'); cfg.figure_visible = false; end
 
 end

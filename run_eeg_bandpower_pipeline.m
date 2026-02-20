@@ -36,10 +36,38 @@ cfg = pipeline.load_config(config_path);
 % 解析输入路径
 files = pipeline.parse_input(input_path);
 
-% 可选日志输出
-if isfield(cfg, 'log_file') && ~isempty(cfg.log_file)
+% Figure visibility (default off for batch friendliness)
+try
+    if isfield(cfg,'figure_visible')
+        if cfg.figure_visible
+            set(0,'DefaultFigureVisible','on');
+        else
+            set(0,'DefaultFigureVisible','off');
+        end
+    end
+catch
+end
+
+% Optional logging: write console output to a per-run/per-subject log file.
+% If cfg.log_file is set, use it. Otherwise, write to <output_root>/summary/pipeline.log
+if isfield(cfg, 'save_log') && cfg.save_log
     try
-        diary(cfg.log_file);
+        if isfield(cfg, 'log_file') && ~isempty(cfg.log_file)
+            diary(cfg.log_file);
+        else
+            % determine input folder
+            if isfolder(input_path)
+                fp_in = input_path;
+            elseif ~isempty(files)
+                fp_in = fileparts(files{1});
+            else
+                fp_in = pwd;
+            end
+            fp_out = pipeline.get_output_root(fp_in, cfg);
+            fp_sum = pipeline.get_summary_dir(fp_in, cfg);
+            logp = fullfile(fp_sum, 'pipeline.log');
+            diary(logp);
+        end
     catch
     end
 end
@@ -462,6 +490,12 @@ fprintf('Saved CSV: %s\n', csvfile);
 % Write a compact per-subject markdown report for sharing/analysis
 pipeline.write_subject_report_md(fp_sub, base, this_file, cfg, T);
 
+% Proactively release memory in low-RAM machines
+try
+    close all;
+catch
+end
+
 %% ===== 6) 你要的两行均值 =====
 m_closed = mean(T.O_alpha(T.cond=="eyes_closed"), 'omitnan');
 m_open   = mean(T.O_alpha(T.cond=="eyes_open"),   'omitnan');
@@ -553,6 +587,14 @@ try
             fp_in = fileparts(files{1});
         end
         pipeline.write_global_report_md(fp_in, cfg);
+    end
+catch
+end
+
+% Stop logging
+try
+    if isfield(cfg,'save_log') && cfg.save_log
+        diary off;
     end
 catch
 end
@@ -705,6 +747,7 @@ for fi = 1:numel(fields)
     figFile = fullfile(fp, sprintf('%s_roi_%s.png', base, roiShort(fi)));
     saveas(fig, figFile);
     fprintf('Saved figure: %s\n', figFile);
+    try; close(fig); catch; end
 end
 end
 
@@ -731,6 +774,7 @@ title('Occipital alpha recovery per cycle');
 figFile = fullfile(fp, sprintf('%s_paired_alpha_recovery.png', base));
 saveas(fig, figFile);
 fprintf('Saved figure: %s\n', figFile);
+try; close(fig); catch; end
 
 % 同时对 theta/alpha/beta 做 gray vs view 配对检验（三个 ROI）
 if size(pairs,1) >= 6
@@ -787,6 +831,7 @@ title('Occipital PSD across conditions');
 figFile = fullfile(fp, sprintf('%s_occ_psd.png', base));
 saveas(fig, figFile);
 fprintf('Saved figure: %s\n', figFile);
+try; close(fig); catch; end
 end
 
 function plot_topoplot_view_minus_gray(EEG, T, bands, totalBand, fs, wlen, nover, nfft, fp, base)
@@ -853,6 +898,7 @@ for bi = 1:3
     figFile = fullfile(fp, sprintf('%s_topoplot_%s.png', base, bandName));
     saveas(fig, figFile);
     fprintf('Saved figure: %s\n', figFile);
+    try; close(fig); catch; end
 end
 end
 
@@ -1203,6 +1249,7 @@ sgtitle('Paired View-Gray Comparison (per scene)', 'FontWeight', 'bold');
 figFile = fullfile(fp, sprintf('%s_paired_scatter.png', base));
 saveas(fig, figFile);
 fprintf('Saved figure: %s\n', figFile);
+try; close(fig); catch; end
 end
 
 function plot_block_comparison(T, fp, base)
@@ -1262,6 +1309,7 @@ sgtitle('Block 1 vs Block 2 Stability (view segments)', 'FontWeight', 'bold');
 figFile = fullfile(fp, sprintf('%s_block_comparison.png', base));
 saveas(fig, figFile);
 fprintf('Saved figure: %s\n', figFile);
+try; close(fig); catch; end
 end
 
 function plot_qc_distributions(T, fp, base, cfg)
@@ -1323,6 +1371,7 @@ sgtitle('Quality Control Distributions', 'FontWeight', 'bold');
 figFile = fullfile(fp, sprintf('%s_qc_distributions.png', base));
 saveas(fig, figFile);
 fprintf('Saved figure: %s\n', figFile);
+try; close(fig); catch; end
 end
 
 function plot_beta_split(T, fp, base)
@@ -1398,6 +1447,7 @@ sgtitle('Low-Beta vs High-Beta (EMG sensitivity comparison)', 'FontWeight', 'bol
 figFile = fullfile(fp, sprintf('%s_beta_split.png', base));
 saveas(fig, figFile);
 fprintf('Saved figure: %s\n', figFile);
+try; close(fig); catch; end
 end
 
 function plot_three_stage_chain(T, fp, base)
@@ -1476,6 +1526,7 @@ sgtitle('Three-Stage Chain: View → Questionnaire → Gray', 'FontWeight', 'bol
 figFile = fullfile(fp, sprintf('%s_three_stage_chain.png', base));
 saveas(fig, figFile);
 fprintf('Saved figure: %s\n', figFile);
+try; close(fig); catch; end
 end
 
 function plot_scene_sequence(T, fp, base)
@@ -1533,6 +1584,7 @@ end
 figFile = fullfile(fp, sprintf('%s_scene_sequence.png', base));
 saveas(fig, figFile);
 fprintf('Saved figure: %s\n', figFile);
+try; close(fig); catch; end
 end
 
 
