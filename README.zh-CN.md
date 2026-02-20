@@ -110,6 +110,10 @@ run_eeg_bandpower_pipeline('path/to/data.set', 'config.json');
   - `<base>_report.md`（可直接发给别人看的 Markdown 摘要）
 - 汇总文件夹会始终生成：
   - `summary/summary_report.md`（批量运行的索引/摘要）
+- 批量分析用合并表（默认开启 `batch_summaries=true`）会写入 `summary/`：
+  - `all_subjects_scene_level.csv`
+  - `all_subjects_pairs_check.csv`
+  - `per_subject_recovery_metrics.csv`
 - 文件夹批量模式下当 `global_summary=true` 时，会额外生成：
   - `summary/global_bandpower_summary.csv`
 

@@ -588,6 +588,14 @@ try
             fp_in = fileparts(files{1});
         end
         pipeline.write_global_report_md(fp_in, cfg);
+
+        % Generate merged batch summaries for downstream analysis
+        if isfield(cfg,'batch_summaries') && cfg.batch_summaries
+            try
+                summarize_bandpower_outputs(fp_in, config_path);
+            catch
+            end
+        end
     end
 catch
 end

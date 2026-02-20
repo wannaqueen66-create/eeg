@@ -194,6 +194,10 @@ Notes:
   - `<base>_report.md` (human-readable summary for sharing)
 - The batch-level markdown index is always written to:
   - `summary/summary_report.md`
+- Batch merged analysis tables (default on via `batch_summaries=true`) are written to `summary/`:
+  - `all_subjects_scene_level.csv`
+  - `all_subjects_pairs_check.csv`
+  - `per_subject_recovery_metrics.csv`
 - `summary/global_bandpower_summary.csv` is created in folder-batch mode when `global_summary=true`.
 
 CSV includes:
