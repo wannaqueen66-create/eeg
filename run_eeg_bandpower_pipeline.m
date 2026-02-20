@@ -343,7 +343,8 @@ fprintf('\n[Global] view=%d, q_small=%d, q_big=%d, gray=%d, rest=%d\n', n_view, 
 exp_view  = 12;
 exp_small = 12;
 exp_big   = 2;
-exp_gray  = 12;
+% NOTE: marker '9' occurs 13 times in the ideal 45-marker protocol, thus gray segments can be 13.
+exp_gray  = 13;
 exp_rest  = 1;
 
 mismatch = (n_view~=exp_view) || (n_small~=exp_small) || (n_big~=exp_big) || (n_gray~=exp_gray) || (n_rest~=exp_rest);
