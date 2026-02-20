@@ -137,6 +137,9 @@ run_eeg_bandpower_pipeline('path/to/data.set','config.json');
 
 Use `config.json` to override defaults.
 
+Additional (new) option:
+- `strict_structure` (default `true`): if enabled, the pipeline will **error & skip** any dataset whose global segment counts do not match the expected structure (view=12, q_small=12, q_big=2, gray=12, rest=1).
+
 ```json
 {
   "gray_dur_min": 3,

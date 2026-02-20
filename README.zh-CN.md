@@ -84,6 +84,7 @@ run_eeg_bandpower_pipeline('path/to/data.set', 'config.json');
 
 ## 配置文件说明
 `config.json` 关键项：
+- `strict_structure`（默认 true）：若开启，则只要全局分段计数与理想结构不一致（view=12, q_small=12, q_big=2, gray=12, rest=1），就会**直接报错并跳过该被试**（批量模式下继续处理其他人）。
 - `pairing_mode`：`strict` 或 `lenient`
 - `zip_output`：是否打包输出 zip
 - `global_summary`：是否导出批量汇总

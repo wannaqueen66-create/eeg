@@ -310,26 +310,44 @@ n_rest = sum(conds=="rest");
 fprintf('\n[Global] view=%d, q_small=%d, q_big=%d, gray=%d, rest=%d\n', n_view, n_small, n_big, n_gray, n_rest);
 
 % 分级判定
-data_quality = 'GOOD';  % GOOD / WARN / FAIL
+% If cfg.strict_structure=true (default), any mismatch will raise an error
+% so the subject is skipped in batch mode.
+exp_view  = 12;
+exp_small = 12;
+exp_big   = 2;
+exp_gray  = 12;
+exp_rest  = 1;
 
-% Hard fail: view≠12 或 q_big≠2（核心结构错误）
-if n_view ~= 12 || n_big ~= 2
-    data_quality = 'FAIL';
-    fprintf('[HARD FAIL] Critical structure error: view=%d (expected 12), q_big=%d (expected 2)\n', n_view, n_big);
-    fprintf('  -> This dataset may be UNUSABLE. Check marker sequence carefully.\n');
-% Soft warn: gray≠12 或 q_small≠12（可继续但需注意）
-elseif n_gray ~= 12 || n_small ~= 12
-    data_quality = 'WARN';
-    fprintf('[SOFT WARN] Minor segment count mismatch:\n');
-    if n_gray ~= 12
-        fprintf('  - gray=%d (expected 12): %d cycles missing gray\n', n_gray, 12-n_gray);
+mismatch = (n_view~=exp_view) || (n_small~=exp_small) || (n_big~=exp_big) || (n_gray~=exp_gray) || (n_rest~=exp_rest);
+
+if isfield(cfg,'strict_structure') && cfg.strict_structure
+    if mismatch
+        msg = sprintf(['[STRICT FAIL] Marker structure mismatch. ' ...
+            'view=%d/%d, q_small=%d/%d, q_big=%d/%d, gray=%d/%d, rest=%d/%d'], ...
+            n_view, exp_view, n_small, exp_small, n_big, exp_big, n_gray, exp_gray, n_rest, exp_rest);
+        error(msg);
+    else
+        fprintf('[OK] Global counts match expected (%d,%d,%d,%d,%d)\n', exp_view, exp_small, exp_big, exp_gray, exp_rest);
     end
-    if n_small ~= 12
-        fprintf('  - q_small=%d (expected 12): %d cycles missing questionnaire\n', n_small, 12-n_small);
-    end
-    fprintf('  -> Analysis will continue. Check pairs_check.csv for affected cycles.\n');
+    data_quality = 'GOOD';
 else
-    fprintf('[OK] Global counts match expected (12,12,2,12,1)\n');
+    data_quality = 'GOOD';  % GOOD / WARN / FAIL
+
+    % Hard fail: view≠12 或 q_big≠2（核心结构错误）
+    if n_view ~= exp_view || n_big ~= exp_big
+        data_quality = 'FAIL';
+        fprintf('[HARD FAIL] Critical structure error: view=%d (expected %d), q_big=%d (expected %d)\n', n_view, exp_view, n_big, exp_big);
+        fprintf('  -> This dataset may be UNUSABLE. Check marker sequence carefully.\n');
+    % Soft warn: gray≠12 或 q_small≠12 或 rest≠1（可继续但需注意）
+    elseif mismatch
+        data_quality = 'WARN';
+        fprintf('[SOFT WARN] Segment count mismatch (expected view=%d, q_small=%d, q_big=%d, gray=%d, rest=%d)\n', ...
+            exp_view, exp_small, exp_big, exp_gray, exp_rest);
+        fprintf('  got: view=%d, q_small=%d, q_big=%d, gray=%d, rest=%d\n', n_view, n_small, n_big, n_gray, n_rest);
+        fprintf('  -> Analysis will continue. Check pairs_check.csv for affected cycles.\n');
+    else
+        fprintf('[OK] Global counts match expected (%d,%d,%d,%d,%d)\n', exp_view, exp_small, exp_big, exp_gray, exp_rest);
+    end
 end
 
 % 保存质量标记到工作区（供后续使用）
@@ -427,6 +445,9 @@ for i = 1:pair_counter
     vi = pairs(i,1);
     gi = pairs(i,2);
     T.pair_id(vi) = i;
+    if isnan(gi)
+        continue;
+    end
     T.pair_id(gi) = i;
     T.pair_gap_s(gi) = T.start_s(gi) - T.end_s(vi);
 end

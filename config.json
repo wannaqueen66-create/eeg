@@ -10,6 +10,7 @@
   "zip_output": false,
   "global_summary": false,
   "global_summary_path": "",
+  "strict_structure": true,
   "roi": {
     "front": ["F3","F4"],
     "par": ["P3","PZ","P4"],
