@@ -1,4 +1,4 @@
-function run_eeg_bandpower_pipeline(input_path, config_path)
+function run_eeg_bandpower_pipeline(input_path, config_path, design_path)
 % RUN_EEG_BANDPOWER_PIPELINE
 % VR 场景观看实验 EEG 频段功率分析流水线
 %
@@ -30,8 +30,21 @@ if nargin < 2 || isempty(config_path)
     % 默认同目录下的 config.json
     config_path = fullfile(fileparts(mfilename('fullpath')), 'config.json');
 end
+if nargin < 3
+    design_path = '';
+end
 
 cfg = pipeline.load_config(config_path);
+
+% Load design mapping (optional)
+if ~isempty(design_path)
+    cfg.design_path = design_path;
+end
+try
+    designMap = pipeline.load_design_mapping(cfg.design_path);
+catch
+    designMap = table();
+end
 
 % 解析输入路径
 files = pipeline.parse_input(input_path);
@@ -1027,6 +1040,14 @@ sceneTable = table( ...
 
 % 保存
 sceneFile = fullfile(fp, sprintf('%s_scene_level.csv', base));
+% Attach design mapping if provided
+try
+    if exist('designMap','var') && ~isempty(designMap)
+        sceneTable = pipeline.attach_design(sceneTable, base, designMap);
+    end
+catch
+end
+
 writetable(sceneTable, sceneFile);
 fprintf('Saved scene_level: %s\n', sceneFile);
 
@@ -1105,6 +1126,14 @@ pairTable = table( ...
 
 % 保存
 pairsFile = fullfile(fp, sprintf('%s_pairs_check.csv', base));
+% Attach design mapping if provided
+try
+    if exist('designMap','var') && ~isempty(designMap)
+        pairTable = pipeline.attach_design(pairTable, base, designMap);
+    end
+catch
+end
+
 writetable(pairTable, pairsFile);
 fprintf('Saved pairs_check: %s\n', pairsFile);
 

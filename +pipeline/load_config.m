@@ -27,5 +27,6 @@ if ~isfield(cfg,'strict_structure'); cfg.strict_structure = true; end
 if ~isfield(cfg,'save_log'); cfg.save_log = true; end
 if ~isfield(cfg,'figure_visible'); cfg.figure_visible = false; end
 if ~isfield(cfg,'batch_summaries'); cfg.batch_summaries = true; end
+if ~isfield(cfg,'design_path'); cfg.design_path = ''; end
 
 end

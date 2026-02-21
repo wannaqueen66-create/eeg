@@ -14,6 +14,7 @@
   "save_log": true,
   "figure_visible": false,
   "batch_summaries": true,
+  "design_path": "",
   "roi": {
     "front": ["F3","F4"],
     "par": ["P3","PZ","P4"],

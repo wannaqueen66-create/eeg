@@ -30,9 +30,9 @@ subs = sort(subs);
 AllScene = table();
 AllPairs = table();
 
-perSub = table('Size',[0 6], 'VariableTypes', ...
-    {'string','double','double','double','double','double'}, ...
-    'VariableNames', {'subject_id','n_pairs','mean_delta_O_alpha','mean_gap_sec','mean_view_dur','mean_gray_dur'});
+perSub = table('Size',[0 8], 'VariableTypes', ...
+    {'string','string','string','double','double','double','double','double'}, ...
+    'VariableNames', {'subject_id','SportFreq','Experience','Order','n_pairs','mean_delta_O_alpha','mean_gap_sec','mean_gray_dur'});
 
 for k = 1:numel(subs)
     sid = string(subs{k});
@@ -56,8 +56,20 @@ for k = 1:numel(subs)
             P.subject_id = repmat(sid, height(P), 1);
             AllPairs = [AllPairs; P]; %#ok<AGROW>
 
-            perSub = [perSub; {sid, height(P), mean(P.delta_O_alpha,'omitnan'), ...
-                mean(P.gap_sec,'omitnan'), mean(P.view_dur,'omitnan'), mean(P.gray_dur,'omitnan')}]; %#ok<AGROW>
+            % subject-level recovery metrics (include subject group labels when present)
+            sf = ""; ex = ""; od = NaN;
+            if ismember('SportFreq', P.Properties.VariableNames)
+                sf = string(P.SportFreq(1));
+            end
+            if ismember('Experience', P.Properties.VariableNames)
+                ex = string(P.Experience(1));
+            end
+            if ismember('Order', P.Properties.VariableNames)
+                od = double(P.Order(1));
+            end
+
+            perSub = [perSub; {sid, sf, ex, od, height(P), mean(P.delta_O_alpha,'omitnan'), ...
+                mean(P.gap_sec,'omitnan'), mean(P.gray_dur,'omitnan')}]; %#ok<AGROW>
         catch
         end
     end
