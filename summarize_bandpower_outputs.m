@@ -44,7 +44,8 @@ for k = 1:numel(subs)
             T = readtable(f_scene);
             T.subject_id = repmat(sid, height(T), 1);
             AllScene = [AllScene; T]; %#ok<AGROW>
-        catch
+        catch ME
+            fprintf(2, '[WARN] Failed reading scene_level for %s: %s\n', sid, ME.message);
         end
     end
 
@@ -70,7 +71,8 @@ for k = 1:numel(subs)
 
             perSub = [perSub; {sid, sf, ex, od, height(P), mean(P.delta_O_alpha,'omitnan'), ...
                 mean(P.gap_sec,'omitnan'), mean(P.gray_dur,'omitnan')}]; %#ok<AGROW>
-        catch
+        catch ME
+            fprintf(2, '[WARN] Failed reading pairs_check for %s: %s\n', sid, ME.message);
         end
     end
 end
@@ -96,13 +98,15 @@ end
 % Optional: group-level figures (PNG) under summary/fig/
 try
     pipeline.plot_group_summaries(AllScene, fp_sum, cfg);
-catch
+catch ME
+    fprintf(2, '[WARN] plot_group_summaries failed: %s\n', ME.message);
 end
 
 % Optional: group-level recovery figures from pairs_check (PNG) under summary/fig/
 try
     pipeline.plot_group_recovery_summaries(AllPairs, fp_sum, cfg);
-catch
+catch ME
+    fprintf(2, '[WARN] plot_group_recovery_summaries failed: %s\n', ME.message);
 end
 
 fprintf('Batch summaries written to: %s\n', fp_sum);
