@@ -1933,6 +1933,35 @@ if ismember('block_id', Tv.Properties.VariableNames) && max(Tv.block_id) > 1
     end
 end
 
+% Mark scenes with high HF_ratio segments (possible EMG contamination)
+% Strategy: for each scene_id, take the max HF_ratio among segments belonging to that scene.
+try
+    thr = 0.4;
+    if ismember('qc_hf_ratio', T.Properties.VariableNames)
+        isScene = ~isnan(T.scene_id);
+        sceneU = unique(T.scene_id(isScene));
+        sceneU = sort(sceneU(:)');
+        badScenes = [];
+        for si = sceneU
+            mx = max(T.qc_hf_ratio(T.scene_id==si), [], 'omitnan');
+            if ~isnan(mx) && mx > thr
+                badScenes(end+1) = si; %#ok<AGROW>
+            end
+        end
+
+        if ~isempty(badScenes)
+            yl = ylim;
+            ymark = yl(2) - 0.05*(yl(2)-yl(1));
+            scatter(badScenes, repmat(ymark, size(badScenes)), 80, 'r', 'filled', ...
+                'MarkerEdgeColor','k', 'DisplayName', sprintf('HF>%.2f', thr));
+            text(badScenes, repmat(ymark, size(badScenes)), "  EMG?", 'Color','r', 'FontSize', 8, ...
+                'HorizontalAlignment','left', 'VerticalAlignment','middle');
+            legend('Location','best');
+        end
+    end
+catch
+end
+
 figFile = fullfile(fp, sprintf('%s_scene_sequence.png', base));
 saveas(fig, figFile);
 fprintf('Saved figure: %s\n', figFile);
