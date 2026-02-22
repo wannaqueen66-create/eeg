@@ -25,9 +25,17 @@ end
 T = readtable(fp, 'TextType','string');
 vars = T.Properties.VariableNames;
 
+% --- Robust header cleanup (handles UTF-8 BOM like '\ufeffSubjectID') ---
+vars_clean = regexprep(vars, '^\x{FEFF}', '');
+if any(~strcmp(vars, vars_clean))
+    T.Properties.VariableNames = vars_clean;
+    vars = vars_clean;
+end
+
 % Detect format
 isWide = ismember('trial01_scene', vars) || any(startsWith(lower(vars), 'trial01_'));
-isLong = ismember('SubjectID', vars) && (ismember('SceneID', vars) || ismember('scene_id', lower(vars)));
+% Long format only requires SubjectID + Block + Position; SceneID is optional
+isLong = ismember('SubjectID', vars) && ismember('Block', vars) && ismember('Position', vars);
 
 if isLong && ~isWide
     % ---------- Long format ----------

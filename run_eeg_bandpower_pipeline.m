@@ -40,9 +40,20 @@ cfg = pipeline.load_config(config_path);
 if ~isempty(design_path)
     cfg.design_path = design_path;
 end
-try
+
+% If design_path is provided, fail fast on any loading/format issues.
+if isfield(cfg,'design_path') && ~isempty(cfg.design_path)
     designMap = pipeline.load_design_mapping(cfg.design_path);
-catch
+    if isempty(designMap) || ~istable(designMap) || height(designMap)==0
+        error('Design mapping is empty. Check design_path and required columns (SubjectID/Block/Position).');
+    end
+    req = {'subject_id','scene_id'};
+    for i=1:numel(req)
+        if ~ismember(req{i}, designMap.Properties.VariableNames)
+            error('Design mapping missing required column: %s', req{i});
+        end
+    end
+else
     designMap = table();
 end
 
