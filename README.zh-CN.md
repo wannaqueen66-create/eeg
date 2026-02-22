@@ -115,6 +115,7 @@ run_eeg_bandpower_pipeline('path/to/data.set', 'config.json');
   - `all_subjects_scene_level.csv`（如果提供 `design_path`，会自动附加 scene_name/WWR/Cond/Complexity 等）
   - `all_subjects_pairs_check.csv`（如果提供 `design_path`，会自动附加 scene_name/WWR/Cond/Complexity 等）
   - `per_subject_recovery_metrics.csv`（如果提供 `design_path`，会带 SportFreq/Experience 分组标签）
+  - `fig/`（群组层面自动出图：按 Experience(High/Low)、SportFreq(High/Low) 分组，对比 Complexity(低/高)）
 - 文件夹批量模式下当 `global_summary=true` 时，会额外生成：
   - `summary/global_bandpower_summary.csv`
 

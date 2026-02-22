@@ -93,6 +93,12 @@ if height(perSub) > 0
     writetable(perSub, out.per_subject_recovery);
 end
 
+% Optional: group-level figures (PNG) under summary/fig/
+try
+    pipeline.plot_group_summaries(AllScene, fp_sum, cfg);
+catch
+end
+
 fprintf('Batch summaries written to: %s\n', fp_sum);
 
 end
