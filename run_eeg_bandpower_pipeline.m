@@ -565,7 +565,7 @@ plot_paired_gray_minus_view(T, fp_fig, base);
 plot_occ_psd(EEG, T, roi, fs, wlen, nover, nfft, fp_fig, base);
 
 %% ===== 10) view-gray 地形图（theta/alpha/beta） =====
-plot_topoplot_view_minus_gray(EEG, T, bands, totalBand30, fs, wlen, nover, nfft, fp_fig, base, designMap);
+plot_topoplot_view_minus_gray(EEG, T, bands, totalBand30, fs, wlen, nover, nfft, fp_fig, fp_csv, fp_qc, base, designMap);
 
 %% ===== 11) 导出论文级汇总表 =====
 export_summary_tables(T, fp_csv, base);
@@ -891,7 +891,7 @@ fprintf('Saved figure: %s\n', figFile);
 try; close(fig); catch; end
 end
 
-function plot_topoplot_view_minus_gray(EEG, T, bands, totalBand, fs, wlen, nover, nfft, fp, base, designMap)
+function plot_topoplot_view_minus_gray(EEG, T, bands, totalBand, fs, wlen, nover, nfft, fp_fig, fp_csv, fp_qc, base, designMap)
 % 绘制 theta/alpha/beta 三个频段的 view-gray 差异地形图
 % 若提供 designMap，额外输出：按 Complexity 拆分的 topoplot（High/Low）
 
@@ -901,8 +901,14 @@ if ~isfield(EEG,'chanlocs') || numel(EEG.chanlocs)~=EEG.nbchan
     return;
 end
 
-if nargin < 11
+if nargin < 12
     designMap = table();
+end
+
+% Save chanlocs snapshot for group-level topoplots
+try
+    pipeline.write_chanlocs_snapshot(fp_qc, base, EEG.chanlocs);
+catch
 end
 
 idx_view = find(string(T.cond)=="view");
@@ -976,7 +982,7 @@ for bi = 1:3
     topoplot(dB, EEG.chanlocs, 'electrodes', 'labels');
     title(sprintf('Relative %s difference: view - gray (all scenes)', bandName));
     colorbar;
-    figFile = fullfile(fp, sprintf('%s_topoplot_%s.png', base, bandName));
+    figFile = fullfile(fp_fig, sprintf('%s_topoplot_%s.png', base, bandName));
     saveas(fig, figFile);
     fprintf('Saved figure: %s\n', figFile);
     try; close(fig); catch; end
@@ -988,7 +994,7 @@ for bi = 1:3
         topoplot(rLow, EEG.chanlocs, 'electrodes', 'labels');
         title(sprintf('Relative %s: view (Low complexity)', bandName));
         colorbar;
-        figFile = fullfile(fp, sprintf('%s_topoplot_%s_view_ComplexityLow.png', base, bandName));
+        figFile = fullfile(fp_fig, sprintf('%s_topoplot_%s_view_ComplexityLow.png', base, bandName));
         saveas(fig, figFile);
         fprintf('Saved figure: %s\n', figFile);
         try; close(fig); catch; end
@@ -998,7 +1004,7 @@ for bi = 1:3
         topoplot(dLow, EEG.chanlocs, 'electrodes', 'labels');
         title(sprintf('Relative %s difference: view(ComplexityLow) - gray', bandName));
         colorbar;
-        figFile = fullfile(fp, sprintf('%s_topoplot_%s_viewComplexityLow_minus_gray.png', base, bandName));
+        figFile = fullfile(fp_fig, sprintf('%s_topoplot_%s_viewComplexityLow_minus_gray.png', base, bandName));
         saveas(fig, figFile);
         fprintf('Saved figure: %s\n', figFile);
         try; close(fig); catch; end
@@ -1010,7 +1016,7 @@ for bi = 1:3
         topoplot(rHigh, EEG.chanlocs, 'electrodes', 'labels');
         title(sprintf('Relative %s: view (High complexity)', bandName));
         colorbar;
-        figFile = fullfile(fp, sprintf('%s_topoplot_%s_view_ComplexityHigh.png', base, bandName));
+        figFile = fullfile(fp_fig, sprintf('%s_topoplot_%s_view_ComplexityHigh.png', base, bandName));
         saveas(fig, figFile);
         fprintf('Saved figure: %s\n', figFile);
         try; close(fig); catch; end
@@ -1020,7 +1026,7 @@ for bi = 1:3
         topoplot(dHigh, EEG.chanlocs, 'electrodes', 'labels');
         title(sprintf('Relative %s difference: view(ComplexityHigh) - gray', bandName));
         colorbar;
-        figFile = fullfile(fp, sprintf('%s_topoplot_%s_viewComplexityHigh_minus_gray.png', base, bandName));
+        figFile = fullfile(fp_fig, sprintf('%s_topoplot_%s_viewComplexityHigh_minus_gray.png', base, bandName));
         saveas(fig, figFile);
         fprintf('Saved figure: %s\n', figFile);
         try; close(fig); catch; end
@@ -1034,11 +1040,47 @@ for bi = 1:3
         topoplot(dHL, EEG.chanlocs, 'electrodes', 'labels');
         title(sprintf('Relative %s difference: ComplexityHigh - ComplexityLow (view)', bandName));
         colorbar;
-        figFile = fullfile(fp, sprintf('%s_topoplot_%s_viewComplexityHigh_minus_viewComplexityLow.png', base, bandName));
+        figFile = fullfile(fp_fig, sprintf('%s_topoplot_%s_viewComplexityHigh_minus_viewComplexityLow.png', base, bandName));
         saveas(fig, figFile);
         fprintf('Saved figure: %s\n', figFile);
         try; close(fig); catch; end
     end
+
+    % --- Export channel-level topo values for group aggregation ---
+    try
+        if ~isempty(idx_view_low) && ~isempty(idx_view_high)
+            topoFile = fullfile(fp_csv, sprintf('%s_topo_long.csv', base));
+
+            chan_idx = (1:EEG.nbchan)';
+            bandCol = repmat(string(bandName), EEG.nbchan, 1);
+
+            % Low/High and baselines
+            if bi==1; % first band pass: create file (overwrite)
+                if exist(topoFile,'file'); delete(topoFile); end
+            end
+
+            % Helper to append block
+            append_block(topoFile, base, chan_idx, bandCol, "view", "ComplexityLow",  rLow);
+            append_block(topoFile, base, chan_idx, bandCol, "view", "ComplexityHigh", rHigh);
+            append_block(topoFile, base, chan_idx, bandCol, "diff", "viewComplexityHigh_minus_viewComplexityLow", dHL);
+            append_block(topoFile, base, chan_idx, bandCol, "diff", "viewComplexityLow_minus_gray",  (rLow - rGray{bi}));
+            append_block(topoFile, base, chan_idx, bandCol, "diff", "viewComplexityHigh_minus_gray", (rHigh - rGray{bi}));
+        end
+    catch
+    end
+end
+end
+
+function append_block(topoFile, subject_id, chan_idx, bandCol, kind, metric, vec)
+% Append a block of topo values to <subject>_topo_long.csv
+T = table(repmat(string(subject_id), numel(chan_idx),1), chan_idx, bandCol, ...
+    repmat(string(kind), numel(chan_idx),1), repmat(string(metric), numel(chan_idx),1), double(vec(:)), ...
+    'VariableNames', {'subject_id','chan_idx','band','kind','metric','value'});
+
+if exist(topoFile,'file')
+    writetable(T, topoFile, 'WriteMode','append');
+else
+    writetable(T, topoFile);
 end
 end
 

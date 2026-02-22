@@ -1,0 +1,173 @@
+function plot_group_topoplots(fp_out, fp_sum, cfg)
+%PLOT_GROUP_TOPOPLOTS Group-level topoplots from per-subject exported topo CSV.
+%
+% Requires per-subject files:
+%   <fp_out>/<subject>/csv/<subject>_topo_long.csv
+% and at least one chanlocs snapshot:
+%   <fp_out>/<subject>/qc/<subject>_chanlocs.mat
+%
+% Produces PNGs under:
+%   <fp_sum>/fig/
+%
+% Factors (between-subject): Experience, SportFreq (High/Low)
+% Metric (within-subject): viewComplexityHigh_minus_viewComplexityLow
+% Bands: theta, alpha, beta
+
+if nargin < 3
+    cfg = struct();
+end
+
+% Require EEGLAB topoplot
+if exist('topoplot','file') ~= 2
+    warning('plot_group_topoplots: topoplot not found on MATLAB path. Start EEGLAB or add it to path, then rerun summarize_bandpower_outputs.');
+    return;
+end
+
+fp_fig = fullfile(fp_sum, 'fig');
+if ~exist(fp_fig,'dir'); mkdir(fp_fig); end
+
+% Load chanlocs from first available snapshot
+D = dir(fullfile(fp_out, '*', 'qc', '*_chanlocs.mat'));
+if isempty(D)
+    warning('plot_group_topoplots: no *_chanlocs.mat found. Skipping group topoplots.');
+    return;
+end
+S = load(fullfile(D(1).folder, D(1).name));
+if ~isfield(S,'chanlocs')
+    warning('plot_group_topoplots: chanlocs variable not found in %s', fullfile(D(1).folder, D(1).name));
+    return;
+end
+chanlocs = S.chanlocs;
+nbchan = numel(chanlocs);
+
+% Read all per-subject topo exports
+Tall = table();
+subs = dir(fp_out);
+subs = subs([subs.isdir]);
+subs = setdiff({subs.name},{'.','..','summary'});
+subs = sort(subs);
+
+for k=1:numel(subs)
+    sid = string(subs{k});
+    f = fullfile(fp_out, char(sid), 'csv', sprintf('%s_topo_long.csv', sid));
+    if exist(f,'file')
+        try
+            T = readtable(f, 'TextType','string');
+            Tall = [Tall; T]; %#ok<AGROW>
+        catch ME
+            fprintf(2, '[WARN] Failed reading topo_long for %s: %s\n', sid, ME.message);
+        end
+    end
+end
+
+if isempty(Tall) || height(Tall)==0
+    warning('plot_group_topoplots: no topo_long data found.');
+    return;
+end
+
+% Normalize factor columns
+if ismember('Experience', Tall.Properties.VariableNames)
+    Tall.Experience = strtrim(string(Tall.Experience));
+end
+if ismember('SportFreq', Tall.Properties.VariableNames)
+    Tall.SportFreq = strtrim(string(Tall.SportFreq));
+end
+
+% Defaults
+metricName = "viewComplexityHigh_minus_viewComplexityLow";
+bands = ["theta","alpha","beta"];
+
+factors = ["Experience","SportFreq"];
+
+for fi=1:numel(factors)
+    fac = factors(fi);
+    if ~ismember(fac, Tall.Properties.VariableNames)
+        continue;
+    end
+
+    for bi=1:numel(bands)
+        band = bands(bi);
+
+        use = Tall.metric==metricName & Tall.band==band;
+        use = use & (lower(Tall.(fac))=="high" | lower(Tall.(fac))=="low");
+        if sum(use) < nbchan*4
+            continue;
+        end
+
+        X = Tall(use,:);
+
+        % Ensure required columns
+        req = {'subject_id','chan_idx','value'};
+        for r=1:numel(req)
+            if ~ismember(req{r}, X.Properties.VariableNames)
+                warning('plot_group_topoplots: missing column %s in topo_long.csv', req{r});
+                return;
+            end
+        end
+
+        % Standardize group labels
+        grp = strtrim(string(X.(fac)));
+        grp(lower(grp)=="high") = "High";
+        grp(lower(grp)=="low") = "Low";
+        X.group = grp;
+
+        % Compute subject-level vectors first (robust)
+        % One value per (subject, chan)
+        [G1, sid_u, grp_u, ch_u] = findgroups(string(X.subject_id), X.group, double(X.chan_idx));
+        mu = splitapply(@(v) mean(double(v),'omitnan'), X.value, G1);
+        Ssub = table(sid_u, grp_u, ch_u, mu, 'VariableNames', {'subject_id','group','chan_idx','mu'});
+
+        % Group mean per channel
+        groups = ["Low","High"];
+        topo = struct();
+        for gi=1:numel(groups)
+            gname = groups(gi);
+            G = Ssub(Ssub.group==gname,:);
+            if isempty(G)
+                continue;
+            end
+            vec = nan(nbchan,1);
+            for ch=1:nbchan
+                vv = G.mu(G.chan_idx==ch);
+                if ~isempty(vv)
+                    vec(ch) = mean(vv,'omitnan');
+                end
+            end
+            topo.(char(gname)) = vec;
+        end
+
+        if ~isfield(topo,'Low') || ~isfield(topo,'High')
+            continue;
+        end
+
+        % Plot Low
+        fig = figure('Name', sprintf('%s %s %s Low', fac, band, metricName), 'Position',[100 100 700 520]);
+        topoplot(topo.Low, chanlocs, 'electrodes','labels');
+        title(sprintf('%s | %s | %s | Low', fac, band, metricName), 'Interpreter','none');
+        colorbar;
+        f1 = fullfile(fp_fig, pipeline.sanitize_filename(sprintf('group_topo_%s_%s_%s_Low.png', lower(fac), band, metricName)));
+        saveas(fig, f1);
+        try; close(fig); catch; end
+
+        % Plot High
+        fig = figure('Name', sprintf('%s %s %s High', fac, band, metricName), 'Position',[100 100 700 520]);
+        topoplot(topo.High, chanlocs, 'electrodes','labels');
+        title(sprintf('%s | %s | %s | High', fac, band, metricName), 'Interpreter','none');
+        colorbar;
+        f2 = fullfile(fp_fig, pipeline.sanitize_filename(sprintf('group_topo_%s_%s_%s_High.png', lower(fac), band, metricName)));
+        saveas(fig, f2);
+        try; close(fig); catch; end
+
+        % Plot High - Low
+        fig = figure('Name', sprintf('%s %s %s High-Low', fac, band, metricName), 'Position',[100 100 700 520]);
+        topoplot(topo.High - topo.Low, chanlocs, 'electrodes','labels');
+        title(sprintf('%s | %s | %s | High - Low', fac, band, metricName), 'Interpreter','none');
+        colorbar;
+        f3 = fullfile(fp_fig, pipeline.sanitize_filename(sprintf('group_topo_%s_%s_%s_HighMinusLow.png', lower(fac), band, metricName)));
+        saveas(fig, f3);
+        try; close(fig); catch; end
+
+    end
+end
+
+end

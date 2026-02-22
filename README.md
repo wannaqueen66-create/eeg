@@ -199,7 +199,9 @@ Notes:
   - `all_subjects_scene_level.csv` (includes optional design columns if `design_path` is provided)
   - `all_subjects_pairs_check.csv` (includes optional design columns if `design_path` is provided)
   - `per_subject_recovery_metrics.csv` (includes SportFreq/Experience group labels when available)
-  - `fig/` (group-level plots: Experience High/Low and SportFreq High/Low vs Complexity Low/High)
+  - `fig/` (group-level plots:
+    - stats: Experience High/Low and SportFreq High/Low vs Complexity Low/High
+    - topoplots: aggregated from per-subject exported channel-level topo CSVs; requires EEGLAB topoplot)
 - `summary/global_bandpower_summary.csv` is created in folder-batch mode when `global_summary=true`.
 
 CSV includes:

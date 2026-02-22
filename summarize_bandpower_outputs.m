@@ -109,6 +109,13 @@ catch ME
     fprintf(2, '[WARN] plot_group_recovery_summaries failed: %s\n', ME.message);
 end
 
+% Optional: group-level topoplots under summary/fig/
+try
+    pipeline.plot_group_topoplots(fp_out, fp_sum, cfg);
+catch ME
+    fprintf(2, '[WARN] plot_group_topoplots failed: %s\n', ME.message);
+end
+
 fprintf('Batch summaries written to: %s\n', fp_sum);
 
 end
