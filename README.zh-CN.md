@@ -118,6 +118,8 @@ run_eeg_bandpower_pipeline('path/to/data.set', 'config.json');
   - `fig/`（群组层面自动出图：
     - 统计图：按 Experience(High/Low)、SportFreq(High/Low) 分组，对比 Complexity(低/高)
     - Topoplot：从单人导出的通道级 topography CSV 汇总得到（需要 EEGLAB 的 topoplot 可用））
+  - `paper_fig/`（期刊友好的多子图结果图，并同时导出 PDF）
+  - `methods_snapshot.md`（自动生成的方法/参数快照，写论文可直接引用）
 - 文件夹批量模式下当 `global_summary=true` 时，会额外生成：
   - `summary/global_bandpower_summary.csv`
 

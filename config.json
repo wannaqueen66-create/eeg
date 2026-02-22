@@ -15,6 +15,8 @@
   "figure_visible": false,
   "batch_summaries": true,
   "design_path": "",
+  "paper_dpi": 300,
+  "paper_metrics": ["O_alpha","O_theta","O_beta","F_theta"],
   "roi": {
     "front": ["F3","F4"],
     "par": ["P3","PZ","P4"],

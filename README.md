@@ -202,6 +202,8 @@ Notes:
   - `fig/` (group-level plots:
     - stats: Experience High/Low and SportFreq High/Low vs Complexity Low/High
     - topoplots: aggregated from per-subject exported channel-level topo CSVs; requires EEGLAB topoplot)
+  - `paper_fig/` (journal-ready multi-panel figures + PDF exports)
+  - `methods_snapshot.md` (auto-generated methods/config snapshot for writing)
 - `summary/global_bandpower_summary.csv` is created in folder-batch mode when `global_summary=true`.
 
 CSV includes:

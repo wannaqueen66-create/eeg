@@ -116,6 +116,19 @@ catch ME
     fprintf(2, '[WARN] plot_group_topoplots failed: %s\n', ME.message);
 end
 
+% Paper-ready multi-panel figures under summary/paper_fig/
+try
+    pipeline.plot_paper_figures(fp_sum, cfg);
+catch ME
+    fprintf(2, '[WARN] plot_paper_figures failed: %s\n', ME.message);
+end
+
+% Methods snapshot (markdown)
+try
+    pipeline.write_methods_snapshot(fp_sum, cfg);
+catch
+end
+
 fprintf('Batch summaries written to: %s\n', fp_sum);
 
 end
