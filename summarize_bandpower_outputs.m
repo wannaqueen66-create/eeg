@@ -95,32 +95,89 @@ if height(perSub) > 0
     writetable(perSub, out.per_subject_recovery);
 end
 
-% Optional: group-level figures (PNG) under summary/fig/
+% QC filtering + reports (optional)
+qcOut = struct();
+AllScene_qc = AllScene;
+AllPairs_qc = AllPairs;
+try
+    if isfield(cfg,'qc_apply') && logical(cfg.qc_apply)
+        qcOut = pipeline.qc_filter_and_report(fp_out, fp_sum, cfg, AllScene, AllPairs);
+        if isfield(qcOut,'AllScene_qc'); AllScene_qc = qcOut.AllScene_qc; end
+        if isfield(qcOut,'AllPairs_qc'); AllPairs_qc = qcOut.AllPairs_qc; end
+    end
+catch ME
+    fprintf(2, '[WARN] qc_filter_and_report failed: %s\n', ME.message);
+end
+
+% Optional: group-level figures (PNG) under summary/fig/ (raw)
 try
     pipeline.plot_group_summaries(AllScene, fp_sum, cfg);
 catch ME
     fprintf(2, '[WARN] plot_group_summaries failed: %s\n', ME.message);
 end
 
-% Optional: group-level recovery figures from pairs_check (PNG) under summary/fig/
+% Optional: group-level figures (PNG) under summary/fig/ (QC-filtered)
+try
+    if ~isequal(AllScene_qc, AllScene)
+        cfg2 = cfg; cfg2.group_plot_metrics = getfield_def(cfg,'group_plot_metrics',{"O_alpha","O_theta","O_beta","F_theta"});
+        pipeline.plot_group_summaries(AllScene_qc, fp_sum, cfg2);
+    end
+catch ME
+    fprintf(2, '[WARN] plot_group_summaries(QC) failed: %s\n', ME.message);
+end
+
+% Optional: group-level recovery figures from pairs_check (PNG) under summary/fig/ (raw)
 try
     pipeline.plot_group_recovery_summaries(AllPairs, fp_sum, cfg);
 catch ME
     fprintf(2, '[WARN] plot_group_recovery_summaries failed: %s\n', ME.message);
 end
 
-% Optional: group-level topoplots under summary/fig/
+% Optional: group-level recovery figures from pairs_check (PNG) under summary/fig/ (QC-filtered)
 try
+    if ~isequal(AllPairs_qc, AllPairs)
+        pipeline.plot_group_recovery_summaries(AllPairs_qc, fp_sum, cfg);
+    end
+catch ME
+    fprintf(2, '[WARN] plot_group_recovery_summaries(QC) failed: %s\n', ME.message);
+end
+
+% Optional: group-level topoplots under summary/fig/ (uses per-subject topo_long; QC by subject exclusion)
+try
+    if isfield(qcOut,'Qsub')
+        cfg.qc_include_subjects = string(qcOut.Qsub.subject_id(~qcOut.Qsub.exclude_scenelevel));
+    end
     pipeline.plot_group_topoplots(fp_out, fp_sum, cfg);
 catch ME
     fprintf(2, '[WARN] plot_group_topoplots failed: %s\n', ME.message);
 end
 
-% Paper-ready multi-panel figures under summary/paper_fig/
+% Paper-ready multi-panel figures under summary/paper_fig/ (raw)
 try
     pipeline.plot_paper_figures(fp_sum, cfg);
 catch ME
     fprintf(2, '[WARN] plot_paper_figures failed: %s\n', ME.message);
+end
+
+% Paper-ready multi-panel figures under summary/paper_fig_qc/ (QC-filtered)
+try
+    if ~isequal(AllScene_qc, AllScene)
+        fp_scene = fullfile(fp_sum,'all_subjects_scene_level_qc.csv');
+        if exist(fp_scene,'file')
+            % temporarily swap file name by copying
+            fp_qc_dir = fullfile(fp_sum,'paper_fig_qc');
+            if ~exist(fp_qc_dir,'dir'); mkdir(fp_qc_dir); end
+            % use plot_paper_figures but point it to fp_sum; it reads standard filenames.
+            % so we temporarily write QC tables as the standard names within fp_qc_dir.
+            copyfile(fullfile(fp_sum,'all_subjects_scene_level_qc.csv'), fullfile(fp_qc_dir,'all_subjects_scene_level.csv'));
+            if exist(fullfile(fp_sum,'all_subjects_pairs_check_qc.csv'),'file')
+                copyfile(fullfile(fp_sum,'all_subjects_pairs_check_qc.csv'), fullfile(fp_qc_dir,'all_subjects_pairs_check.csv'));
+            end
+            pipeline.plot_paper_figures(fp_qc_dir, cfg);
+        end
+    end
+catch ME
+    fprintf(2, '[WARN] plot_paper_figures(QC) failed: %s\n', ME.message);
 end
 
 % Methods snapshot (markdown)
@@ -131,4 +188,16 @@ end
 
 fprintf('Batch summaries written to: %s\n', fp_sum);
 
+end
+
+function v = getfield_def(s, f, d)
+try
+    if isfield(s,f)
+        v = s.(f);
+    else
+        v = d;
+    end
+catch
+    v = d;
+end
 end

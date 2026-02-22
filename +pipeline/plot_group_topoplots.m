@@ -65,6 +65,15 @@ if isempty(Tall) || height(Tall)==0
     return;
 end
 
+% Apply QC inclusion list (optional)
+try
+    if isfield(cfg,'qc_include_subjects') && ~isempty(cfg.qc_include_subjects)
+        inc = string(cfg.qc_include_subjects);
+        Tall = Tall(ismember(string(Tall.subject_id), inc), :);
+    end
+catch
+end
+
 % Attach between-subject factors (Experience/SportFreq) if missing in topo_long
 % topo_long exported from single-subject stage may only include subject_id/chan/band/metric/value.
 if ~ismember('Experience', Tall.Properties.VariableNames) || ~ismember('SportFreq', Tall.Properties.VariableNames)
