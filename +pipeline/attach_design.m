@@ -25,14 +25,16 @@ if height(M)==0
 end
 
 % Join on scene_id (LEFT join: keep Tin rows only)
-Tin.__orig_row__ = (1:height(Tin))';
+% NOTE: table variable names must start with a letter (MATLAB identifier rule),
+% so do NOT use names like "__orig_row__".
+Tin.orig_row_attach_design = (1:height(Tin))';
 J = outerjoin(Tin, M(:,{'scene_id','scene_name','WWR','Cond','Complexity','SportFreq','Experience','Order'}), ...
     'Keys', 'scene_id', 'MergeKeys', true, 'Type','left');
 
 % Restore original row order
-if ismember('__orig_row__', J.Properties.VariableNames)
-    J = sortrows(J, '__orig_row__');
-    J.__orig_row__ = [];
+if ismember('orig_row_attach_design', J.Properties.VariableNames)
+    J = sortrows(J, 'orig_row_attach_design');
+    J.orig_row_attach_design = [];
 end
 
 Tout = J;
