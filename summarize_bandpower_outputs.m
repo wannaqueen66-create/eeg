@@ -99,6 +99,12 @@ try
 catch
 end
 
+% Optional: group-level recovery figures from pairs_check (PNG) under summary/fig/
+try
+    pipeline.plot_group_recovery_summaries(AllPairs, fp_sum, cfg);
+catch
+end
+
 fprintf('Batch summaries written to: %s\n', fp_sum);
 
 end

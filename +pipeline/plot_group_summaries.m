@@ -27,7 +27,8 @@ fp_fig = fullfile(fp_sum, 'fig');
 if ~exist(fp_fig, 'dir'); mkdir(fp_fig); end
 
 % metrics list (configurable)
-default_metrics = {"O_alpha","F_theta","O_beta"};
+% Journal-oriented defaults (scene effects in occipital bands + a frontal control)
+default_metrics = {"O_alpha","O_theta","O_beta","F_theta"};
 metrics = default_metrics;
 try
     if isfield(cfg,'group_plot_metrics') && ~isempty(cfg.group_plot_metrics)
