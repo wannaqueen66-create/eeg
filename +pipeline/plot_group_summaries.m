@@ -159,7 +159,7 @@ for fi = 1:numel(factors)
         title(sprintf('%s: %s by Complexity (subject means)', fac, met), 'Interpreter','none');
         legend('Location','best');
 
-        f1 = fullfile(fp_fig, pipeline.sanitize_filename(sprintf('group_%s_%s_by_complexity.png', lower(fac), met)));
+        f1 = fullfile(fp_fig, pipeline.sanitize_filename(sprintf('group_%s_%s_by_Complexity.png', lower(fac), met)));
         saveas(fig, f1);
         try; close(fig); catch; end
 
@@ -196,7 +196,7 @@ for fi = 1:numel(factors)
             text(ii, dT.mean(ii), sprintf(' n=%d', dT.n(ii)), 'VerticalAlignment','bottom', 'HorizontalAlignment','center');
         end
 
-        f2 = fullfile(fp_fig, pipeline.sanitize_filename(sprintf('group_%s_%s_delta_complexity.png', lower(fac), met)));
+        f2 = fullfile(fp_fig, pipeline.sanitize_filename(sprintf('group_%s_%s_delta_Complexity.png', lower(fac), met)));
         saveas(fig, f2);
         try; close(fig); catch; end
 
