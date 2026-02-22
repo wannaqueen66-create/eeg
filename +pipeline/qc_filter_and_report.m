@@ -358,6 +358,30 @@ try
             fprintf(fid, '- excluded (recovery): %d\n\n', sum(Qsub.exclude_recovery));
         end
 
+        % Scene-level valid counts (after exclusions)
+        try
+            if isfield(out,'qc_scene_valid_counts') && exist(out.qc_scene_valid_counts,'file')
+                Tcnt = readtable(out.qc_scene_valid_counts, 'TextType','string');
+                fprintf(fid, '## Scene valid counts (after QC)\n\n');
+                fprintf(fid, '| scene_id | scene_name | valid / total | excluded_subjects |\n');
+                fprintf(fid, '|---:|---|---:|---|\n');
+                for i=1:height(Tcnt)
+                    sid = Tcnt.scene_id(i);
+                    sname = "";
+                    if ismember('scene_name', Tcnt.Properties.VariableNames)
+                        sname = string(Tcnt.scene_name(i));
+                    end
+                    excl = "";
+                    if ismember('excluded_subjects', Tcnt.Properties.VariableNames)
+                        excl = string(Tcnt.excluded_subjects(i));
+                    end
+                    fprintf(fid, '| %d | %s | %d / %d | %s |\n', sid, sname, Tcnt.n_valid(i), Tcnt.n_total(i), excl);
+                end
+                fprintf(fid, '\n');
+            end
+        catch
+        end
+
         fclose(fid);
     end
     out.qc_filter_report_md = fp_md;
