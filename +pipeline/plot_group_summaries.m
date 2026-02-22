@@ -154,7 +154,7 @@ for fi = 1:numel(factors)
                 'MarkerFaceColor', colors(gi,:), 'DisplayName', sprintf('%s (n=%d/%d)', glab, sum(Ti.n), numel(unique(S.subject_id(S.group==glab)))) );
         end
 
-        set(gca,'XTick',[0 1],'XTickLabel',{'LowCx','HighCx'});
+        set(gca,'XTick',[0 1],'XTickLabel',{'ComplexityLow','ComplexityHigh'});
         xlabel('Complexity');
         ylabel(met);
         title(sprintf('%s: %s by Complexity (subject means)', fac, met), 'Interpreter','none');
@@ -164,7 +164,7 @@ for fi = 1:numel(factors)
         saveas(fig, f1);
         try; close(fig); catch; end
 
-        % ---- Plot 2: delta (HighCx - LowCx) by group ----
+        % ---- Plot 2: delta (ComplexityHigh - ComplexityLow) by group ----
         % compute delta per subject
         [G3, sid3, g3] = findgroups(S.subject_id, S.group);
         % For each subject, pick cx==0 and cx==1 means
@@ -190,7 +190,7 @@ for fi = 1:numel(factors)
         bar(x, dT.mean, 'FaceColor',[0.7 0.7 0.9]);
         errorbar(x, dT.mean, dT.sem, 'k.', 'LineWidth', 1.5);
         set(gca, 'XTick', x, 'XTickLabel', dT.group);
-        ylabel(sprintf('%s (HighCx - LowCx)', met), 'Interpreter','none');
+        ylabel(sprintf('%s (ComplexityHigh - ComplexityLow)', met), 'Interpreter','none');
         title(sprintf('%s: %s Complexity effect by group', fac, met), 'Interpreter','none');
 
         for ii=1:height(dT)

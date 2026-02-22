@@ -132,7 +132,7 @@ for fi=1:numel(factors)
                 errorbar(Ti.cx, Ti.mean, Ti.sem, 'o-', 'LineWidth', 1.8, 'Color', colors(gi,:), ...
                     'MarkerFaceColor', colors(gi,:), 'DisplayName', glab);
             end
-            set(gca,'XTick',[0 1],'XTickLabel',{'LowCx','HighCx'});
+            set(gca,'XTick',[0 1],'XTickLabel',{'ComplexityLow','ComplexityHigh'});
             xlabel('Complexity');
             ylabel(met, 'Interpreter','none');
             title(sprintf('Recovery (%s): %s by Complexity (subject means)', fac, met), 'Interpreter','none');
@@ -142,7 +142,7 @@ for fi=1:numel(factors)
             saveas(fig, f1);
             try; close(fig); catch; end
 
-            % delta of delta: HighCx - LowCx per subject
+            % delta of delta: ComplexityHigh - ComplexityLow per subject
             [G3, sid3, g3] = findgroups(S.subject_id, S.group);
             del = splitapply(@(cxv, muv) local_delta(cxv, muv), S.cx, S.mu, G3);
             D = table(sid3, g3, del, 'VariableNames', {'subject_id','group','delta'});
@@ -162,7 +162,7 @@ for fi=1:numel(factors)
             bar(x, dT.mean, 'FaceColor',[0.85 0.75 0.75]);
             errorbar(x, dT.mean, dT.sem, 'k.', 'LineWidth', 1.5);
             set(gca,'XTick',x,'XTickLabel',dT.group);
-            ylabel(sprintf('%s: (HighCx - LowCx)', met), 'Interpreter','none');
+            ylabel(sprintf('%s: (ComplexityHigh - ComplexityLow)', met), 'Interpreter','none');
             title(sprintf('Recovery complexity effect by %s', fac), 'Interpreter','none');
             for ii=1:height(dT)
                 text(ii, dT.mean(ii), sprintf(' n=%d', dT.n(ii)), 'VerticalAlignment','bottom', 'HorizontalAlignment','center');

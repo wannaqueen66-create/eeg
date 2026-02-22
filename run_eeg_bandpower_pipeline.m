@@ -996,7 +996,7 @@ for bi = 1:3
         dLow = rLow - rGray{bi};
         fig = figure('Name', sprintf('%s topoplot (view low - gray)', upper(bandName)));
         topoplot(dLow, EEG.chanlocs, 'electrodes', 'labels');
-        title(sprintf('Relative %s difference: view(LowCx) - gray', bandName));
+        title(sprintf('Relative %s difference: view(ComplexityLow) - gray', bandName));
         colorbar;
         figFile = fullfile(fp, sprintf('%s_topoplot_%s_viewComplexityLow_minus_gray.png', base, bandName));
         saveas(fig, figFile);
@@ -1018,7 +1018,7 @@ for bi = 1:3
         dHigh = rHigh - rGray{bi};
         fig = figure('Name', sprintf('%s topoplot (view high - gray)', upper(bandName)));
         topoplot(dHigh, EEG.chanlocs, 'electrodes', 'labels');
-        title(sprintf('Relative %s difference: view(HighCx) - gray', bandName));
+        title(sprintf('Relative %s difference: view(ComplexityHigh) - gray', bandName));
         colorbar;
         figFile = fullfile(fp, sprintf('%s_topoplot_%s_viewComplexityHigh_minus_gray.png', base, bandName));
         saveas(fig, figFile);
@@ -1030,9 +1030,9 @@ for bi = 1:3
         rLow = mean_rel_topo(idx_view_low, bandRange);
         rHigh = mean_rel_topo(idx_view_high, bandRange);
         dHL = rHigh - rLow;
-        fig = figure('Name', sprintf('%s topoplot (HighCx - LowCx)', upper(bandName)));
+        fig = figure('Name', sprintf('%s topoplot (ComplexityHigh - ComplexityLow)', upper(bandName)));
         topoplot(dHL, EEG.chanlocs, 'electrodes', 'labels');
-        title(sprintf('Relative %s difference: HighCx - LowCx (view)', bandName));
+        title(sprintf('Relative %s difference: ComplexityHigh - ComplexityLow (view)', bandName));
         colorbar;
         figFile = fullfile(fp, sprintf('%s_topoplot_%s_viewComplexityHigh_minus_viewComplexityLow.png', base, bandName));
         saveas(fig, figFile);
