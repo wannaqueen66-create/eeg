@@ -90,12 +90,13 @@ for fi = 1:numel(factors)
     end
 
     A = AllScene(keep, :);
-    A.__cx01__ = cx01(keep);
-    A.__group__ = group(keep);
+    % NOTE: table variable names must start with a letter.
+    A.cx01_attach = cx01(keep);
+    A.group_attach = group(keep);
 
     % Standardize group casing to High/Low
-    A.__group__(lower(A.__group__)=="high") = "High";
-    A.__group__(lower(A.__group__)=="low") = "Low";
+    A.group_attach(lower(A.group_attach)=="high") = "High";
+    A.group_attach(lower(A.group_attach)=="low") = "Low";
 
     for mi = 1:numel(metrics)
         met = char(metrics{mi});
@@ -110,8 +111,8 @@ for fi = 1:numel(factors)
 
         % subject-level means by group x complexity
         sid = string(A.subject_id);
-        g = string(A.__group__);
-        cx = double(A.__cx01__);
+        g = string(A.group_attach);
+        cx = double(A.cx01_attach);
 
         [Gid, sid_u, g_u, cx_u] = findgroups(sid, g, cx);
         mu = splitapply(@(x) mean(x,'omitnan'), y, Gid);
