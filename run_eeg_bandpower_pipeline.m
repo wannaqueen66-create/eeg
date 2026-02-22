@@ -60,6 +60,30 @@ end
 % 解析输入路径
 files = pipeline.parse_input(input_path);
 
+% Fail fast if design is provided but subject IDs don't match
+try
+    if ~isempty(designMap) && ismember('subject_id', designMap.Properties.VariableNames) && ~isempty(files)
+        bases = strings(numel(files),1);
+        for ii = 1:numel(files)
+            [~,b,~] = fileparts(files{ii});
+            bases(ii) = string(b);
+        end
+        bases = unique(strtrim(bases));
+        dids = unique(strtrim(string(designMap.subject_id)));
+
+        missing = setdiff(bases, dids);
+        if ~isempty(missing)
+            msg = sprintf(['Design mapping loaded, but these .set base names are NOT found in design SubjectID (after cleanup):\n', ...
+                '  %s\n\n', ...
+                'Fix by making SubjectID in the long CSV match the .set base name exactly (recommended),\n', ...
+                'or rename the .set files accordingly.'], strjoin(cellstr(missing(1:min(end,20))), ', '));
+            error(msg);
+        end
+    end
+catch ME
+    rethrow(ME);
+end
+
 % Figure visibility (default off for batch friendliness)
 try
     if isfield(cfg,'figure_visible')
