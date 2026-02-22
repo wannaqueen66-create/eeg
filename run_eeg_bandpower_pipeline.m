@@ -234,7 +234,10 @@ segs = struct('seg_idx',[],'m0',[],'m1',[],'s0',[],'s1',[],...
               'start_s',[],'end_s',[],'dur_s',[],'cond',"",...
               'block_id',[],'cycle_in_block',[],'scene_id',[]);
 
-block_id = 1;
+% Block indexing:
+%   block_id=0 denotes pre-block baseline/transition segments before the first view.
+%   block_id starts from 1 at the first view (7→8), then increments at rest (5→7).
+block_id = 0;
 scene_in_block = 0;  % block 内的 scene 计数
 scene_id_global = 0; % 全局 scene_id
 seg_count = 0;
@@ -271,26 +274,38 @@ for i = 1:nSeg
         cond = "eyes_open";
         
     elseif m0==7 && m1==8
+        % First view marks the start of Block 1
         cond = "view";
+        if block_id == 0
+            block_id = 1;
+        end
         scene_in_block = scene_in_block + 1;
         scene_id_global = scene_id_global + 1;
-        
+
     elseif m0==8 && m1==9
         cond = "questionnaire_small";
-        
+
     elseif m0==8 && (m1==5 || m1==6)
         cond = "questionnaire_big";
-        
+
     elseif m0==9 && ismember(m1, [7,8])
-        % 9→7/8 灰屏，只允许进入下一轮
+        % 9→7/8 灰屏：如果发生在第一个 view 之前，属于 pre-block transition
         cond = "gray";
-        gray_subtype = "gray_to_next";
-        
+        if scene_id_global == 0
+            gray_subtype = "gray_preblock";
+        else
+            gray_subtype = "gray_to_next";
+        end
+
     elseif m0==5 && m1==7
         cond = "rest";
-        block_id = block_id + 1;
+        if block_id == 0
+            block_id = 1;
+        else
+            block_id = block_id + 1;
+        end
         scene_in_block = 0;
-        
+
     else
         % 非法转移
         cond = "INVALID";
