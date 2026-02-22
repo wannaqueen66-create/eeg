@@ -104,6 +104,34 @@ try
         qcOut = pipeline.qc_filter_and_report(fp_out, fp_sum, cfg, AllScene, AllPairs);
         if isfield(qcOut,'AllScene_qc'); AllScene_qc = qcOut.AllScene_qc; end
         if isfield(qcOut,'AllPairs_qc'); AllPairs_qc = qcOut.AllPairs_qc; end
+
+        % Print per-scene valid N and excluded subject names into log
+        if isfield(qcOut,'qc_scene_valid_counts') && exist(qcOut.qc_scene_valid_counts,'file')
+            try
+                Tcnt = readtable(qcOut.qc_scene_valid_counts, 'TextType','string');
+                fprintf('\n=== QC Scene Valid Counts (after exclusions) ===\n');
+                for i=1:height(Tcnt)
+                    sid = Tcnt.scene_id(i);
+                    nt = Tcnt.n_total(i);
+                    nv = Tcnt.n_valid(i);
+                    excl = "";
+                    if ismember('excluded_subjects', Tcnt.Properties.VariableNames)
+                        excl = string(Tcnt.excluded_subjects(i));
+                    end
+                    label = "";
+                    if ismember('scene_name', Tcnt.Properties.VariableNames)
+                        label = string(Tcnt.scene_name(i));
+                    end
+                    if strlength(label)>0
+                        fprintf('Scene %02d (%s): valid=%d/%d | excluded: %s\n', sid, label, nv, nt, excl);
+                    else
+                        fprintf('Scene %02d: valid=%d/%d | excluded: %s\n', sid, nv, nt, excl);
+                    end
+                end
+            catch ME2
+                fprintf(2, '[WARN] Failed printing qc_scene_valid_counts: %s\n', ME2.message);
+            end
+        end
     end
 catch ME
     fprintf(2, '[WARN] qc_filter_and_report failed: %s\n', ME.message);

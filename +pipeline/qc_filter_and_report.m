@@ -196,6 +196,7 @@ Qsub.rms_gray_threshold = repmat(rmsGrayThr, height(Qsub), 1);
 out.qc_exclusion_subjects = fullfile(fp_sum, 'qc_exclusion_subjects.csv');
 try
     writetable(Qsub, out.qc_exclusion_subjects);
+    fprintf('[QC] Wrote subject exclusion table: %s\n', out.qc_exclusion_subjects);
 catch
 end
 
@@ -331,6 +332,7 @@ try
 
         out.qc_scene_valid_counts = fullfile(fp_sum, 'qc_scene_valid_counts.csv');
         writetable(Tcnt, out.qc_scene_valid_counts);
+        fprintf('[QC] Wrote scene valid counts: %s\n', out.qc_scene_valid_counts);
     end
 catch
 end
