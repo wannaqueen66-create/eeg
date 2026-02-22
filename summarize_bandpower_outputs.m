@@ -21,6 +21,41 @@ cfg = pipeline.load_config(config_path);
 fp_out = pipeline.get_output_root(input_folder, cfg);
 fp_sum = pipeline.get_summary_dir(input_folder, cfg);
 
+% Ensure summary-stage logs are written to summary/pipeline.log
+% (Users often run summarize_bandpower_outputs separately after batch runs.)
+didStartDiary = false;
+try
+    if isfield(cfg,'save_log') && logical(cfg.save_log)
+        logPath = fullfile(fp_sum, 'pipeline.log');
+        diaryOn = false;
+        try
+            diaryOn = strcmpi(get(0,'Diary'), 'on');
+        catch
+        end
+
+        if ~diaryOn
+            diary(logPath);
+            diary on;
+            didStartDiary = true;
+        else
+            % If diary is already on, do not switch files silently.
+            try
+                cur = string(get(0,'DiaryFile'));
+                if cur ~= string(logPath)
+                    fprintf(2, '[NOTE] Diary is already ON to a different file: %s\n', cur);
+                    fprintf(2, '       Summary logs may not be written to: %s\n', logPath);
+                end
+            catch
+            end
+        end
+
+        fprintf('\n===== summarize_bandpower_outputs started: %s =====\n', datestr(now,31));
+        fprintf('Input folder: %s\n', input_folder);
+        fprintf('Summary dir : %s\n\n', fp_sum);
+    end
+catch
+end
+
 % List subject folders
 D = dir(fp_out);
 D = D([D.isdir]);
@@ -215,6 +250,15 @@ catch
 end
 
 fprintf('Batch summaries written to: %s\n', fp_sum);
+
+% Close summary-stage diary if we started it
+try
+    if didStartDiary
+        fprintf('===== summarize_bandpower_outputs finished: %s =====\n', datestr(now,31));
+        diary off;
+    end
+catch
+end
 
 end
 
