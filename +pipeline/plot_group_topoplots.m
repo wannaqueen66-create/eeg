@@ -65,6 +65,49 @@ if isempty(Tall) || height(Tall)==0
     return;
 end
 
+% Attach between-subject factors (Experience/SportFreq) if missing in topo_long
+% topo_long exported from single-subject stage may only include subject_id/chan/band/metric/value.
+if ~ismember('Experience', Tall.Properties.VariableNames) || ~ismember('SportFreq', Tall.Properties.VariableNames)
+    try
+        map = table();
+        f_map = fullfile(fp_sum, 'per_subject_recovery_metrics.csv');
+        if exist(f_map,'file')
+            map = readtable(f_map, 'TextType','string');
+        else
+            f_pairs = fullfile(fp_sum, 'all_subjects_pairs_check.csv');
+            if exist(f_pairs,'file')
+                map = readtable(f_pairs, 'TextType','string');
+            end
+        end
+
+        if ~isempty(map) && ismember('subject_id', map.Properties.VariableNames)
+            % Reduce to unique subject rows
+            sidm = string(map.subject_id);
+            [~, ia] = unique(sidm, 'stable');
+            map = map(ia,:);
+
+            if ~ismember('SportFreq', Tall.Properties.VariableNames)
+                sf = repmat("", height(Tall), 1);
+                if ismember('SportFreq', map.Properties.VariableNames)
+                    [tf, loc] = ismember(string(Tall.subject_id), string(map.subject_id));
+                    sf(tf) = strtrim(string(map.SportFreq(loc(tf))));
+                end
+                Tall.SportFreq = sf;
+            end
+
+            if ~ismember('Experience', Tall.Properties.VariableNames)
+                ex = repmat("", height(Tall), 1);
+                if ismember('Experience', map.Properties.VariableNames)
+                    [tf, loc] = ismember(string(Tall.subject_id), string(map.subject_id));
+                    ex(tf) = strtrim(string(map.Experience(loc(tf))));
+                end
+                Tall.Experience = ex;
+            end
+        end
+    catch
+    end
+end
+
 % Normalize factor columns
 if ismember('Experience', Tall.Properties.VariableNames)
     Tall.Experience = strtrim(string(Tall.Experience));
