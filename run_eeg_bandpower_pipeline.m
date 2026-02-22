@@ -603,7 +603,7 @@ plot_paired_scatter(T, fp_fig, base, cfg);
 plot_block_comparison(T, fp_fig, base);
 
 %% ===== 17) QC 分布图 =====
-plot_qc_distributions(T, fp_fig, base, cfg);
+plot_qc_distributions(T, fp_fig, fp_qc, base, cfg, designMap);
 
 %% ===== 18) Low-beta vs High-beta 对比图 =====
 plot_beta_split(T, fp_fig, base);
@@ -1569,7 +1569,7 @@ fprintf('Saved figure: %s\n', figFile);
 try; close(fig); catch; end
 end
 
-function plot_qc_distributions(T, fp, base, cfg)
+function plot_qc_distributions(T, fp_fig, fp_qc, base, cfg, designMap)
 % QC 分布图：让 β/高频解释站得住
 
 fig = figure('Name', 'QC Distributions', 'Position', [100 100 1200 400]);
@@ -1625,7 +1625,61 @@ grid on;
 
 sgtitle('Quality Control Distributions', 'FontWeight', 'bold');
 
-figFile = fullfile(fp, sprintf('%s_qc_distributions.png', base));
+% Annotate segments above EMG threshold with scene labels (if available)
+try
+    thr = 0.4;
+    mask_hi = T.qc_hf_ratio > thr;
+    if any(mask_hi)
+        % Build a label using design mapping; fallback to scene_id
+        label = repmat("", height(T), 1);
+        if nargin >= 6 && ~isempty(designMap)
+            tmp = table(T.scene_id, 'VariableNames', {'scene_id'});
+            tmp = pipeline.attach_design(tmp, base, designMap);
+            sn = repmat("", height(tmp), 1);
+            if ismember('scene_name', tmp.Properties.VariableNames)
+                sn = string(tmp.scene_name);
+            end
+            for ii=1:height(T)
+                if isnan(T.scene_id(ii))
+                    label(ii) = "";
+                elseif strlength(sn(ii))>0
+                    label(ii) = "round" + sprintf('%02d', T.scene_id(ii)) + "_" + sn(ii);
+                else
+                    label(ii) = "round" + sprintf('%02d', T.scene_id(ii));
+                end
+            end
+        else
+            for ii=1:height(T)
+                if ~isnan(T.scene_id(ii))
+                    label(ii) = "round" + sprintf('%02d', T.scene_id(ii));
+                end
+            end
+        end
+
+        hiTable = table(T.seg_idx(mask_hi), string(T.cond(mask_hi)), T.scene_id(mask_hi), label(mask_hi), T.qc_hf_ratio(mask_hi), ...
+            'VariableNames', {'seg_idx','cond','scene_id','scene_label','hf_ratio'});
+
+        % write a dedicated CSV for quick auditing
+        try
+            f_hi = fullfile(fp_qc, sprintf('%s_qc_high_hf_segments.csv', base));
+            writetable(hiTable, f_hi);
+            fprintf('Saved QC high-HF segments: %s\n', f_hi);
+        catch
+        end
+
+        % add a small note on the figure footer
+        try
+            hiStr = strjoin(cellstr(hiTable.scene_label(1:min(height(hiTable),8))), ', ');
+            annotation('textbox', [0.01 0.01 0.98 0.06], 'String', ...
+                sprintf('HF_ratio>%.2f segments (showing up to 8): %s', thr, hiStr), ...
+                'EdgeColor','none', 'FontSize', 8, 'Interpreter','none');
+        catch
+        end
+    end
+catch
+end
+
+figFile = fullfile(fp_fig, sprintf('%s_qc_distributions.png', base));
 saveas(fig, figFile);
 fprintf('Saved figure: %s\n', figFile);
 try; close(fig); catch; end
