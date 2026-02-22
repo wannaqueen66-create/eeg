@@ -593,7 +593,7 @@ export_scene_level(T, fp_csv, base, designMap);
 export_pairs_check(T, fp_qc, base, cfg, designMap);
 
 %% ===== 14) 导出 QC 质量指标表 =====
-export_qc_table(T, fp_qc, base);
+export_qc_table(T, fp_qc, base, designMap);
 export_marker_report(segs, fp_qc, base);
 
 %% ===== 15) 配对散点+连线图（view vs gray） =====
@@ -1335,7 +1335,7 @@ else
 end
 end
 
-function export_qc_table(T, fp, base)
+function export_qc_table(T, fp, base, designMap)
 % 导出 QC 质量指标表
 % 包含每段的 RMS、高频占比、边界标记等
 
@@ -1353,6 +1353,15 @@ qcTable = table( ...
         'seg_idx', 'cond', 'scene_id', 'start_s', 'end_s', 'dur_s', ...
         'rms_mean_uV', 'hf_ratio_20_40Hz', 'near_boundary' ...
     });
+
+% Attach design columns for easier QC interpretation (if available)
+try
+    if nargin >= 4 && ~isempty(designMap)
+        qcTable2 = pipeline.attach_design(qcTable, base, designMap);
+        qcTable = qcTable2;
+    end
+catch
+end
 
 % 保存
 qcFile = fullfile(fp, sprintf('%s_qc.csv', base));
@@ -1374,7 +1383,48 @@ end
 high_hf = T.qc_hf_ratio > 0.4;
 if any(high_hf)
     fprintf('\n[WARNING] %d segments have HF_ratio > 0.4 (possible EMG contamination)\n', sum(high_hf));
-    high_hf_segs = T(high_hf, {'seg_idx','cond','qc_hf_ratio'});
+
+    % Build a readable per-segment label using design mapping (if available)
+    % Example: round01_W45_C1 (scene_name preferred)
+    label = repmat("", height(T), 1);
+    try
+        if nargin >= 4 && ~isempty(designMap)
+            tmp = table(T.scene_id, 'VariableNames', {'scene_id'});
+            tmp = pipeline.attach_design(tmp, base, designMap);
+            if ismember('scene_name', tmp.Properties.VariableNames)
+                sn = string(tmp.scene_name);
+            else
+                sn = repmat("", height(tmp), 1);
+            end
+            if ismember('WWR', tmp.Properties.VariableNames)
+                w = string(tmp.WWR);
+            else
+                w = repmat("", height(tmp), 1);
+            end
+            if ismember('Cond', tmp.Properties.VariableNames)
+                cnd = string(tmp.Cond);
+            else
+                cnd = repmat("", height(tmp), 1);
+            end
+
+            for ii = 1:height(T)
+                if isnan(T.scene_id(ii))
+                    label(ii) = "";
+                else
+                    if strlength(sn(ii))>0
+                        label(ii) = "round" + sprintf('%02d', T.scene_id(ii)) + "_" + sn(ii);
+                    else
+                        label(ii) = "round" + sprintf('%02d', T.scene_id(ii)) + "_W" + w(ii) + "_" + cnd(ii);
+                    end
+                end
+            end
+        end
+    catch
+    end
+
+    % Display warning table (include scene_id and label)
+    high_hf_segs = table(T.seg_idx(high_hf), string(T.cond(high_hf)), T.scene_id(high_hf), label(high_hf), T.qc_hf_ratio(high_hf), ...
+        'VariableNames', {'seg_idx','cond','scene_id','scene_label','hf_ratio'});
     disp(high_hf_segs);
 else
     fprintf('\n[OK] No segments with high-frequency anomaly detected.\n');
