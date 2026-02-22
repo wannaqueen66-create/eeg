@@ -26,7 +26,11 @@ fp_sum = pipeline.get_summary_dir(input_folder, cfg);
 didStartDiary = false;
 try
     if isfield(cfg,'save_log') && logical(cfg.save_log)
-        logPath = fullfile(fp_sum, 'pipeline.log');
+        % Timestamped log file (never overwrite previous logs)
+        ts = datestr(now, 'yyyymmdd_HHMMSS');
+        logPathRun = fullfile(fp_sum, sprintf('pipeline_%s.log', ts));
+        logPathLatest = fullfile(fp_sum, 'pipeline_latest.log');
+
         diaryOn = false;
         try
             diaryOn = strcmpi(get(0,'Diary'), 'on');
@@ -34,24 +38,23 @@ try
         end
 
         if ~diaryOn
-            diary(logPath);
+            diary(logPathRun);
             diary on;
             didStartDiary = true;
         else
             % If diary is already on, do not switch files silently.
             try
                 cur = string(get(0,'DiaryFile'));
-                if cur ~= string(logPath)
-                    fprintf(2, '[NOTE] Diary is already ON to a different file: %s\n', cur);
-                    fprintf(2, '       Summary logs may not be written to: %s\n', logPath);
-                end
+                fprintf(2, '[NOTE] Diary is already ON: %s\n', cur);
+                fprintf(2, '       This summarize run will NOT redirect diary to: %s\n', logPathRun);
             catch
             end
         end
 
         fprintf('\n===== summarize_bandpower_outputs started: %s =====\n', datestr(now,31));
         fprintf('Input folder: %s\n', input_folder);
-        fprintf('Summary dir : %s\n\n', fp_sum);
+        fprintf('Summary dir : %s\n', fp_sum);
+        fprintf('Log file    : %s\n\n', logPathRun);
     end
 catch
 end
@@ -256,6 +259,11 @@ try
     if didStartDiary
         fprintf('===== summarize_bandpower_outputs finished: %s =====\n', datestr(now,31));
         diary off;
+        % Copy to pipeline_latest.log for convenience
+        try
+            copyfile(logPathRun, logPathLatest, 'f');
+        catch
+        end
     end
 catch
 end
