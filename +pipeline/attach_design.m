@@ -24,13 +24,15 @@ if height(M)==0
     return;
 end
 
-% Join on scene_id
+% Join on scene_id (LEFT join: keep Tin rows only)
+Tin.__orig_row__ = (1:height(Tin))';
 J = outerjoin(Tin, M(:,{'scene_id','scene_name','WWR','Cond','Complexity','SportFreq','Experience','Order'}), ...
-    'Keys', 'scene_id', 'MergeKeys', true);
+    'Keys', 'scene_id', 'MergeKeys', true, 'Type','left');
 
 % Restore original row order
-if ismember('scene_id', J.Properties.VariableNames)
-    % outerjoin may reorder; keep stable by sorting on scene_id then original index if present
+if ismember('__orig_row__', J.Properties.VariableNames)
+    J = sortrows(J, '__orig_row__');
+    J.__orig_row__ = [];
 end
 
 Tout = J;

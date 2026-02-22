@@ -530,7 +530,7 @@ plot_paired_gray_minus_view(T, fp_fig, base);
 plot_occ_psd(EEG, T, roi, fs, wlen, nover, nfft, fp_fig, base);
 
 %% ===== 10) view-gray 地形图（theta/alpha/beta） =====
-plot_topoplot_view_minus_gray(EEG, T, bands, totalBand30, fs, wlen, nover, nfft, fp_fig, base);
+plot_topoplot_view_minus_gray(EEG, T, bands, totalBand30, fs, wlen, nover, nfft, fp_fig, base, designMap);
 
 %% ===== 11) 导出论文级汇总表 =====
 export_summary_tables(T, fp_csv, base);
@@ -562,7 +562,7 @@ plot_beta_split(T, fp_fig, base);
 plot_three_stage_chain(T, fp_fig, base);
 
 %% ===== 20) Scene 序列曲线 =====
-plot_scene_sequence(T, fp_fig, base);
+plot_scene_sequence(T, fp_fig, base, designMap);
 
 %% ===== 21) 可选打包输出 =====
 if isfield(cfg, 'zip_output') && cfg.zip_output
@@ -856,8 +856,9 @@ fprintf('Saved figure: %s\n', figFile);
 try; close(fig); catch; end
 end
 
-function plot_topoplot_view_minus_gray(EEG, T, bands, totalBand, fs, wlen, nover, nfft, fp, base)
+function plot_topoplot_view_minus_gray(EEG, T, bands, totalBand, fs, wlen, nover, nfft, fp, base, designMap)
 % 绘制 theta/alpha/beta 三个频段的 view-gray 差异地形图
+% 若提供 designMap，额外输出：按 Complexity 拆分的 topoplot（High/Low）
 
 % 检查 chanlocs
 if ~isfield(EEG,'chanlocs') || numel(EEG.chanlocs)~=EEG.nbchan
@@ -865,62 +866,144 @@ if ~isfield(EEG,'chanlocs') || numel(EEG.chanlocs)~=EEG.nbchan
     return;
 end
 
+if nargin < 11
+    designMap = table();
+end
+
 idx_view = find(string(T.cond)=="view");
 idx_gray = find(string(T.cond)=="gray");
 if isempty(idx_view) || isempty(idx_gray)
-    warning('No segments for view/gray; skip topoplot.'); 
+    warning('No segments for view/gray; skip topoplot.');
     return;
 end
+
+% Helper to compute mean relative band power topography for a set of segments
+    function rB = mean_rel_topo(idxSeg, bandRange)
+        rB = zeros(EEG.nbchan,1);
+        cnt = 0;
+        for kk = idxSeg(:)'
+            seg = double(EEG.data(:, T.s0(kk):T.s1(kk)));
+            [P,F] = pwelch(seg', wlen, nover, nfft, fs);
+            for ci = 1:EEG.nbchan
+                [rel, ~] = band_power(P(:,ci), F, bandRange, totalBand);
+                rB(ci) = rB(ci) + rel;
+            end
+            cnt = cnt + 1;
+        end
+        rB = rB / max(cnt,1);
+    end
 
 % 频段列表
 bandNames = {'theta', 'alpha', 'beta'};
 bandRanges = {bands.theta, bands.alpha, bands.beta};
 
+% Compute gray baseline once
+rGray = cell(1,3);
+for bi = 1:3
+    rGray{bi} = mean_rel_topo(idx_gray, bandRanges{bi});
+end
+
+% Optional: determine complexity split for view segments
+idx_view_low = [];
+idx_view_high = [];
+try
+    if ~isempty(designMap)
+        tmp = table((1:height(T))', T.scene_id, string(T.cond), 'VariableNames', {'seg_idx','scene_id','cond'});
+        tmp = tmp(string(tmp.cond)=="view", :);
+        tmp = pipeline.attach_design(tmp, base, designMap);
+
+        if ismember('Complexity', tmp.Properties.VariableNames)
+            cx = tmp.Complexity;
+            if isstring(cx) || iscellstr(cx)
+                cx = string(cx);
+                lowMask = lower(strtrim(cx))=="low" | lower(strtrim(cx))=="0";
+                highMask = lower(strtrim(cx))=="high" | lower(strtrim(cx))=="1";
+            else
+                lowMask = cx <= 0.5;
+                highMask = cx > 0.5;
+            end
+            idx_view_low  = tmp.seg_idx(lowMask);
+            idx_view_high = tmp.seg_idx(highMask);
+        end
+    end
+catch
+end
+
 for bi = 1:3
     bandName = bandNames{bi};
     bandRange = bandRanges{bi};
-    
-    rB_view = zeros(EEG.nbchan,1); cntv = 0;
-    rB_gray = zeros(EEG.nbchan,1); cntg = 0;
-    
-    % 计算 view 段均值
-    for kk = idx_view'
-        seg = double(EEG.data(:, T.s0(kk):T.s1(kk)));
-        [P,F] = pwelch(seg', wlen, nover, nfft, fs);
-        for ci = 1:EEG.nbchan
-            [rel, ~] = band_power(P(:,ci), F, bandRange, totalBand);
-            rB_view(ci) = rB_view(ci) + rel;
-        end
-        cntv = cntv + 1;
-    end
-    rB_view = rB_view / cntv;
-    
-    % 计算 gray 段均值
-    for kk = idx_gray'
-        seg = double(EEG.data(:, T.s0(kk):T.s1(kk)));
-        [P,F] = pwelch(seg', wlen, nover, nfft, fs);
-        for ci = 1:EEG.nbchan
-            [rel, ~] = band_power(P(:,ci), F, bandRange, totalBand);
-            rB_gray(ci) = rB_gray(ci) + rel;
-        end
-        cntg = cntg + 1;
-    end
-    rB_gray = rB_gray / cntg;
-    
-    % 差异
-    dB = rB_view - rB_gray;
-    
-    % 绘图
+
+    % --- Original: view - gray (all view pooled) ---
+    rView = mean_rel_topo(idx_view, bandRange);
+    dB = rView - rGray{bi};
+
     fig = figure('Name', sprintf('%s topoplot (view - gray)', upper(bandName)));
     topoplot(dB, EEG.chanlocs, 'electrodes', 'labels');
-    title(sprintf('Relative %s difference: view - gray', bandName));
+    title(sprintf('Relative %s difference: view - gray (all scenes)', bandName));
     colorbar;
-    
-    % 保存图片
     figFile = fullfile(fp, sprintf('%s_topoplot_%s.png', base, bandName));
     saveas(fig, figFile);
     fprintf('Saved figure: %s\n', figFile);
     try; close(fig); catch; end
+
+    % --- New: split view by complexity (if available) ---
+    if ~isempty(idx_view_low)
+        rLow = mean_rel_topo(idx_view_low, bandRange);
+        fig = figure('Name', sprintf('%s topoplot (view low complexity)', upper(bandName)));
+        topoplot(rLow, EEG.chanlocs, 'electrodes', 'labels');
+        title(sprintf('Relative %s: view (Low complexity)', bandName));
+        colorbar;
+        figFile = fullfile(fp, sprintf('%s_topoplot_%s_view_lowCx.png', base, bandName));
+        saveas(fig, figFile);
+        fprintf('Saved figure: %s\n', figFile);
+        try; close(fig); catch; end
+
+        dLow = rLow - rGray{bi};
+        fig = figure('Name', sprintf('%s topoplot (view low - gray)', upper(bandName)));
+        topoplot(dLow, EEG.chanlocs, 'electrodes', 'labels');
+        title(sprintf('Relative %s difference: view(LowCx) - gray', bandName));
+        colorbar;
+        figFile = fullfile(fp, sprintf('%s_topoplot_%s_viewLow_minus_gray.png', base, bandName));
+        saveas(fig, figFile);
+        fprintf('Saved figure: %s\n', figFile);
+        try; close(fig); catch; end
+    end
+
+    if ~isempty(idx_view_high)
+        rHigh = mean_rel_topo(idx_view_high, bandRange);
+        fig = figure('Name', sprintf('%s topoplot (view high complexity)', upper(bandName)));
+        topoplot(rHigh, EEG.chanlocs, 'electrodes', 'labels');
+        title(sprintf('Relative %s: view (High complexity)', bandName));
+        colorbar;
+        figFile = fullfile(fp, sprintf('%s_topoplot_%s_view_highCx.png', base, bandName));
+        saveas(fig, figFile);
+        fprintf('Saved figure: %s\n', figFile);
+        try; close(fig); catch; end
+
+        dHigh = rHigh - rGray{bi};
+        fig = figure('Name', sprintf('%s topoplot (view high - gray)', upper(bandName)));
+        topoplot(dHigh, EEG.chanlocs, 'electrodes', 'labels');
+        title(sprintf('Relative %s difference: view(HighCx) - gray', bandName));
+        colorbar;
+        figFile = fullfile(fp, sprintf('%s_topoplot_%s_viewHigh_minus_gray.png', base, bandName));
+        saveas(fig, figFile);
+        fprintf('Saved figure: %s\n', figFile);
+        try; close(fig); catch; end
+    end
+
+    if ~isempty(idx_view_low) && ~isempty(idx_view_high)
+        rLow = mean_rel_topo(idx_view_low, bandRange);
+        rHigh = mean_rel_topo(idx_view_high, bandRange);
+        dHL = rHigh - rLow;
+        fig = figure('Name', sprintf('%s topoplot (HighCx - LowCx)', upper(bandName)));
+        topoplot(dHL, EEG.chanlocs, 'electrodes', 'labels');
+        title(sprintf('Relative %s difference: HighCx - LowCx (view)', bandName));
+        colorbar;
+        figFile = fullfile(fp, sprintf('%s_topoplot_%s_viewHigh_minus_viewLow.png', base, bandName));
+        saveas(fig, figFile);
+        fprintf('Saved figure: %s\n', figFile);
+        try; close(fig); catch; end
+    end
 end
 end
 
@@ -1567,9 +1650,14 @@ fprintf('Saved figure: %s\n', figFile);
 try; close(fig); catch; end
 end
 
-function plot_scene_sequence(T, fp, base)
+function plot_scene_sequence(T, fp, base, designMap)
 % Scene 序列曲线：按 scene_id 的折线图
 % 一眼看出是否有场景效应/趋势/异常
+% 若提供 designMap，则在 x 轴标注 SceneID/WWR/Complexity（尽量不挤爆）
+
+if nargin < 4
+    designMap = table();
+end
 
 conds = string(T.cond);
 view_mask = conds == "view";
@@ -1584,7 +1672,15 @@ end
 [~, ord] = sort(Tv.scene_id);
 Tv = Tv(ord, :);
 
-fig = figure('Name', 'Scene Sequence', 'Position', [100 100 1000 400]);
+% Attach design labels if available
+try
+    if ~isempty(designMap)
+        Tv = pipeline.attach_design(Tv, base, designMap);
+    end
+catch
+end
+
+fig = figure('Name', 'Scene Sequence', 'Position', [100 100 1100 420]);
 
 metrics = {'O_alpha', 'O_theta', 'F_theta', 'F_alpha'};
 colors = lines(numel(metrics));
@@ -1595,10 +1691,10 @@ for mi = 1:numel(metrics)
     if ~ismember(colName, Tv.Properties.VariableNames)
         continue;
     end
-    
+
     vals = Tv.(colName);
     scene_ids = Tv.scene_id;
-    
+
     plot(scene_ids, vals, 'o-', 'Color', colors(mi,:), 'LineWidth', 1.5, ...
         'MarkerFaceColor', colors(mi,:), 'DisplayName', strrep(colName, '_', ' '));
 end
@@ -1609,8 +1705,36 @@ title('Power Across Scenes (View Segments)');
 legend('Location', 'best');
 grid on;
 
+% X tick labels: try show scene_name / WWR / Complexity
+try
+    if ismember('scene_name', Tv.Properties.VariableNames) || ismember('WWR', Tv.Properties.VariableNames)
+        xt = Tv.scene_id;
+        labs = strings(numel(xt),1);
+        for i = 1:numel(xt)
+            sn = ""; wwr = ""; cx = "";
+            if ismember('scene_name', Tv.Properties.VariableNames); sn = string(Tv.scene_name(i)); end
+            if ismember('WWR', Tv.Properties.VariableNames) && ~isnan(Tv.WWR(i)); wwr = "W" + string(Tv.WWR(i)); end
+            if ismember('Complexity', Tv.Properties.VariableNames) && ~isnan(Tv.Complexity(i)); cx = "C" + string(Tv.Complexity(i)); end
+
+            if strlength(sn) > 0
+                labs(i) = sn;
+            else
+                labs(i) = strjoin([wwr cx], "_");
+            end
+            if strlength(labs(i))==0
+                labs(i) = string(xt(i));
+            end
+        end
+
+        set(gca, 'XTick', xt);
+        set(gca, 'XTickLabel', labs);
+        xtickangle(45);
+    end
+catch
+end
+
 % 标注 block 边界
-if max(Tv.block_id) > 1
+if ismember('block_id', Tv.Properties.VariableNames) && max(Tv.block_id) > 1
     block_boundary = find(diff(Tv.block_id) > 0);
     if ~isempty(block_boundary)
         xline(Tv.scene_id(block_boundary) + 0.5, 'k--', 'LineWidth', 1.5);
