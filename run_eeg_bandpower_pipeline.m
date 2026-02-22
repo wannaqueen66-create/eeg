@@ -572,10 +572,10 @@ export_summary_tables(T, fp_csv, base);
 summary_files{end+1} = fullfile(fp_csv, sprintf('%s_bandpower_summary.csv', base)); %#ok<AGROW>
 
 %% ===== 12) 导出 scene_level.csv 用于回归分析 =====
-export_scene_level(T, fp_csv, base);
+export_scene_level(T, fp_csv, base, designMap);
 
 %% ===== 13) 导出配对检查清单（用于审核配对是否正确） =====
-export_pairs_check(T, fp_qc, base, cfg);
+export_pairs_check(T, fp_qc, base, cfg, designMap);
 
 %% ===== 14) 导出 QC 质量指标表 =====
 export_qc_table(T, fp_qc, base);
@@ -1116,7 +1116,7 @@ fprintf('Saved summary: %s\n', summaryFile);
 fprintf('Saved tests:   %s\n', metaFile);
 end
 
-function export_scene_level(T, fp, base)
+function export_scene_level(T, fp, base, designMap)
 % 导出 scene_level.csv：仅 view 段，按 scene_id 排序
 % 包含 scene_id, 各频段功率，可直接用于与复杂度指标回归
 
@@ -1159,11 +1159,8 @@ sceneTable = table( ...
 % 保存
 sceneFile = fullfile(fp, sprintf('%s_scene_level.csv', base));
 % Attach design mapping if provided
-try
-    if exist('designMap','var') && ~isempty(designMap)
-        sceneTable = pipeline.attach_design(sceneTable, base, designMap);
-    end
-catch
+if nargin >= 4 && ~isempty(designMap)
+    sceneTable = pipeline.attach_design(sceneTable, base, designMap);
 end
 
 writetable(sceneTable, sceneFile);
@@ -1174,7 +1171,7 @@ disp('=== Scene-level data (for regression) ===');
 disp(sceneTable);
 end
 
-function export_pairs_check(T, fp, base, cfg)
+function export_pairs_check(T, fp, base, cfg, designMap)
 % 导出配对检查清单：就近窗口匹配
 % 配对关系说明：
 %   view (7→8) → questionnaire_small (8→9) → gray (9→7/8/5/6)
@@ -1245,11 +1242,8 @@ pairTable = table( ...
 % 保存
 pairsFile = fullfile(fp, sprintf('%s_pairs_check.csv', base));
 % Attach design mapping if provided
-try
-    if exist('designMap','var') && ~isempty(designMap)
-        pairTable = pipeline.attach_design(pairTable, base, designMap);
-    end
-catch
+if nargin >= 5 && ~isempty(designMap)
+    pairTable = pipeline.attach_design(pairTable, base, designMap);
 end
 
 writetable(pairTable, pairsFile);
