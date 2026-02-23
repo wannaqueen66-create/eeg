@@ -393,4 +393,78 @@ out.AllPairs_qc = AllPairs_qc;
 out.Qsub = Qsub;
 out.Qview = Qview;
 
+% Write machine-readable QC audit trail JSON (for supplementary materials)
+try
+    doJson = true;
+    if isfield(cfg,'qc_write_json'); doJson = logical(cfg.qc_write_json); end
+    if doJson
+        qc = struct();
+        qc.generated = datestr(now,31);
+        qc.git_commit = '';
+        try
+            [st,outc] = system('git rev-parse HEAD');
+            if st==0; qc.git_commit = strtrim(outc); end
+        catch
+        end
+
+        qc.params = struct();
+        qc.params.qc_apply = applyQc;
+        qc.params.qc_hf_threshold = hfThr;
+        qc.params.qc_view_bad_frac_threshold = badFracThr;
+        qc.params.qc_rms_method = char(rmsMethod);
+        qc.params.qc_rms_k = rmsK;
+
+        qc.derived = struct();
+        qc.derived.rms_view_threshold_subject_mean = rmsViewThr;
+        qc.derived.rms_gray_threshold_subject_mean = rmsGrayThr;
+
+        qc.summary = struct();
+        qc.summary.n_subjects = height(Qsub);
+        qc.summary.n_excluded_scenelevel = sum(Qsub.exclude_scenelevel);
+        qc.summary.n_excluded_recovery = sum(Qsub.exclude_recovery);
+
+        qc.excluded = struct();
+        qc.excluded.scenelevel_subjects = cellstr(string(Qsub.subject_id(Qsub.exclude_scenelevel)));
+        qc.excluded.recovery_subjects = cellstr(string(Qsub.subject_id(Qsub.exclude_recovery)));
+
+        % Per-scene valid counts (as struct array)
+        qc.scene_counts = [];
+        try
+            if isfield(out,'qc_scene_valid_counts') && exist(out.qc_scene_valid_counts,'file')
+                Tcnt = readtable(out.qc_scene_valid_counts, 'TextType','string');
+                arr = repmat(struct('scene_id',[],'scene_name','','n_total',[],'n_valid',[],'excluded_subjects',{{}}), height(Tcnt), 1);
+                for i=1:height(Tcnt)
+                    arr(i).scene_id = double(Tcnt.scene_id(i));
+                    if ismember('scene_name', Tcnt.Properties.VariableNames)
+                        arr(i).scene_name = char(string(Tcnt.scene_name(i)));
+                    end
+                    arr(i).n_total = double(Tcnt.n_total(i));
+                    arr(i).n_valid = double(Tcnt.n_valid(i));
+                    excl = '';
+                    if ismember('excluded_subjects', Tcnt.Properties.VariableNames)
+                        excl = char(string(Tcnt.excluded_subjects(i)));
+                    end
+                    if strlength(string(excl))>0
+                        arr(i).excluded_subjects = strsplit(excl, ';');
+                    else
+                        arr(i).excluded_subjects = {};
+                    end
+                end
+                qc.scene_counts = arr;
+            end
+        catch
+        end
+
+        fp_json = fullfile(fp_sum, 'qc_report.json');
+        fid = fopen(fp_json,'w');
+        if fid~=-1
+            fwrite(fid, jsonencode(qc, 'PrettyPrint', true), 'char');
+            fclose(fid);
+            out.qc_report_json = fp_json;
+            fprintf('[QC] Wrote QC audit JSON: %s\n', fp_json);
+        end
+    end
+catch
+end
+
 end

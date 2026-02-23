@@ -252,6 +252,13 @@ try
 catch
 end
 
+% Denominator sensitivity (1-30 vs 1-40)
+try
+    pipeline.compare_denominator_sensitivity(fp_sum, cfg);
+catch ME
+    fprintf(2, '[WARN] compare_denominator_sensitivity failed: %s\n', ME.message);
+end
+
 fprintf('Batch summaries written to: %s\n', fp_sum);
 
 % Close summary-stage diary if we started it

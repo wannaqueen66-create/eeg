@@ -27,6 +27,24 @@ try
     fprintf(fid, '- figure_visible: %s\n', string(getfield_def(cfg,'figure_visible',false)));
     fprintf(fid, '- batch_summaries: %s\n', string(getfield_def(cfg,'batch_summaries',true)));
 
+    % Paper metrics / QC
+    try
+        if isfield(cfg,'paper_metrics')
+            fprintf(fid, '- paper_metrics: %s\n', strjoin(string(cfg.paper_metrics), ', '));
+        end
+    catch
+    end
+    try
+        if isfield(cfg,'qc_apply')
+            fprintf(fid, '- qc_apply: %s\n', string(cfg.qc_apply));
+            fprintf(fid, '  - qc_hf_threshold: %s\n', string(getfield_def(cfg,'qc_hf_threshold','')));
+            fprintf(fid, '  - qc_view_bad_frac_threshold: %s\n', string(getfield_def(cfg,'qc_view_bad_frac_threshold','')));
+            fprintf(fid, '  - qc_rms_method: %s\n', string(getfield_def(cfg,'qc_rms_method','')));
+            fprintf(fid, '  - qc_rms_k: %s\n', string(getfield_def(cfg,'qc_rms_k','')));
+        end
+    catch
+    end
+
     if isfield(cfg,'roi')
         fprintf(fid, '\n## ROI\n\n');
         r = cfg.roi;
