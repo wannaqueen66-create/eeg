@@ -259,6 +259,21 @@ catch ME
     fprintf(2, '[WARN] compare_denominator_sensitivity failed: %s\n', ME.message);
 end
 
+% Group-level scene sequences (raw + QC)
+try
+    pipeline.plot_group_scene_sequences(AllScene, fp_sum, cfg, "raw");
+catch ME
+    fprintf(2, '[WARN] plot_group_scene_sequences(raw) failed: %s\n', ME.message);
+end
+try
+    if exist(fullfile(fp_sum,'all_subjects_scene_level_qc.csv'),'file')
+        S_qc = readtable(fullfile(fp_sum,'all_subjects_scene_level_qc.csv'));
+        pipeline.plot_group_scene_sequences(S_qc, fp_sum, cfg, "qc");
+    end
+catch ME
+    fprintf(2, '[WARN] plot_group_scene_sequences(qc) failed: %s\n', ME.message);
+end
+
 fprintf('Batch summaries written to: %s\n', fp_sum);
 
 % Close summary-stage diary if we started it
