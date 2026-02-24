@@ -152,7 +152,12 @@ for fi=1:numel(factors)
                         c = [0.95 0.97 1.0]; % low complexity
                     end
                     x0 = si-0.5; x1 = si+0.5;
-                    patch([x0 x1 x1 x0], [yl(1) yl(1) yl(2) yl(2)], c, 'EdgeColor','none', 'FaceAlpha', 0.35);
+                    hp = patch([x0 x1 x1 x0], [yl(1) yl(1) yl(2) yl(2)], c, 'EdgeColor','none', 'FaceAlpha', 0.35, 'HandleVisibility','off');
+                    % ensure background shading does not appear in legend (avoid data1..dataN)
+                    try
+                        hp.Annotation.LegendInformation.IconDisplayStyle = 'off';
+                    catch
+                    end
                 end
             end
         catch
@@ -160,6 +165,7 @@ for fi=1:numel(factors)
 
         groups_order = ["Low","High"];
         colors = lines(2);
+        hLines = gobjects(0);
         for gi=1:2
             glab = groups_order(gi);
             Ti = Tsum(Tsum.group==glab,:);
@@ -168,8 +174,9 @@ for fi=1:numel(factors)
             [~, pos] = ismember(double(Ti.scene_id), scenes);
             [pos, o] = sort(pos);
             Ti = Ti(o,:);
-            errorbar(pos, Ti.mean, Ti.sem, 'o-', 'LineWidth', 1.8, 'Color', colors(gi,:), ...
+            h = errorbar(pos, Ti.mean, Ti.sem, 'o-', 'LineWidth', 1.8, 'Color', colors(gi,:), ...
                 'MarkerFaceColor', colors(gi,:), 'DisplayName', sprintf('%s (mean n≈%.1f)', glab, mean(Ti.n,'omitnan')));
+            hLines(end+1) = h; %#ok<AGROW>
         end
 
         xlim([0.5, numel(scenes)+0.5]);
@@ -195,7 +202,11 @@ for fi=1:numel(factors)
             ttag = " [" + string(tag) + "]";
         end
         title(sprintf('%s: %s across scenes%s', fac, met, ttag), 'Interpreter','none');
-        legend('Location','best');
+        try
+            legend(hLines, 'Location','best');
+        catch
+            legend('Location','best');
+        end
 
         fn = sprintf('group_scene_sequence_%s_%s', lower(fac), char(met));
         if strlength(string(tag))>0
