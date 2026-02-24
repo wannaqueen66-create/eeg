@@ -80,18 +80,50 @@ try
 catch
 end
 
+% Ensure string columns for robust comparisons
+try
+    if ismember('metric', Tall.Properties.VariableNames)
+        Tall.metric = string(Tall.metric);
+    end
+    if ismember('band', Tall.Properties.VariableNames)
+        Tall.band = string(Tall.band);
+    end
+catch
+end
+
 % Attach between-subject factors (Experience/SportFreq) if missing in topo_long
 % topo_long exported from single-subject stage may only include subject_id/chan/band/metric/value.
 if ~ismember('Experience', Tall.Properties.VariableNames) || ~ismember('SportFreq', Tall.Properties.VariableNames)
     try
         map = table();
-        f_map = fullfile(fp_sum, 'per_subject_recovery_metrics.csv');
+
+        % Tidy layout: tables live under summary/tables/merged_raw
+        fp_tbl_raw = fp_sum;
+        try
+            if exist('pipeline.get_table_dir','file')==2
+                fp_tbl_raw = pipeline.get_table_dir(fp_sum, cfg, 'merged_raw');
+            end
+        catch
+        end
+
+        f_map = fullfile(fp_tbl_raw, 'per_subject_recovery_metrics.csv');
         if exist(f_map,'file')
             map = readtable(f_map, 'TextType','string');
         else
-            f_pairs = fullfile(fp_sum, 'all_subjects_pairs_check.csv');
+            f_pairs = fullfile(fp_tbl_raw, 'all_subjects_pairs_check.csv');
             if exist(f_pairs,'file')
                 map = readtable(f_pairs, 'TextType','string');
+            else
+                % legacy fallback
+                f_map2 = fullfile(fp_sum, 'per_subject_recovery_metrics.csv');
+                if exist(f_map2,'file')
+                    map = readtable(f_map2, 'TextType','string');
+                else
+                    f_pairs2 = fullfile(fp_sum, 'all_subjects_pairs_check.csv');
+                    if exist(f_pairs2,'file')
+                        map = readtable(f_pairs2, 'TextType','string');
+                    end
+                end
             end
         end
 
