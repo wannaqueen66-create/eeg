@@ -220,6 +220,9 @@ catch ME
     fprintf(2, '[WARN] plot_group_topoplots failed: %s\n', ME.message);
 end
 
+% In tidy layout, topo outputs land under summary/figures/topo/<tag>/.
+% If user expects files but none exist, they should check warnings above or ensure topo_long + chanlocs exist.
+
 % Paper-ready multi-panel figures under summary/paper_fig/ (raw)
 try
     fp_paper_raw = pipeline.get_fig_dir(fp_sum, cfg, 'paper', 'raw');

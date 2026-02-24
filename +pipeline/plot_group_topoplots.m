@@ -80,13 +80,13 @@ try
 catch
 end
 
-% Ensure string columns for robust comparisons
+% Ensure string columns for robust comparisons (case-insensitive matching)
 try
     if ismember('metric', Tall.Properties.VariableNames)
-        Tall.metric = string(Tall.metric);
+        Tall.metric = strtrim(string(Tall.metric));
     end
     if ismember('band', Tall.Properties.VariableNames)
-        Tall.band = string(Tall.band);
+        Tall.band = lower(strtrim(string(Tall.band)));
     end
 catch
 end
@@ -165,6 +165,9 @@ end
 
 % Defaults
 metricName = "viewComplexityHigh_minus_viewComplexityLow";
+% allow case-insensitive / minor naming differences in exported topo_long
+metricName2 = "viewComplexityHigh_minus_viewComplexityLow";
+metricName3 = "viewComplexityHigh_minus_viewComplexityLow";
 bands = ["theta","alpha","beta"];
 
 factors = ["Experience","SportFreq"];
@@ -178,9 +181,15 @@ for fi=1:numel(factors)
     for bi=1:numel(bands)
         band = bands(bi);
 
-        use = Tall.metric==metricName & Tall.band==band;
-        use = use & (lower(Tall.(fac))=="high" | lower(Tall.(fac))=="low");
+        m = strtrim(string(Tall.metric));
+        % metric match (case-insensitive)
+        use = (lower(m)==lower(metricName));
+        % band match (already lowercased)
+        use = use & (Tall.band==band);
+        use = use & (lower(strtrim(string(Tall.(fac))))=="high" | lower(strtrim(string(Tall.(fac))))=="low");
+
         if sum(use) < nbchan*4
+            fprintf(2,'[WARN] topo: not enough rows for %s %s (%s). got=%d need>=%d\n', fac, band, metricName, sum(use), nbchan*4);
             continue;
         end
 
@@ -226,7 +235,8 @@ for fi=1:numel(factors)
             topo.(char(gname)) = vec;
         end
 
-        if ~isfield(topo,'Low') || ~isfield(topo,'High')
+                if ~isfield(topo,'Low') || ~isfield(topo,'High')
+            fprintf(2,'[WARN] topo: missing Low/High for %s %s after grouping\n', fac, band);
             continue;
         end
 
