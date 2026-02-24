@@ -38,6 +38,21 @@ try
         end
     catch
     end
+
+    % Denominator / gamma reporting
+    try
+        if isfield(cfg,'denominator_mode')
+            fprintf(fid, '- denominator_mode: %s\n', string(cfg.denominator_mode));
+        end
+        if isfield(cfg,'gamma_mode')
+            fprintf(fid, '- gamma_mode: %s\n', string(cfg.gamma_mode));
+        end
+        if isfield(cfg,'write_gamma_relative')
+            fprintf(fid, '- write_gamma_relative: %s\n', string(cfg.write_gamma_relative));
+        end
+    catch
+    end
+
     try
         if isfield(cfg,'qc_apply')
             fprintf(fid, '- qc_apply: %s\n', string(cfg.qc_apply));
