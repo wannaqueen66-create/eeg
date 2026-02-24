@@ -128,7 +128,7 @@ try
     if fid~=-1
         fprintf(fid, '# Denominator Sensitivity Report (1–30 vs 1–40)\n\n');
         fprintf(fid, '- Generated: %s\n', datestr(now,31));
-        fprintf(fid, '- Note: This report mirrors the repository\'s default aggregation (subject means by Complexity), not a full LMM.\n\n');
+        fprintf(fid, '- Note: This report mirrors the repository''s default aggregation (subject means by Complexity), not a full LMM.\n\n');
         fprintf(fid, 'See `denominator_sensitivity.csv` for the full table.\n');
         fclose(fid);
     end
