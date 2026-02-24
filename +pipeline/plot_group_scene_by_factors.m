@@ -153,13 +153,13 @@ for fi=1:numel(factors)
             [~,o] = sort(Ti.WWR); Ti = Ti(o,:);
             if cxi==0
                 ls = '-';
-                cxlab = 'CxLow';
+                cxlab = 'ComplexityLow';
             else
                 ls = '--';
-                cxlab = 'CxHigh';
+                cxlab = 'ComplexityHigh';
             end
             errorbar(Ti.WWR, Ti.mean, Ti.sem, 'o', 'LineWidth', 1.5, 'Color', cols(ci,:), 'MarkerFaceColor', cols(ci,:));
-            plot(Ti.WWR, Ti.mean, ls, 'LineWidth', 1.8, 'Color', cols(ci,:), 'DisplayName', sprintf('%s-%s', glab, cxlab));
+            plot(Ti.WWR, Ti.mean, ls, 'LineWidth', 1.8, 'Color', cols(ci,:), 'DisplayName', sprintf('%s group – %s', glab, cxlab));
         end
         set(gca,'XTick',wLevels);
         xlabel('WWR');
