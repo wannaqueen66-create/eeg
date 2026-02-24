@@ -287,9 +287,15 @@ try
 catch
 end
 
-% Denominator sensitivity (1-30 vs 1-40)
+% Denominator sensitivity (optional)
 try
-    pipeline.compare_denominator_sensitivity(fp_sum, cfg);
+    doDen = false;
+    if isfield(cfg,'write_denom_sensitivity')
+        doDen = logical(cfg.write_denom_sensitivity);
+    end
+    if doDen
+        pipeline.compare_denominator_sensitivity(fp_sum, cfg);
+    end
 catch ME
     fprintf(2, '[WARN] compare_denominator_sensitivity failed: %s\n', ME.message);
 end

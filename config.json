@@ -20,6 +20,8 @@
   "group_plot_metrics": ["O_alpha","O_theta","O_beta","F_theta"],
   "group_recovery_metrics": ["delta_O_alpha"],
   "output_layout": "tidy",
+  "denominator_mode": "rel30_only",
+  "write_denom_sensitivity": false,
   "qc_apply": true,
   "qc_hf_threshold": 0.4,
   "qc_view_bad_frac_threshold": 0.3,

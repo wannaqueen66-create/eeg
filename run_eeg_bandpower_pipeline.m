@@ -480,10 +480,17 @@ T.P_low_beta = out_rel30(:,10); T.P_high_beta = out_rel30(:,11); T.P_low_gamma =
 T.O_theta = out_rel30(:,13); T.O_alpha = out_rel30(:,14); T.O_beta = out_rel30(:,15);
 T.O_low_beta = out_rel30(:,16); T.O_high_beta = out_rel30(:,17); T.O_low_gamma = out_rel40(:,18);
 
-% === 相对功率 (1-40Hz 分母，作为对照) ===
-T.F_theta_40 = out_rel40(:,1); T.F_alpha_40 = out_rel40(:,2); T.F_beta_40 = out_rel40(:,3);
-T.P_theta_40 = out_rel40(:,7); T.P_alpha_40 = out_rel40(:,8); T.P_beta_40 = out_rel40(:,9);
-T.O_theta_40 = out_rel40(:,13); T.O_alpha_40 = out_rel40(:,14); T.O_beta_40 = out_rel40(:,15);
+% === 相对功率 (1-40Hz 分母，作为对照；可选输出) ===
+try
+    denomMode = string(getfield_def(cfg,'denominator_mode','rel30_only'));
+catch
+    denomMode = "rel30_only";
+end
+if any(denomMode == ["both","rel40_only"])
+    T.F_theta_40 = out_rel40(:,1); T.F_alpha_40 = out_rel40(:,2); T.F_beta_40 = out_rel40(:,3);
+    T.P_theta_40 = out_rel40(:,7); T.P_alpha_40 = out_rel40(:,8); T.P_beta_40 = out_rel40(:,9);
+    T.O_theta_40 = out_rel40(:,13); T.O_alpha_40 = out_rel40(:,14); T.O_beta_40 = out_rel40(:,15);
+end
 
 % === log10 绝对功率 ===
 T.F_theta_logabs = log10(out_abs(:,1) + eps);
