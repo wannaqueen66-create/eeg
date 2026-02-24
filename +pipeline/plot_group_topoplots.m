@@ -163,11 +163,58 @@ if ismember('SportFreq', Tall.Properties.VariableNames)
     Tall.SportFreq = strtrim(string(Tall.SportFreq));
 end
 
+% Fallback: if factors still missing/empty, try mapping from all_subjects_scene_level
+try
+    needEx = ~ismember('Experience', Tall.Properties.VariableNames) || all(strlength(strtrim(string(Tall.Experience)))==0);
+    needSf = ~ismember('SportFreq', Tall.Properties.VariableNames) || all(strlength(strtrim(string(Tall.SportFreq)))==0);
+    if needEx || needSf
+        fp_tbl_raw = fp_sum;
+        try
+            if exist('pipeline.get_table_dir','file')==2
+                fp_tbl_raw = pipeline.get_table_dir(fp_sum, cfg, 'merged_raw');
+            end
+        catch
+        end
+
+        f_scene = fullfile(fp_tbl_raw, 'all_subjects_scene_level.csv');
+        if ~exist(f_scene,'file')
+            % legacy fallback
+            f_scene = fullfile(fp_sum, 'all_subjects_scene_level.csv');
+        end
+
+        if exist(f_scene,'file')
+            M = readtable(f_scene, 'TextType','string');
+            if ismember('subject_id', M.Properties.VariableNames)
+                sidm = string(M.subject_id);
+                [~, ia] = unique(sidm, 'stable');
+                M = M(ia,:);
+
+                if needEx && ismember('Experience', M.Properties.VariableNames)
+                    [tf, loc] = ismember(string(Tall.subject_id), string(M.subject_id));
+                    ex = repmat("", height(Tall), 1);
+                    ex(tf) = strtrim(string(M.Experience(loc(tf))));
+                    Tall.Experience = ex;
+                end
+                if needSf && ismember('SportFreq', M.Properties.VariableNames)
+                    [tf, loc] = ismember(string(Tall.subject_id), string(M.subject_id));
+                    sf = repmat("", height(Tall), 1);
+                    sf(tf) = strtrim(string(M.SportFreq(loc(tf))));
+                    Tall.SportFreq = sf;
+                end
+            end
+        end
+    end
+catch
+end
+
+% If still missing factor columns, bail with a clear warning (otherwise silently produces no plots)
+if ~ismember('Experience', Tall.Properties.VariableNames) && ~ismember('SportFreq', Tall.Properties.VariableNames)
+    warning('plot_group_topoplots: Experience/SportFreq not found in topo_long and could not be attached from summary tables. No group topoplots were generated.');
+    return;
+end
+
 % Defaults
 metricName = "viewComplexityHigh_minus_viewComplexityLow";
-% allow case-insensitive / minor naming differences in exported topo_long
-metricName2 = "viewComplexityHigh_minus_viewComplexityLow";
-metricName3 = "viewComplexityHigh_minus_viewComplexityLow";
 bands = ["theta","alpha","beta"];
 
 factors = ["Experience","SportFreq"];
@@ -186,7 +233,11 @@ for fi=1:numel(factors)
         use = (lower(m)==lower(metricName));
         % band match (already lowercased)
         use = use & (Tall.band==band);
-        use = use & (lower(strtrim(string(Tall.(fac))))=="high" | lower(strtrim(string(Tall.(fac))))=="low");
+        % normalize factor values to High/Low (support Chinese/1-0)
+        fval = lower(strtrim(string(Tall.(fac))));
+        fval(fval=="高" | fval=="1" | fval=="h") = "high";
+        fval(fval=="低" | fval=="0" | fval=="l") = "low";
+        use = use & (fval=="high" | fval=="low");
 
         if sum(use) < nbchan*4
             fprintf(2,'[WARN] topo: not enough rows for %s %s (%s). got=%d need>=%d\n', fac, band, metricName, sum(use), nbchan*4);
