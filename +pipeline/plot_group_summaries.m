@@ -1,5 +1,5 @@
-function plot_group_summaries(AllScene, fp_sum, cfg)
-%PLOT_GROUP_SUMMARIES Generate group-level PNG summaries under summary/fig.
+function plot_group_summaries(AllScene, fp_sum, cfg, tag)
+%PLOT_GROUP_SUMMARIES Generate group-level PNG summaries under summary figures.
 %
 % Uses merged scene-level table (typically summary/all_subjects_scene_level.csv)
 % and produces simple group comparison plots:
@@ -9,9 +9,8 @@ function plot_group_summaries(AllScene, fp_sum, cfg)
 % Plots are based on subject-level means (within-subject averaging across scenes
 % of the same complexity), then group means/SEM across subjects.
 
-if nargin < 3
-    cfg = struct();
-end
+if nargin < 3; cfg = struct(); end
+if nargin < 4; tag = 'raw'; end
 
 if isempty(AllScene) || ~istable(AllScene) || height(AllScene)==0
     return;
@@ -23,8 +22,7 @@ if ~ismember('subject_id', AllScene.Properties.VariableNames)
 end
 
 % output dir
-fp_fig = fullfile(fp_sum, 'fig');
-if ~exist(fp_fig, 'dir'); mkdir(fp_fig); end
+fp_fig = pipeline.get_fig_dir(fp_sum, cfg, 'group', tag);
 
 % metrics list (configurable)
 % Journal-oriented defaults (scene effects in occipital bands + a frontal control)

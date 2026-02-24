@@ -30,7 +30,19 @@ if exist(fp_pairs,'file')
     end
 end
 
+% output dir (paper figures)
+% In legacy layout, keep historical location (fp_sum/paper_fig).
+% In tidy layout, use summary/figures/paper/<tag> handled by summarize.
 fp_fig = fullfile(fp_sum, 'paper_fig');
+if exist('pipeline.get_fig_dir','file') == 2
+    % If caller passes a QC subfolder (fp_sum=.../paper_fig_qc), we want figures in that folder root.
+    % summarize_bandpower_outputs now calls plot_paper_figures with fp_sum pointing to target output dir.
+    % So: detect if fp_sum endswith 'paper_fig_qc' or 'paper_fig' and write directly there.
+    [~, leaf] = fileparts(fp_sum);
+    if strcmpi(leaf,'paper_fig_qc') || strcmpi(leaf,'paper_fig')
+        fp_fig = fp_sum;
+    end
+end
 if ~exist(fp_fig,'dir'); mkdir(fp_fig); end
 
 % Style

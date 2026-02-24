@@ -23,8 +23,14 @@ if exist('topoplot','file') ~= 2
     return;
 end
 
-fp_fig = fullfile(fp_sum, 'fig');
-if ~exist(fp_fig,'dir'); mkdir(fp_fig); end
+tag = 'raw';
+try
+    if isfield(cfg,'qc_include_subjects') && ~isempty(cfg.qc_include_subjects)
+        tag = 'qc';
+    end
+catch
+end
+fp_fig = pipeline.get_fig_dir(fp_sum, cfg, 'topo', tag);
 
 % Load chanlocs from first available snapshot
 D = dir(fullfile(fp_out, '*', 'qc', '*_chanlocs.mat'));

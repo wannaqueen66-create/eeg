@@ -1,8 +1,7 @@
-function plot_group_recovery_summaries(AllPairs, fp_sum, cfg)
+function plot_group_recovery_summaries(AllPairs, fp_sum, cfg, tag)
 %PLOT_GROUP_RECOVERY_SUMMARIES Group-level plots for view→gray recovery deltas.
 %
-% Reads merged pairs_check table (typically summary/all_subjects_pairs_check.csv)
-% and generates PNGs under summary/fig.
+% Reads merged pairs_check table and generates PNGs under summary figures.
 %
 % Current focus: delta_O_alpha (and optionally delta_O_theta, delta_O_beta if present)
 % stratified by:
@@ -10,9 +9,8 @@ function plot_group_recovery_summaries(AllPairs, fp_sum, cfg)
 %   - SportFreq (High/Low)
 % and optionally by Complexity (Low/High) if available.
 
-if nargin < 3
-    cfg = struct();
-end
+if nargin < 3; cfg = struct(); end
+if nargin < 4; tag = 'raw'; end
 
 if isempty(AllPairs) || ~istable(AllPairs) || height(AllPairs)==0
     return;
@@ -23,8 +21,7 @@ if ~ismember('subject_id', AllPairs.Properties.VariableNames)
     return;
 end
 
-fp_fig = fullfile(fp_sum, 'fig');
-if ~exist(fp_fig,'dir'); mkdir(fp_fig); end
+fp_fig = pipeline.get_fig_dir(fp_sum, cfg, 'recovery', tag);
 
 % metrics to plot (pair-level deltas)
 default_metrics = {"delta_O_alpha"};

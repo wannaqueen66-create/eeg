@@ -26,8 +26,7 @@ if ~ismember('scene_id', AllScene.Properties.VariableNames)
     return;
 end
 
-fp_fig = fullfile(fp_sum, 'fig');
-if ~exist(fp_fig, 'dir'); mkdir(fp_fig); end
+fp_fig = pipeline.get_fig_dir(fp_sum, cfg, 'scene_sequence', tag);
 
 % metrics list
 metrics = {"O_alpha","O_theta","O_beta","F_theta"};

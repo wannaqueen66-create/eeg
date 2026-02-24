@@ -175,34 +175,34 @@ catch ME
     fprintf(2, '[WARN] qc_filter_and_report failed: %s\n', ME.message);
 end
 
-% Optional: group-level figures (PNG) under summary/fig/ (raw)
+% Group-level figures (raw)
 try
-    pipeline.plot_group_summaries(AllScene, fp_sum, cfg);
+    pipeline.plot_group_summaries(AllScene, fp_sum, cfg, 'raw');
 catch ME
     fprintf(2, '[WARN] plot_group_summaries failed: %s\n', ME.message);
 end
 
-% Optional: group-level figures (PNG) under summary/fig/ (QC-filtered)
+% Group-level figures (QC-filtered)
 try
     if ~isequal(AllScene_qc, AllScene)
         cfg2 = cfg; cfg2.group_plot_metrics = getfield_def(cfg,'group_plot_metrics',{"O_alpha","O_theta","O_beta","F_theta"});
-        pipeline.plot_group_summaries(AllScene_qc, fp_sum, cfg2);
+        pipeline.plot_group_summaries(AllScene_qc, fp_sum, cfg2, 'qc');
     end
 catch ME
     fprintf(2, '[WARN] plot_group_summaries(QC) failed: %s\n', ME.message);
 end
 
-% Optional: group-level recovery figures from pairs_check (PNG) under summary/fig/ (raw)
+% Recovery figures (raw)
 try
-    pipeline.plot_group_recovery_summaries(AllPairs, fp_sum, cfg);
+    pipeline.plot_group_recovery_summaries(AllPairs, fp_sum, cfg, 'raw');
 catch ME
     fprintf(2, '[WARN] plot_group_recovery_summaries failed: %s\n', ME.message);
 end
 
-% Optional: group-level recovery figures from pairs_check (PNG) under summary/fig/ (QC-filtered)
+% Recovery figures (QC-filtered)
 try
     if ~isequal(AllPairs_qc, AllPairs)
-        pipeline.plot_group_recovery_summaries(AllPairs_qc, fp_sum, cfg);
+        pipeline.plot_group_recovery_summaries(AllPairs_qc, fp_sum, cfg, 'qc');
     end
 catch ME
     fprintf(2, '[WARN] plot_group_recovery_summaries(QC) failed: %s\n', ME.message);
@@ -274,7 +274,7 @@ catch ME
     fprintf(2, '[WARN] plot_group_scene_sequences(qc) failed: %s\n', ME.message);
 end
 
-% Group-level factor-sorted plots (B1/B2): WWR + Complexity
+% Factor-sorted plots (B1/B2): WWR + Complexity
 try
     pipeline.plot_group_scene_by_factors(AllScene, fp_sum, cfg, "raw");
 catch ME
