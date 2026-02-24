@@ -92,7 +92,7 @@ for fi=1:numel(factors)
         end
     end
 
-    % tick labels (scene_name/SceneID)
+    % tick labels (scene_name/SceneID) + journal-friendly shortening
     tickLabels = strings(numel(scenes),1);
     for si=1:numel(scenes)
         idx = double(A.scene_id)==scenes(si);
@@ -104,7 +104,7 @@ for fi=1:numel(factors)
         if strlength(lab)==0
             lab = "scene" + sprintf('%02d', scenes(si));
         end
-        tickLabels(si) = lab;
+        tickLabels(si) = local_shorten_label(lab);
     end
 
     for mi=1:numel(metrics)
@@ -175,7 +175,19 @@ for fi=1:numel(factors)
 
         xlim([0.5, numel(scenes)+0.5]);
         set(gca,'XTick',1:numel(scenes),'XTickLabel',tickLabels);
-        xtickangle(45);
+        xtickangle(30);
+
+        % Block split line between scene 6 and 7
+        try
+            if numel(scenes) >= 12
+                xline(6.5, '--', 'Color', [0.2 0.2 0.2], 'LineWidth', 1.2, 'HandleVisibility','off');
+                yl2 = ylim;
+                ytop = yl2(2) - 0.02*(yl2(2)-yl2(1));
+                text(3.25, ytop, 'Block 1', 'HorizontalAlignment','center', 'VerticalAlignment','top', 'FontSize', 9);
+                text(9.25, ytop, 'Block 2', 'HorizontalAlignment','center', 'VerticalAlignment','top', 'FontSize', 9);
+            end
+        catch
+        end
         ylabel(char(met), 'Interpreter','none');
         xlabel('Scene (design label)', 'Interpreter','none');
 
@@ -236,5 +248,25 @@ if isstring(cx_raw)
     cx01(cx=="high" | cx=="1") = 1;
 else
     cx01 = double(cx_raw);
+end
+end
+
+function out = local_shorten_label(lab)
+% Make x-axis labels readable in journal figures.
+% Rule: keep alnum + '-' + '_' ; collapse spaces; clip to <=14 chars.
+try
+    s = string(lab);
+    s = strrep(s, " ", "");
+    s = strrep(s, "_", "-");
+    % remove common prefixes
+    s = regexprep(s, '^round\d+[-_]*', '');
+    % keep only safe chars
+    s = regexprep(s, '[^A-Za-z0-9\-]', '');
+    if strlength(s) > 14
+        s = extractBetween(s, 1, 14);
+    end
+    out = s;
+catch
+    out = string(lab);
 end
 end
