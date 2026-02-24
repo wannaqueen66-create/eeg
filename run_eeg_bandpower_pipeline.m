@@ -651,6 +651,12 @@ try
             fp_in = fileparts(files{1});
         end
         pipeline.write_global_report_md(fp_in, cfg);
+        % Ensure methods snapshot exists even if user doesn't run summarize
+        try
+            fp_sum = pipeline.get_summary_dir(fp_in, cfg);
+            pipeline.write_methods_snapshot(fp_sum, cfg);
+        catch
+        end
 
         % Generate merged batch summaries for downstream analysis
         if isfield(cfg,'batch_summaries') && cfg.batch_summaries

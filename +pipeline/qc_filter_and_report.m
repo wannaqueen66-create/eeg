@@ -193,7 +193,23 @@ Qsub.reasons_recovery = reasons_recov;
 Qsub.rms_view_threshold = repmat(rmsViewThr, height(Qsub), 1);
 Qsub.rms_gray_threshold = repmat(rmsGrayThr, height(Qsub), 1);
 
-out.qc_exclusion_subjects = fullfile(fp_sum, 'qc_exclusion_subjects.csv');
+fp_tbl_qc = fp_sum;
+fp_rep = fp_sum;
+fp_aud = fp_sum;
+try
+    if exist('pipeline.get_table_dir','file')==2
+        fp_tbl_qc = pipeline.get_table_dir(fp_sum, cfg, 'merged_qc');
+    end
+    if exist('pipeline.get_report_dir','file')==2
+        fp_rep = pipeline.get_report_dir(fp_sum, cfg);
+    end
+    if exist('pipeline.get_audit_dir','file')==2
+        fp_aud = pipeline.get_audit_dir(fp_sum, cfg);
+    end
+catch
+end
+
+out.qc_exclusion_subjects = fullfile(fp_tbl_qc, 'qc_exclusion_subjects.csv');
 try
     writetable(Qsub, out.qc_exclusion_subjects);
     fprintf('[QC] Wrote subject exclusion table: %s\n', out.qc_exclusion_subjects);
@@ -263,11 +279,11 @@ end
 
 % Write filtered merged tables
 if ~isempty(AllScene_qc)
-    out.all_subjects_scene_level_qc = fullfile(fp_sum, 'all_subjects_scene_level_qc.csv');
+    out.all_subjects_scene_level_qc = fullfile(fp_tbl_qc, 'all_subjects_scene_level_qc.csv');
     try; writetable(AllScene_qc, out.all_subjects_scene_level_qc); catch; end
 end
 if ~isempty(AllPairs_qc)
-    out.all_subjects_pairs_check_qc = fullfile(fp_sum, 'all_subjects_pairs_check_qc.csv');
+    out.all_subjects_pairs_check_qc = fullfile(fp_tbl_qc, 'all_subjects_pairs_check_qc.csv');
     try; writetable(AllPairs_qc, out.all_subjects_pairs_check_qc); catch; end
 end
 
@@ -330,7 +346,7 @@ try
             Tcnt.scene_name = labs;
         end
 
-        out.qc_scene_valid_counts = fullfile(fp_sum, 'qc_scene_valid_counts.csv');
+        out.qc_scene_valid_counts = fullfile(fp_tbl_qc, 'qc_scene_valid_counts.csv');
         writetable(Tcnt, out.qc_scene_valid_counts);
         fprintf('[QC] Wrote scene valid counts: %s\n', out.qc_scene_valid_counts);
     end
@@ -339,7 +355,7 @@ end
 
 % Human-readable report
 try
-    fp_md = fullfile(fp_sum, 'qc_filter_report.md');
+    fp_md = fullfile(fp_rep, 'qc_filter_report.md');
     fid = fopen(fp_md,'w');
     if fid~=-1
         fprintf(fid, '# QC Filter Report (Auto-generated)\n\n');
@@ -455,7 +471,7 @@ try
         catch
         end
 
-        fp_json = fullfile(fp_sum, 'qc_report.json');
+        fp_json = fullfile(fp_aud, 'qc_report.json');
         fid = fopen(fp_json,'w');
         if fid~=-1
             fwrite(fid, jsonencode(qc, 'PrettyPrint', true), 'char');

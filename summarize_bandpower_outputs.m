@@ -28,8 +28,9 @@ try
     if isfield(cfg,'save_log') && logical(cfg.save_log)
         % Timestamped log file (never overwrite previous logs)
         ts = datestr(now, 'yyyymmdd_HHMMSS');
-        logPathRun = fullfile(fp_sum, sprintf('pipeline_%s.log', ts));
-        logPathLatest = fullfile(fp_sum, 'pipeline_latest.log');
+        fp_log = pipeline.get_log_dir(fp_sum, cfg);
+        logPathRun = fullfile(fp_log, sprintf('pipeline_%s.log', ts));
+        logPathLatest = fullfile(fp_log, 'pipeline_latest.log');
 
         diaryOn = false;
         try
@@ -118,18 +119,19 @@ end
 out = struct();
 
 % Write merged tables
+fp_tbl_raw = pipeline.get_table_dir(fp_sum, cfg, 'merged_raw');
 if ~isempty(AllScene)
-    out.all_subjects_scene_level = fullfile(fp_sum, 'all_subjects_scene_level.csv');
+    out.all_subjects_scene_level = fullfile(fp_tbl_raw, 'all_subjects_scene_level.csv');
     writetable(AllScene, out.all_subjects_scene_level);
 end
 
 if ~isempty(AllPairs)
-    out.all_subjects_pairs_check = fullfile(fp_sum, 'all_subjects_pairs_check.csv');
+    out.all_subjects_pairs_check = fullfile(fp_tbl_raw, 'all_subjects_pairs_check.csv');
     writetable(AllPairs, out.all_subjects_pairs_check);
 end
 
 if height(perSub) > 0
-    out.per_subject_recovery = fullfile(fp_sum, 'per_subject_recovery_metrics.csv');
+    out.per_subject_recovery = fullfile(fp_tbl_raw, 'per_subject_recovery_metrics.csv');
     writetable(perSub, out.per_subject_recovery);
 end
 
@@ -220,7 +222,17 @@ end
 
 % Paper-ready multi-panel figures under summary/paper_fig/ (raw)
 try
-    pipeline.plot_paper_figures(fp_sum, cfg);
+    fp_paper_raw = pipeline.get_fig_dir(fp_sum, cfg, 'paper', 'raw');
+    % ensure raw tables are present where plotter reads them
+    try
+        fp_tbl_raw = pipeline.get_table_dir(fp_sum, cfg, 'merged_raw');
+        copyfile(fullfile(fp_tbl_raw,'all_subjects_scene_level.csv'), fullfile(fp_paper_raw,'all_subjects_scene_level.csv'));
+        if exist(fullfile(fp_tbl_raw,'all_subjects_pairs_check.csv'),'file')
+            copyfile(fullfile(fp_tbl_raw,'all_subjects_pairs_check.csv'), fullfile(fp_paper_raw,'all_subjects_pairs_check.csv'));
+        end
+    catch
+    end
+    pipeline.plot_paper_figures(fp_paper_raw, cfg);
 catch ME
     fprintf(2, '[WARN] plot_paper_figures failed: %s\n', ME.message);
 end
@@ -228,16 +240,39 @@ end
 % Paper-ready multi-panel figures under summary/paper_fig_qc/ (QC-filtered)
 try
     if ~isequal(AllScene_qc, AllScene)
-        fp_scene = fullfile(fp_sum,'all_subjects_scene_level_qc.csv');
+        % locate QC scene table (tidy or legacy)
+        fp_tbl_qc = fp_sum;
+        try
+            if exist('pipeline.get_table_dir','file')==2
+                fp_tbl_qc = pipeline.get_table_dir(fp_sum, cfg, 'merged_qc');
+            end
+        catch
+        end
+        fp_scene = fullfile(fp_tbl_qc,'all_subjects_scene_level_qc.csv');
         if exist(fp_scene,'file')
             % temporarily swap file name by copying
-            fp_qc_dir = fullfile(fp_sum,'paper_fig_qc');
+            fp_qc_dir = pipeline.get_fig_dir(fp_sum, cfg, 'paper', 'qc');
             if ~exist(fp_qc_dir,'dir'); mkdir(fp_qc_dir); end
             % use plot_paper_figures but point it to fp_sum; it reads standard filenames.
             % so we temporarily write QC tables as the standard names within fp_qc_dir.
-            copyfile(fullfile(fp_sum,'all_subjects_scene_level_qc.csv'), fullfile(fp_qc_dir,'all_subjects_scene_level.csv'));
-            if exist(fullfile(fp_sum,'all_subjects_pairs_check_qc.csv'),'file')
-                copyfile(fullfile(fp_sum,'all_subjects_pairs_check_qc.csv'), fullfile(fp_qc_dir,'all_subjects_pairs_check.csv'));
+            fp_tbl_qc = fp_sum;
+            try
+                if exist('pipeline.get_table_dir','file')==2
+                    fp_tbl_qc = pipeline.get_table_dir(fp_sum, cfg, 'merged_qc');
+                end
+            catch
+            end
+            copyfile(fullfile(fp_tbl_qc,'all_subjects_scene_level_qc.csv'), fullfile(fp_qc_dir,'all_subjects_scene_level.csv'));
+            % find QC tables (tidy or legacy)
+            fp_tbl_qc = fp_sum;
+            try
+                if exist('pipeline.get_table_dir','file')==2
+                    fp_tbl_qc = pipeline.get_table_dir(fp_sum, cfg, 'merged_qc');
+                end
+            catch
+            end
+            if exist(fullfile(fp_tbl_qc,'all_subjects_pairs_check_qc.csv'),'file')
+                copyfile(fullfile(fp_tbl_qc,'all_subjects_pairs_check_qc.csv'), fullfile(fp_qc_dir,'all_subjects_pairs_check.csv'));
             end
             pipeline.plot_paper_figures(fp_qc_dir, cfg);
         end

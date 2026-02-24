@@ -1,7 +1,11 @@
 function write_methods_snapshot(fp_sum, cfg)
 %WRITE_METHODS_SNAPSHOT Write a journal-friendly methods snapshot markdown.
 
-md = fullfile(fp_sum, 'methods_snapshot.md');
+fp_rep = fp_sum;
+if exist('pipeline.get_report_dir','file')==2
+    fp_rep = pipeline.get_report_dir(fp_sum, cfg);
+end
+md = fullfile(fp_rep, 'methods_snapshot.md');
 
 try
     fid = fopen(md, 'w');

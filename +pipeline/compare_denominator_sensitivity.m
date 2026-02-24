@@ -118,11 +118,20 @@ end
 
 T = cell2table(Rows, 'VariableNames', {'factor','group','metric','n_subjects','delta_1_30','delta_1_40','sign_consistent','corr_subject_deltas'});
 
-out.denominator_sensitivity_csv = fullfile(fp_sum, 'denominator_sensitivity.csv');
+fp_tbl = fp_sum;
+fp_rep = fp_sum;
+if exist('pipeline.get_table_dir','file')==2
+    fp_tbl = pipeline.get_table_dir(fp_sum, cfg, 'sensitivity');
+end
+if exist('pipeline.get_report_dir','file')==2
+    fp_rep = pipeline.get_report_dir(fp_sum, cfg);
+end
+
+out.denominator_sensitivity_csv = fullfile(fp_tbl, 'denominator_sensitivity.csv');
 writetable(T, out.denominator_sensitivity_csv);
 
 % Markdown report
-out.denominator_sensitivity_md = fullfile(fp_sum, 'denominator_sensitivity_report.md');
+out.denominator_sensitivity_md = fullfile(fp_rep, 'denominator_sensitivity_report.md');
 try
     fid = fopen(out.denominator_sensitivity_md,'w');
     if fid~=-1

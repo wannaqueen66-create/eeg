@@ -6,7 +6,14 @@ function md_path = write_global_report_md(fp_in, cfg)
 
 fp_out = pipeline.get_output_root(fp_in, cfg);
 fp_summary = pipeline.get_summary_dir(fp_in, cfg);
-md_path = fullfile(fp_summary, 'summary_report.md');
+fp_rep = fp_summary;
+try
+    if exist('pipeline.get_report_dir','file')==2
+        fp_rep = pipeline.get_report_dir(fp_summary, cfg);
+    end
+catch
+end
+md_path = fullfile(fp_rep, 'summary_report.md');
 
 try
     fid = fopen(md_path, 'w');
