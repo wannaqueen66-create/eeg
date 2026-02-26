@@ -163,11 +163,11 @@ if ismember('SportFreqGroup', Tall.Properties.VariableNames)
     Tall.SportFreqGroup = strtrim(string(Tall.SportFreqGroup));
 end
 
-% Fallback: if factors still missing/empty, try mapping from all_subjects_scene_level
+% Fallback: if canonical group columns still missing/empty, map from all_subjects_scene_level
 try
-    needEx = ~ismember('Experience', Tall.Properties.VariableNames) || all(strlength(strtrim(string(Tall.Experience)))==0);
-    needSf = ~ismember('SportFreq', Tall.Properties.VariableNames) || all(strlength(strtrim(string(Tall.SportFreq)))==0);
-    if needEx || needSf
+    needExG = ~ismember('ExperienceGroup', Tall.Properties.VariableNames) || all(strlength(strtrim(string(Tall.ExperienceGroup)))==0);
+    needSfG = ~ismember('SportFreqGroup', Tall.Properties.VariableNames) || all(strlength(strtrim(string(Tall.SportFreqGroup)))==0);
+    if needExG || needSfG
         fp_tbl_raw = fp_sum;
         try
             if exist('pipeline.get_table_dir','file')==2
@@ -185,21 +185,31 @@ try
         if exist(f_scene,'file')
             M = readtable(f_scene, 'TextType','string');
             if ismember('subject_id', M.Properties.VariableNames)
-                sidm = string(M.subject_id);
+                sidm = strtrim(string(M.subject_id));
                 [~, ia] = unique(sidm, 'stable');
                 M = M(ia,:);
 
-                if needEx && ismember('Experience', M.Properties.VariableNames)
-                    [tf, loc] = ismember(string(Tall.subject_id), string(M.subject_id));
+                [tf, loc] = ismember(strtrim(string(Tall.subject_id)), sidm);
+
+                if needExG
                     ex = repmat("", height(Tall), 1);
-                    ex(tf) = strtrim(string(M.Experience(loc(tf))));
-                    Tall.Experience = ex;
+                    if ismember('ExperienceGroup', M.Properties.VariableNames)
+                        ex(tf) = strtrim(string(M.ExperienceGroup(loc(tf))));
+                    elseif ismember('Experience', M.Properties.VariableNames)
+                        % backward-compat: derive High/Low from non-canonical column
+                        ex(tf) = normalize_high_low_local(M.Experience(loc(tf)));
+                    end
+                    Tall.ExperienceGroup = ex;
                 end
-                if needSf && ismember('SportFreq', M.Properties.VariableNames)
-                    [tf, loc] = ismember(string(Tall.subject_id), string(M.subject_id));
+
+                if needSfG
                     sf = repmat("", height(Tall), 1);
-                    sf(tf) = strtrim(string(M.SportFreq(loc(tf))));
-                    Tall.SportFreq = sf;
+                    if ismember('SportFreqGroup', M.Properties.VariableNames)
+                        sf(tf) = strtrim(string(M.SportFreqGroup(loc(tf))));
+                    elseif ismember('SportFreq', M.Properties.VariableNames)
+                        sf(tf) = normalize_high_low_local(M.SportFreq(loc(tf)));
+                    end
+                    Tall.SportFreqGroup = sf;
                 end
             end
         end
@@ -332,4 +342,14 @@ for fi=1:numel(factors)
     end
 end
 
+end
+
+function g = normalize_high_low_local(x)
+s = lower(strtrim(string(x)));
+g = repmat("", numel(s), 1);
+g(s=="high" | s=="1" | s=="高" | s=="h") = "High";
+g(s=="low"  | s=="0" | s=="低" | s=="l") = "Low";
+t = strtrim(string(x));
+g(t=="High") = "High";
+g(t=="Low") = "Low";
 end
