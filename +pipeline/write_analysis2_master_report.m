@@ -84,6 +84,13 @@ for tg = tags
         lines = [lines; render_rows(rows4, {'metric','term','F','p'})]; %#ok<AGROW>
         lines(end+1) = '';
 
+        % Significant-only digest + one-line direction summary
+        lines(end+1) = '#### Significant-only digest (p < 0.05)';
+        Sig = build_sig_digest(rows, rows2, rows3, rows4);
+        lines = [lines; render_sig_rows(Sig)]; %#ok<AGROW>
+        lines(end+1) = summarize_sig_sentence(Sig, tag, a);
+        lines(end+1) = '';
+
         % add task5/task6 quick links
         lines(end+1) = '- Task5 PeakIndex files: `analysis-2/task5_peakindex_invertedU/...`';
         lines(end+1) = '- Task6 O_beta special files: `analysis-2/task6_obeta_special/...`';
@@ -271,5 +278,106 @@ else
     for i=1:height(T)
         lines(end+1) = sprintf('%s | %s | %.4g | %.4g', string(T.metric(i)), string(T.term(i)), double(T.F(i)), double(T.p(i)));
     end
+end
+end
+
+function Sig = build_sig_digest(rowsMain, rows2way, rows3way, rowsSeq)
+Sig = table('Size',[0 7], ...
+    'VariableTypes', {'string','string','string','double','double','string','string'}, ...
+    'VariableNames', {'section','metric','term','F','p','direction','note'});
+
+if ~isempty(rowsMain)
+    p = toNumField(rowsMain,'p');
+    k = find(~isnan(p) & p<0.05);
+    for i=k'
+        note = "";
+        if rowsMain.term(i)=="Group"
+            note = "main-effect group direction";
+        end
+        Sig = [Sig; {"main", string(rowsMain.metric(i)), string(rowsMain.term(i)), double(rowsMain.F(i)), double(rowsMain.p(i)), safe_dir(rowsMain,i), note}]; %#ok<AGROW>
+    end
+end
+
+if ~isempty(rows2way)
+    p = toNumField(rows2way,'p');
+    k = find(~isnan(p) & p<0.05);
+    for i=k'
+        Sig = [Sig; {"two-way", string(rows2way.metric(i)), string(rows2way.term(i)), double(rows2way.F(i)), double(rows2way.p(i)), "", "interaction significant"}]; %#ok<AGROW>
+    end
+end
+
+if ~isempty(rows3way)
+    p = toNumField(rows3way,'p');
+    k = find(~isnan(p) & p<0.05);
+    for i=k'
+        Sig = [Sig; {"three-way", string(rows3way.metric(i)), string(rows3way.term(i)), double(rows3way.F(i)), double(rows3way.p(i)), "", "key higher-order interaction"}]; %#ok<AGROW>
+    end
+end
+
+if ~isempty(rowsSeq)
+    p = toNumField(rowsSeq,'p');
+    k = find(~isnan(p) & p<0.05);
+    for i=k'
+        nt = "";
+        if rowsSeq.term(i)=="TrialIndex"
+            nt = "adaptation trend present";
+        elseif rowsSeq.term(i)=="Group:TrialIndex"
+            nt = "different adaptation slopes by group";
+        end
+        Sig = [Sig; {"sequence", string(rowsSeq.metric(i)), string(rowsSeq.term(i)), double(rowsSeq.F(i)), double(rowsSeq.p(i)), "", nt}]; %#ok<AGROW>
+    end
+end
+end
+
+function d = safe_dir(T, i)
+d = "";
+try
+    if ismember('direction', string(T.Properties.VariableNames))
+        d = string(T.direction(i));
+    end
+catch
+end
+end
+
+function lines = render_sig_rows(Sig)
+lines = strings(0,1);
+if isempty(Sig) || height(Sig)==0
+    lines(end+1) = '- no significant effects (p < 0.05) for this grouping/tag';
+    return;
+end
+
+lines(end+1) = 'section | metric | term | F | p | direction | note';
+lines(end+1) = '---|---|---|---:|---:|---|---';
+for i=1:height(Sig)
+    lines(end+1) = sprintf('%s | %s | %s | %.4g | %.4g | %s | %s', ...
+        string(Sig.section(i)), string(Sig.metric(i)), string(Sig.term(i)), ...
+        double(Sig.F(i)), double(Sig.p(i)), string(Sig.direction(i)), string(Sig.note(i)));
+end
+end
+
+function s = summarize_sig_sentence(Sig, tag, analysisName)
+if isempty(Sig) || height(Sig)==0
+    s = sprintf('- Summary (%s/%s): no significant effects detected at p < 0.05 in the extracted core terms.', tag, analysisName);
+    return;
+end
+nMain = sum(string(Sig.section)=="main");
+n2 = sum(string(Sig.section)=="two-way");
+n3 = sum(string(Sig.section)=="three-way");
+nS = sum(string(Sig.section)=="sequence");
+
+% group direction highlights
+idxDir = find(strlength(string(Sig.direction))>0);
+dirTxt = "";
+if ~isempty(idxDir)
+    d = unique(string(Sig.direction(idxDir)), 'stable');
+    dirTxt = strjoin(d, '; ');
+end
+
+if strlength(dirTxt)>0
+    s = sprintf('- Summary (%s/%s): sig main=%d, two-way=%d, three-way=%d, sequence=%d. Group direction notes: %s.', ...
+        tag, analysisName, nMain, n2, n3, nS, dirTxt);
+else
+    s = sprintf('- Summary (%s/%s): sig main=%d, two-way=%d, three-way=%d, sequence=%d.', ...
+        tag, analysisName, nMain, n2, n3, nS);
 end
 end
