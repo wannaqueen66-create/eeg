@@ -243,6 +243,37 @@ try
     if isfield(qcOut,'Qsub')
         cfg.qc_include_subjects = string(qcOut.Qsub.subject_id(~qcOut.Qsub.exclude_scenelevel));
     end
+
+    % Build a direct subject->group map from AllScene (source of truth for this run)
+    try
+        if ismember('subject_id', AllScene.Properties.VariableNames)
+            G = table(string(AllScene.subject_id), 'VariableNames', {'subject_id'});
+            if ismember('ExperienceGroup', AllScene.Properties.VariableNames)
+                G.ExperienceGroup = string(AllScene.ExperienceGroup);
+            elseif ismember('Experience', AllScene.Properties.VariableNames)
+                G.ExperienceGroup = string(AllScene.Experience);
+            else
+                G.ExperienceGroup = repmat("", height(G), 1);
+            end
+            if ismember('SportFreqGroup', AllScene.Properties.VariableNames)
+                G.SportFreqGroup = string(AllScene.SportFreqGroup);
+            elseif ismember('SportFreq', AllScene.Properties.VariableNames)
+                G.SportFreqGroup = string(AllScene.SportFreq);
+            else
+                G.SportFreqGroup = repmat("", height(G), 1);
+            end
+
+            G.subject_id = strtrim(string(G.subject_id));
+            [~, ia] = unique(G.subject_id, 'stable');
+            G = G(ia,:);
+
+            fp_groupmap = fullfile(fp_tbl_raw, 'per_subject_group_map.csv');
+            writetable(G, fp_groupmap);
+            cfg.topo_group_map_path = fp_groupmap;
+        end
+    catch
+    end
+
     pipeline.plot_group_topoplots(fp_out, fp_sum, cfg);
 catch ME
     fprintf(2, '[WARN] plot_group_topoplots failed: %s\n', ME.message);

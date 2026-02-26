@@ -100,6 +100,42 @@ end
 
 % Attach between-subject factors (ExperienceGroup/SportFreqGroup preferred) if missing in topo_long
 % topo_long exported from single-subject stage may only include subject_id/chan/band/metric/value.
+% First priority: direct group map produced in current summarize run.
+if (~ismember('ExperienceGroup', Tall.Properties.VariableNames) || all(strlength(strtrim(string(Tall.ExperienceGroup)))==0)) || ...
+   (~ismember('SportFreqGroup', Tall.Properties.VariableNames) || all(strlength(strtrim(string(Tall.SportFreqGroup)))==0))
+    try
+        if isfield(cfg,'topo_group_map_path') && ~isempty(cfg.topo_group_map_path) && exist(cfg.topo_group_map_path,'file')
+            M = readtable(cfg.topo_group_map_path, 'TextType','string');
+            if ismember('subject_id', M.Properties.VariableNames)
+                sidm = canonical_subject_id(M.subject_id);
+                [~, ia] = unique(sidm,'stable');
+                M = M(ia,:);
+                sidm = sidm(ia);
+                [tf, loc] = ismember(Tall.sid_key, sidm);
+
+                if ~ismember('ExperienceGroup', Tall.Properties.VariableNames)
+                    Tall.ExperienceGroup = repmat("", height(Tall), 1);
+                end
+                if ~ismember('SportFreqGroup', Tall.Properties.VariableNames)
+                    Tall.SportFreqGroup = repmat("", height(Tall), 1);
+                end
+
+                if ismember('ExperienceGroup', M.Properties.VariableNames)
+                    tmp = Tall.ExperienceGroup;
+                    tmp(tf) = normalize_high_low_local(M.ExperienceGroup(loc(tf)));
+                    Tall.ExperienceGroup = tmp;
+                end
+                if ismember('SportFreqGroup', M.Properties.VariableNames)
+                    tmp = Tall.SportFreqGroup;
+                    tmp(tf) = normalize_high_low_local(M.SportFreqGroup(loc(tf)));
+                    Tall.SportFreqGroup = tmp;
+                end
+            end
+        end
+    catch
+    end
+end
+
 if ~ismember('Experience', Tall.Properties.VariableNames) || ~ismember('SportFreq', Tall.Properties.VariableNames)
     try
         map = table();
