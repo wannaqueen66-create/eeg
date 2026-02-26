@@ -86,12 +86,12 @@ if ismember('Complexity', T.Properties.VariableNames)
     T.Complexity = normalize_complexity(T.Complexity);
 end
 
-% Group columns normalization
-if ismember('Experience', T.Properties.VariableNames)
-    T.Experience = normalize_high_low(T.Experience);
+% Group columns normalization (group labels are the canonical grouping vars)
+if ismember('ExperienceGroup', T.Properties.VariableNames)
+    T.ExperienceGroup = normalize_high_low(T.ExperienceGroup);
 end
-if ismember('SportFreq', T.Properties.VariableNames)
-    T.SportFreq = normalize_high_low(T.SportFreq);
+if ismember('SportFreqGroup', T.Properties.VariableNames)
+    T.SportFreqGroup = normalize_high_low(T.SportFreqGroup);
 end
 
 % Remove rows with missing essentials
@@ -105,8 +105,8 @@ end
 
 % Setup grouping analyses
 analyses = { ...
-    struct('name','experience','gcol','Experience'), ...
-    struct('name','sportfreq','gcol','SportFreq') ...
+    struct('name','experience','gcol','ExperienceGroup'), ...
+    struct('name','sportfreq','gcol','SportFreqGroup') ...
 };
 
 for ai=1:numel(analyses)

@@ -91,7 +91,7 @@ try
 catch
 end
 
-% Attach between-subject factors (Experience/SportFreq) if missing in topo_long
+% Attach between-subject factors (ExperienceGroup/SportFreqGroup preferred) if missing in topo_long
 % topo_long exported from single-subject stage may only include subject_id/chan/band/metric/value.
 if ~ismember('Experience', Tall.Properties.VariableNames) || ~ismember('SportFreq', Tall.Properties.VariableNames)
     try
@@ -133,59 +133,34 @@ if ~ismember('Experience', Tall.Properties.VariableNames) || ~ismember('SportFre
             [~, ia] = unique(sidm, 'stable');
             map = map(ia,:);
 
-            if ~ismember('SportFreq', Tall.Properties.VariableNames)
+            if ~ismember('SportFreqGroup', Tall.Properties.VariableNames)
                 sf = repmat("", height(Tall), 1);
-                if ismember('SportFreq', map.Properties.VariableNames)
+                if ismember('SportFreqGroup', map.Properties.VariableNames)
                     [tf, loc] = ismember(string(Tall.subject_id), string(map.subject_id));
-                    sf(tf) = strtrim(string(map.SportFreq(loc(tf))));
+                    sf(tf) = strtrim(string(map.SportFreqGroup(loc(tf))));
                 end
-                Tall.SportFreq = sf;
+                Tall.SportFreqGroup = sf;
             end
 
-            if ~ismember('Experience', Tall.Properties.VariableNames)
+            if ~ismember('ExperienceGroup', Tall.Properties.VariableNames)
                 ex = repmat("", height(Tall), 1);
-                if ismember('Experience', map.Properties.VariableNames)
+                if ismember('ExperienceGroup', map.Properties.VariableNames)
                     [tf, loc] = ismember(string(Tall.subject_id), string(map.subject_id));
-                    ex(tf) = strtrim(string(map.Experience(loc(tf))));
+                    ex(tf) = strtrim(string(map.ExperienceGroup(loc(tf))));
                 end
-                Tall.Experience = ex;
+                Tall.ExperienceGroup = ex;
             end
         end
     catch
     end
 end
 
-% Normalize factor columns
-if ismember('Experience', Tall.Properties.VariableNames)
-    Tall.Experience = strtrim(string(Tall.Experience));
+% Canonical group columns
+if ismember('ExperienceGroup', Tall.Properties.VariableNames)
+    Tall.ExperienceGroup = strtrim(string(Tall.ExperienceGroup));
 end
-if ismember('SportFreq', Tall.Properties.VariableNames)
-    Tall.SportFreq = strtrim(string(Tall.SportFreq));
-end
-
-% If Experience/SportFreq are present but not valid High/Low labels,
-% fallback to ExperienceGroup/SportFreqGroup when available.
-try
-    if ismember('Experience', Tall.Properties.VariableNames)
-        ex = lower(strtrim(string(Tall.Experience)));
-        bad = ~(ex=="high" | ex=="low" | ex=="高" | ex=="低" | ex=="1" | ex=="0" | ex=="h" | ex=="l");
-        if any(bad) && ismember('ExperienceGroup', Tall.Properties.VariableNames)
-            Tall.Experience(bad) = strtrim(string(Tall.ExperienceGroup(bad)));
-        end
-    elseif ismember('ExperienceGroup', Tall.Properties.VariableNames)
-        Tall.Experience = strtrim(string(Tall.ExperienceGroup));
-    end
-
-    if ismember('SportFreq', Tall.Properties.VariableNames)
-        sf = lower(strtrim(string(Tall.SportFreq)));
-        bad = ~(sf=="high" | sf=="low" | sf=="高" | sf=="低" | sf=="1" | sf=="0" | sf=="h" | sf=="l");
-        if any(bad) && ismember('SportFreqGroup', Tall.Properties.VariableNames)
-            Tall.SportFreq(bad) = strtrim(string(Tall.SportFreqGroup(bad)));
-        end
-    elseif ismember('SportFreqGroup', Tall.Properties.VariableNames)
-        Tall.SportFreq = strtrim(string(Tall.SportFreqGroup));
-    end
-catch
+if ismember('SportFreqGroup', Tall.Properties.VariableNames)
+    Tall.SportFreqGroup = strtrim(string(Tall.SportFreqGroup));
 end
 
 % Fallback: if factors still missing/empty, try mapping from all_subjects_scene_level
@@ -233,19 +208,19 @@ catch
 end
 
 % If still missing or invalid factor columns, bail with a clear warning
-hasEx = ismember('Experience', Tall.Properties.VariableNames);
-hasSf = ismember('SportFreq', Tall.Properties.VariableNames);
+hasEx = ismember('ExperienceGroup', Tall.Properties.VariableNames);
+hasSf = ismember('SportFreqGroup', Tall.Properties.VariableNames);
 validEx = false; validSf = false;
 if hasEx
-    ex = lower(strtrim(string(Tall.Experience)));
+    ex = lower(strtrim(string(Tall.ExperienceGroup)));
     validEx = any(ex=="high" | ex=="low" | ex=="高" | ex=="低" | ex=="1" | ex=="0" | ex=="h" | ex=="l");
 end
 if hasSf
-    sf = lower(strtrim(string(Tall.SportFreq)));
+    sf = lower(strtrim(string(Tall.SportFreqGroup)));
     validSf = any(sf=="high" | sf=="low" | sf=="高" | sf=="低" | sf=="1" | sf=="0" | sf=="h" | sf=="l");
 end
 if ~(validEx || validSf)
-    warning('plot_group_topoplots: Experience/SportFreq not found in topo_long and could not be attached from summary tables. No group topoplots were generated.');
+    warning('plot_group_topoplots: ExperienceGroup/SportFreqGroup not found in topo_long and could not be attached from summary tables. No group topoplots were generated.');
     return;
 end
 
@@ -253,7 +228,7 @@ end
 metricName = "viewComplexityHigh_minus_viewComplexityLow";
 bands = ["theta","alpha","beta"];
 
-factors = ["Experience","SportFreq"];
+factors = ["ExperienceGroup","SportFreqGroup"];
 
 for fi=1:numel(factors)
     fac = factors(fi);
