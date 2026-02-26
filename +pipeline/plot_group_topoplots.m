@@ -201,21 +201,28 @@ try
 
                 if needExG
                     ex = repmat("", height(Tall), 1);
+                    src = string([]);
                     if ismember('ExperienceGroup', M.Properties.VariableNames)
-                        ex(tf) = strtrim(string(M.ExperienceGroup(loc(tf))));
+                        src = string(M.ExperienceGroup(loc(tf)));
                     elseif ismember('Experience', M.Properties.VariableNames)
-                        % backward-compat: derive High/Low from non-canonical column
-                        ex(tf) = normalize_high_low_local(M.Experience(loc(tf)));
+                        src = string(M.Experience(loc(tf)));
+                    end
+                    if ~isempty(src)
+                        ex(tf) = normalize_high_low_local(src);
                     end
                     Tall.ExperienceGroup = ex;
                 end
 
                 if needSfG
                     sf = repmat("", height(Tall), 1);
+                    src = string([]);
                     if ismember('SportFreqGroup', M.Properties.VariableNames)
-                        sf(tf) = strtrim(string(M.SportFreqGroup(loc(tf))));
+                        src = string(M.SportFreqGroup(loc(tf)));
                     elseif ismember('SportFreq', M.Properties.VariableNames)
-                        sf(tf) = normalize_high_low_local(M.SportFreq(loc(tf)));
+                        src = string(M.SportFreq(loc(tf)));
+                    end
+                    if ~isempty(src)
+                        sf(tf) = normalize_high_low_local(src);
                     end
                     Tall.SportFreqGroup = sf;
                 end
@@ -360,8 +367,16 @@ end
 function g = normalize_high_low_local(x)
 s = lower(strtrim(string(x)));
 g = repmat("", numel(s), 1);
+
+% strict matches
 g(s=="high" | s=="1" | s=="高" | s=="h") = "High";
 g(s=="low"  | s=="0" | s=="低" | s=="l") = "Low";
+
+% relaxed contains (e.g., 高组/低组/high group/low group)
+maskEmpty = (g=="");
+g(maskEmpty & (contains(s,"high") | contains(s,"高"))) = "High";
+g(maskEmpty & (contains(s,"low")  | contains(s,"低"))) = "Low";
+
 t = strtrim(string(x));
 g(t=="High") = "High";
 g(t=="Low") = "Low";
