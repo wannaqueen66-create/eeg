@@ -188,11 +188,16 @@ for ai=1:numel(analyses)
             fp_an = "";
         end
 
-        % Paper-friendly figure: trend over TrialIndex by Group
+        % Paper-friendly figures: trend over TrialIndex by Group (overall + faceted by WWR x Complexity)
         try
             pipeline.plot_trialindex_trend(Tready, A.name, m, tag, fp_fig2, lme);
         catch ME
             fprintf(2, '[WARN] analyze_trialindex_lmm: plot_trialindex_trend failed for %s (%s): %s\n', m, A.name, ME.message);
+        end
+        try
+            pipeline.plot_trialindex_trend_facets(Tready, A.name, m, tag, fp_fig2, lme);
+        catch ME
+            fprintf(2, '[WARN] analyze_trialindex_lmm: plot_trialindex_trend_facets failed for %s (%s): %s\n', m, A.name, ME.message);
         end
 
         % Report md (highlight TrialIndex + Group:TrialIndex)
