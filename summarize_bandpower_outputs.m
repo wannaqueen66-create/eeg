@@ -296,6 +296,22 @@ catch ME
     fprintf(2, '[WARN] analyze_trialindex_lmm(qc) failed: %s\n', ME.message);
 end
 
+% Analysis-2/task4: Core LMM suite (factor WWR + trend screening) (raw + qc)
+try
+    pipeline.analyze_core_lmm_suite(AllScene, fp_sum, cfg, 'raw');
+catch ME
+    fprintf(2, '[WARN] analyze_core_lmm_suite(raw) failed: %s\n', ME.message);
+end
+try
+    if exist('AllScene_qc','var') && ~isempty(AllScene_qc)
+        pipeline.analyze_core_lmm_suite(AllScene_qc, fp_sum, cfg, 'qc');
+    else
+        pipeline.analyze_core_lmm_suite(AllScene, fp_sum, cfg, 'qc');
+    end
+catch ME
+    fprintf(2, '[WARN] analyze_core_lmm_suite(qc) failed: %s\n', ME.message);
+end
+
 % In tidy layout, topo outputs land under summary/figures/topo/<tag>/.
 % If user expects files but none exist, they should check warnings above or ensure topo_long + chanlocs exist.
 
