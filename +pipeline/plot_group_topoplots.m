@@ -73,16 +73,16 @@ end
 
 % Canonical subject id (robust join key)
 try
-    Tall._sid = canonical_subject_id(Tall.subject_id);
+    Tall.sid_key = canonical_subject_id(Tall.subject_id);
 catch
-    Tall._sid = strtrim(string(Tall.subject_id));
+    Tall.sid_key = strtrim(string(Tall.subject_id));
 end
 
 % Apply QC inclusion list (optional)
 try
     if isfield(cfg,'qc_include_subjects') && ~isempty(cfg.qc_include_subjects)
         inc = canonical_subject_id(cfg.qc_include_subjects);
-        Tall = Tall(ismember(Tall._sid, inc), :);
+        Tall = Tall(ismember(Tall.sid_key, inc), :);
     end
 catch
 end
@@ -143,7 +143,7 @@ if ~ismember('Experience', Tall.Properties.VariableNames) || ~ismember('SportFre
             if ~ismember('SportFreqGroup', Tall.Properties.VariableNames)
                 sf = repmat("", height(Tall), 1);
                 if ismember('SportFreqGroup', map.Properties.VariableNames)
-                    [tf, loc] = ismember(Tall._sid, sidm);
+                    [tf, loc] = ismember(Tall.sid_key, sidm);
                     sf(tf) = strtrim(string(map.SportFreqGroup(loc(tf))));
                 end
                 Tall.SportFreqGroup = sf;
@@ -152,7 +152,7 @@ if ~ismember('Experience', Tall.Properties.VariableNames) || ~ismember('SportFre
             if ~ismember('ExperienceGroup', Tall.Properties.VariableNames)
                 ex = repmat("", height(Tall), 1);
                 if ismember('ExperienceGroup', map.Properties.VariableNames)
-                    [tf, loc] = ismember(Tall._sid, sidm);
+                    [tf, loc] = ismember(Tall.sid_key, sidm);
                     ex(tf) = strtrim(string(map.ExperienceGroup(loc(tf))));
                 end
                 Tall.ExperienceGroup = ex;
@@ -197,7 +197,7 @@ try
                 M = M(ia,:);
                 sidm = sidm(ia);
 
-                [tf, loc] = ismember(Tall._sid, sidm);
+                [tf, loc] = ismember(Tall.sid_key, sidm);
 
                 if needExG
                     ex = repmat("", height(Tall), 1);
@@ -239,7 +239,7 @@ if hasSf
 end
 if ~(validEx || validSf)
     try
-        nSubTopo = numel(unique(Tall._sid));
+        nSubTopo = numel(unique(Tall.sid_key));
     catch
         nSubTopo = NaN;
     end
