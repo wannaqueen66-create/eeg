@@ -328,6 +328,22 @@ catch ME
     fprintf(2, '[WARN] analyze_peakindex_invertedu(qc) failed: %s\n', ME.message);
 end
 
+% Analysis-2/task6: O_beta special (group-only and controlled model) (raw + qc)
+try
+    pipeline.analyze_obeta_special(AllScene, fp_sum, cfg, 'raw');
+catch ME
+    fprintf(2, '[WARN] analyze_obeta_special(raw) failed: %s\n', ME.message);
+end
+try
+    if exist('AllScene_qc','var') && ~isempty(AllScene_qc)
+        pipeline.analyze_obeta_special(AllScene_qc, fp_sum, cfg, 'qc');
+    else
+        pipeline.analyze_obeta_special(AllScene, fp_sum, cfg, 'qc');
+    end
+catch ME
+    fprintf(2, '[WARN] analyze_obeta_special(qc) failed: %s\n', ME.message);
+end
+
 % In tidy layout, topo outputs land under summary/figures/topo/<tag>/.
 % If user expects files but none exist, they should check warnings above or ensure topo_long + chanlocs exist.
 

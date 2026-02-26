@@ -1,0 +1,251 @@
+function out = analyze_obeta_special(AllScene, fp_sum, cfg, tag)
+%ANALYZE_OBETA_SPECIAL Task6: O_beta special models.
+%
+% For each grouping line (ExperienceGroup / SportFreqGroup), fit:
+%   Model A: O_beta ~ Group + (1|Subject)
+%   Model B: O_beta ~ WWR + Complexity + Group + (1|Subject)
+%
+% Outputs under:
+%   <summary>/analysis-2/task6_obeta_special/
+%     tables/<tag>/{experience|sportfreq}/...
+%     reports/<tag>/{experience|sportfreq}/...
+%     figures/<tag>/{experience|sportfreq}/...
+
+if nargin < 4 || isempty(tag)
+    tag = 'raw';
+end
+if nargin < 3
+    cfg = struct();
+end
+out = struct();
+
+if exist('fitlme','file') ~= 2
+    warning('analyze_obeta_special: fitlme not found (Stats toolbox missing). Skipping.');
+    return;
+end
+
+req = {'subject_id','O_beta'};
+for i=1:numel(req)
+    if ~ismember(req{i}, AllScene.Properties.VariableNames)
+        warning('analyze_obeta_special: missing required column %s. Skipping.', req{i});
+        return;
+    end
+end
+
+analyses = { ...
+    struct('name','experience','gcol','ExperienceGroup'), ...
+    struct('name','sportfreq','gcol','SportFreqGroup') ...
+};
+
+fp_root = fullfile(fp_sum, 'analysis-2', 'task6_obeta_special');
+
+T0 = AllScene;
+T0.subject_id = string(T0.subject_id);
+if ismember('WWR', T0.Properties.VariableNames)
+    T0.WWR = normalize_wwr(T0.WWR);
+end
+if ismember('Complexity', T0.Properties.VariableNames)
+    T0.Complexity = normalize_complexity(T0.Complexity);
+end
+
+for ai=1:numel(analyses)
+    A = analyses{ai};
+    gcol = string(A.gcol);
+    if ~ismember(gcol, T0.Properties.VariableNames)
+        continue;
+    end
+
+    vars = {'subject_id','O_beta',gcol};
+    if ismember('WWR', T0.Properties.VariableNames)
+        vars{end+1} = 'WWR';
+    end
+    if ismember('Complexity', T0.Properties.VariableNames)
+        vars{end+1} = 'Complexity';
+    end
+
+    T = T0(:, vars);
+    T.Properties.VariableNames{3} = 'GroupRaw';
+    T.EEG = double(T.O_beta);
+    T.Group = normalize_high_low(T.GroupRaw);
+    T = T(~isnan(T.EEG), :);
+    T = T(strlength(string(T.Group))>0, :);
+    if height(T) < 20
+        continue;
+    end
+
+    T.Subject = categorical(string(T.subject_id));
+    T.Group = categorical(string(T.Group), {'Low','High'});
+
+    if ismember('WWR', T.Properties.VariableNames)
+        T.WWR = categorical(string(T.WWR), {'15','45','75'});
+    end
+    if ismember('Complexity', T.Properties.VariableNames)
+        T.Complexity = categorical(string(T.Complexity), {'ComplexityLow','ComplexityHigh'});
+    end
+
+    fp_tbl = fullfile(fp_root, 'tables', tag, A.name);
+    fp_rep = fullfile(fp_root, 'reports', tag, A.name);
+    fp_fig = fullfile(fp_root, 'figures', tag, A.name);
+    if ~exist(fp_tbl,'dir'); mkdir(fp_tbl); end
+    if ~exist(fp_rep,'dir'); mkdir(fp_rep); end
+    if ~exist(fp_fig,'dir'); mkdir(fp_fig); end
+
+    % Save analysis-ready
+    keep = {'Subject','Group','EEG'};
+    if ismember('WWR', T.Properties.VariableNames); keep{end+1} = 'WWR'; end
+    if ismember('Complexity', T.Properties.VariableNames); keep{end+1} = 'Complexity'; end
+    writetable(T(:,keep), fullfile(fp_tbl, sprintf('obeta_analysis_ready_%s.csv', tag)));
+
+    % Model A
+    try
+        lmeA = fitlme(T, 'EEG ~ Group + (1|Subject)');
+    catch ME
+        warning('analyze_obeta_special: Model A failed (%s/%s): %s', tag, A.name, ME.message);
+        continue;
+    end
+
+    write_lme_tables(lmeA, fp_tbl, sprintf('obeta_modelA_group_only_%s', tag));
+
+    % Model B (controlled)
+    lmeB = [];
+    try
+        if ismember('WWR', T.Properties.VariableNames) && ismember('Complexity', T.Properties.VariableNames)
+            lmeB = fitlme(T, 'EEG ~ WWR + Complexity + Group + (1|Subject)');
+            write_lme_tables(lmeB, fp_tbl, sprintf('obeta_modelB_controlled_%s', tag));
+        end
+    catch ME
+        warning('analyze_obeta_special: Model B failed (%s/%s): %s', tag, A.name, ME.message);
+    end
+
+    % Figure
+    try
+        fp_png = fullfile(fp_fig, pipeline.sanitize_filename(sprintf('obeta_special_%s_%s.png', tag, A.name)));
+        plot_group_obeta(T, tag, A.name, fp_png);
+    catch
+    end
+
+    % Report
+    try
+        fp_md = fullfile(fp_rep, sprintf('obeta_special_report_%s.md', tag));
+        write_report(fp_md, tag, A.name, T, lmeA, lmeB);
+    catch
+    end
+end
+
+end
+
+function write_lme_tables(lme, fp_tbl, stem)
+try
+    writetable(lme.Coefficients, fullfile(fp_tbl, sprintf('%s_fixed_effects.csv', stem)));
+catch
+end
+try
+    A = anova(lme,'DFMethod','Satterthwaite');
+    writetable(A, fullfile(fp_tbl, sprintf('%s_anova.csv', stem)));
+catch
+end
+end
+
+function plot_group_obeta(T, tag, analysisName, fp_png)
+set(0,'DefaultFigureVisible','off');
+fig = figure('Color','w','Position',[100 100 760 360]);
+ax = axes(fig); hold(ax,'on');
+
+groups = ["Low","High"];
+cols = [0.2 0.5 0.9; 0.9 0.4 0.2];
+for gi=1:2
+    g = groups(gi);
+    y = T.EEG(string(T.Group)==g);
+    if isempty(y); continue; end
+    x = gi + (rand(size(y))-0.5)*0.14;
+    scatter(ax, x, y, 22, cols(gi,:), 'filled', 'MarkerFaceAlpha',0.6, 'HandleVisibility','off');
+    mu = mean(y,'omitnan');
+    se = std(y,'omitnan')/sqrt(numel(y));
+    errorbar(ax, gi, mu, se, 'o', 'Color', cols(gi,:), 'MarkerFaceColor', cols(gi,:), 'LineWidth',1.4, 'DisplayName', char(g));
+end
+set(ax,'XTick',1:2,'XTickLabel',{'Low','High'});
+xlim(ax,[0.5 2.5]);
+ylabel(ax,'O\_beta');
+grid(ax,'on');
+title(ax, sprintf('Task6 O\\_beta special | %s [%s]', analysisName, tag), 'Interpreter','none');
+legend(ax,'Location','best');
+pipeline.export_figure_png(fig, fp_png, 300);
+try; close(fig); catch; end
+end
+
+function write_report(fp_md, tag, analysisName, T, lmeA, lmeB)
+lines = strings(0,1);
+lines(end+1) = sprintf('# Task6 O_beta special | %s | %s', analysisName, tag);
+lines(end+1) = '';
+lines(end+1) = 'Models:';
+lines(end+1) = '- Model A: `EEG ~ Group + (1|Subject)`';
+if ~isempty(lmeB)
+    lines(end+1) = '- Model B: `EEG ~ WWR + Complexity + Group + (1|Subject)`';
+end
+lines(end+1) = '';
+
+% Raw means
+try
+    [G, grp] = findgroups(string(T.Group));
+    n = splitapply(@numel, T.EEG, G);
+    mu = splitapply(@(x) mean(x,'omitnan'), T.EEG, G);
+    se = splitapply(@(x) std(x,'omitnan')/sqrt(numel(x)), T.EEG, G);
+    lines(end+1) = '## Raw group means';
+    lines(end+1) = 'Group | n | mean | sem';
+    lines(end+1) = '---|---:|---:|---:';
+    for i=1:numel(n)
+        lines(end+1) = sprintf('%s|%d|%.6g|%.6g', grp(i), n(i), mu(i), se(i));
+    end
+    lines(end+1) = '';
+catch
+end
+
+lines(end+1) = '## LMM outputs';
+lines(end+1) = '- See exported fixed_effects/anova CSVs in tables/.';
+lines(end+1) = '- Compare Group effect in Model A vs Model B to assess robustness after controlling WWR & Complexity.';
+
+fid = fopen(fp_md,'w');
+for i=1:numel(lines)
+    fprintf(fid, '%s\n', lines(i));
+end
+fclose(fid);
+end
+
+function w = normalize_wwr(x)
+w = string(x);
+w = strtrim(w);
+for i=1:numel(w)
+    tok = regexp(char(w(i)), '(\d+)', 'tokens', 'once');
+    if ~isempty(tok)
+        w(i) = string(str2double(tok{1}));
+    end
+end
+ok = ismember(w,["15","45","75"]);
+w(~ok) = "";
+end
+
+function c = normalize_complexity(x)
+c = string(x);
+c = strtrim(c);
+cl = lower(c);
+out = repmat("", numel(c), 1);
+out(ismember(cl,["low","0","c0","complexitylow"])) = "ComplexityLow";
+out(ismember(cl,["high","1","c1","complexityhigh"])) = "ComplexityHigh";
+out(c=="ComplexityLow") = "ComplexityLow";
+out(c=="ComplexityHigh") = "ComplexityHigh";
+isNum = ~isnan(str2double(c));
+out(isNum & str2double(c)==0) = "ComplexityLow";
+out(isNum & str2double(c)==1) = "ComplexityHigh";
+c = out;
+end
+
+function g = normalize_high_low(x)
+s = string(x);
+s = strtrim(s);
+sl = lower(s);
+g = repmat("", numel(s), 1);
+g(ismember(sl,["high","1","高","h"])) = "High";
+g(ismember(sl,["low","0","低","l"])) = "Low";
+mask = (s=="High" | s=="Low");
+g(mask) = s(mask);
+end
