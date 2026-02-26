@@ -473,6 +473,13 @@ catch ME
     fprintf(2, '[WARN] plot_group_scene_by_factors(qc) failed: %s\n', ME.message);
 end
 
+% Analysis-2 master report in requested narrative order
+try
+    pipeline.write_analysis2_master_report(fp_sum, cfg);
+catch ME
+    fprintf(2, '[WARN] write_analysis2_master_report failed: %s\n', ME.message);
+end
+
 fprintf('Batch summaries written to: %s\n', fp_sum);
 
 % Close summary-stage diary if we started it
