@@ -102,6 +102,24 @@ for mi = 1:numel(metrics)
         % Prepare analysis table
         T = T0(:, {'subject_id','WWR','Complexity',gcol,dv});
         T.Properties.VariableNames{4} = 'GroupRaw';
+        % Fallback for score-vs-group columns in long design:
+        % if Experience/SportFreq are numeric scores, use ExperienceGroup/SportFreqGroup when present.
+        try
+            if A.name=="experience" && ismember('ExperienceGroup', T0.Properties.VariableNames)
+                gtmp = normalize_high_low(T.GroupRaw);
+                bad = strlength(gtmp)==0;
+                if any(bad)
+                    T.GroupRaw(bad) = string(T0.ExperienceGroup(bad));
+                end
+            elseif A.name=="sportfreq" && ismember('SportFreqGroup', T0.Properties.VariableNames)
+                gtmp = normalize_high_low(T.GroupRaw);
+                bad = strlength(gtmp)==0;
+                if any(bad)
+                    T.GroupRaw(bad) = string(T0.SportFreqGroup(bad));
+                end
+            end
+        catch
+        end
         T.EEG = double(T.(dv));
         T.Group = normalize_high_low(T.GroupRaw);
         T = remove_missing_rows(T);

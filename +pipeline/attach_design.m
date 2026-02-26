@@ -28,7 +28,9 @@ end
 % NOTE: table variable names must start with a letter (MATLAB identifier rule),
 % so do NOT use names like "__orig_row__".
 Tin.orig_row_attach_design = (1:height(Tin))';
-J = outerjoin(Tin, M(:,{'scene_id','scene_name','WWR','Cond','Complexity','SportFreq','Experience','Order'}), ...
+keep = {'scene_id','scene_name','WWR','Cond','Complexity','SportFreq','Experience','SportFreqGroup','ExperienceGroup','Order'};
+keep = keep(ismember(keep, M.Properties.VariableNames));
+J = outerjoin(Tin, M(:,keep), ...
     'Keys', 'scene_id', 'MergeKeys', true, 'Type','left');
 
 % Restore original row order

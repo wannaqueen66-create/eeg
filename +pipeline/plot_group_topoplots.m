@@ -163,6 +163,31 @@ if ismember('SportFreq', Tall.Properties.VariableNames)
     Tall.SportFreq = strtrim(string(Tall.SportFreq));
 end
 
+% If Experience/SportFreq are present but not valid High/Low labels,
+% fallback to ExperienceGroup/SportFreqGroup when available.
+try
+    if ismember('Experience', Tall.Properties.VariableNames)
+        ex = lower(strtrim(string(Tall.Experience)));
+        bad = ~(ex=="high" | ex=="low" | ex=="高" | ex=="低" | ex=="1" | ex=="0" | ex=="h" | ex=="l");
+        if any(bad) && ismember('ExperienceGroup', Tall.Properties.VariableNames)
+            Tall.Experience(bad) = strtrim(string(Tall.ExperienceGroup(bad)));
+        end
+    elseif ismember('ExperienceGroup', Tall.Properties.VariableNames)
+        Tall.Experience = strtrim(string(Tall.ExperienceGroup));
+    end
+
+    if ismember('SportFreq', Tall.Properties.VariableNames)
+        sf = lower(strtrim(string(Tall.SportFreq)));
+        bad = ~(sf=="high" | sf=="low" | sf=="高" | sf=="低" | sf=="1" | sf=="0" | sf=="h" | sf=="l");
+        if any(bad) && ismember('SportFreqGroup', Tall.Properties.VariableNames)
+            Tall.SportFreq(bad) = strtrim(string(Tall.SportFreqGroup(bad)));
+        end
+    elseif ismember('SportFreqGroup', Tall.Properties.VariableNames)
+        Tall.SportFreq = strtrim(string(Tall.SportFreqGroup));
+    end
+catch
+end
+
 % Fallback: if factors still missing/empty, try mapping from all_subjects_scene_level
 try
     needEx = ~ismember('Experience', Tall.Properties.VariableNames) || all(strlength(strtrim(string(Tall.Experience)))==0);
@@ -207,8 +232,19 @@ try
 catch
 end
 
-% If still missing factor columns, bail with a clear warning (otherwise silently produces no plots)
-if ~ismember('Experience', Tall.Properties.VariableNames) && ~ismember('SportFreq', Tall.Properties.VariableNames)
+% If still missing or invalid factor columns, bail with a clear warning
+hasEx = ismember('Experience', Tall.Properties.VariableNames);
+hasSf = ismember('SportFreq', Tall.Properties.VariableNames);
+validEx = false; validSf = false;
+if hasEx
+    ex = lower(strtrim(string(Tall.Experience)));
+    validEx = any(ex=="high" | ex=="low" | ex=="高" | ex=="低" | ex=="1" | ex=="0" | ex=="h" | ex=="l");
+end
+if hasSf
+    sf = lower(strtrim(string(Tall.SportFreq)));
+    validSf = any(sf=="high" | sf=="low" | sf=="高" | sf=="低" | sf=="1" | sf=="0" | sf=="h" | sf=="l");
+end
+if ~(validEx || validSf)
     warning('plot_group_topoplots: Experience/SportFreq not found in topo_long and could not be attached from summary tables. No group topoplots were generated.');
     return;
 end

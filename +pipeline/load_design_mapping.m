@@ -66,6 +66,7 @@ if isLong && ~isWide
     if ismember('Complexity', vars); cmp = double(T.Complexity); end
 
     sport = "";
+    % Prefer explicit High/Low grouping column when present.
     if ismember('SportFreqGroup', vars)
         sport = string(T.SportFreqGroup);
     elseif ismember('SportFreq', vars)
@@ -73,17 +74,40 @@ if isLong && ~isWide
     end
 
     expv = "";
+    % Prefer explicit High/Low grouping column when present.
     if ismember('ExperienceGroup', vars)
         expv = string(T.ExperienceGroup);
     elseif ismember('Experience', vars)
         expv = string(T.Experience);
     end
 
+    % If both score and group columns exist but selected value is numeric/empty,
+    % fallback to the explicit group column.
+    if ismember('SportFreqGroup', vars)
+        tmp = strtrim(lower(sport));
+        bad = strlength(tmp)==0 | (~ismember(tmp,["high","low","高","低","1","0","h","l"]));
+        if any(bad)
+            sport(bad) = string(T.SportFreqGroup(bad));
+        end
+    end
+    if ismember('ExperienceGroup', vars)
+        tmp = strtrim(lower(expv));
+        bad = strlength(tmp)==0 | (~ismember(tmp,["high","low","高","低","1","0","h","l"]));
+        if any(bad)
+            expv(bad) = string(T.ExperienceGroup(bad));
+        end
+    end
+
     orderv = nan(height(T),1);
     if ismember('Order', vars); orderv = double(T.Order); end
 
-    rows = table(subj, scene_id, scene_name, wwr, cond, cmp, sport, expv, orderv, repmat(string(fp),height(T),1), ...
-        'VariableNames', {'subject_id','scene_id','scene_name','WWR','Cond','Complexity','SportFreq','Experience','Order','design_file'});
+    sport_grp = repmat("", height(T), 1);
+    exp_grp = repmat("", height(T), 1);
+    if ismember('SportFreqGroup', vars); sport_grp = string(T.SportFreqGroup); end
+    if ismember('ExperienceGroup', vars); exp_grp = string(T.ExperienceGroup); end
+
+    rows = table(subj, scene_id, scene_name, wwr, cond, cmp, sport, expv, sport_grp, exp_grp, orderv, repmat(string(fp),height(T),1), ...
+        'VariableNames', {'subject_id','scene_id','scene_name','WWR','Cond','Complexity','SportFreq','Experience','SportFreqGroup','ExperienceGroup','Order','design_file'});
 
     % Attach extra columns (ratings etc.)
     extraVars = setdiff(vars, {'SubjectID','Block','Position','WWR','Condition','Complexity','SportFreq','Experience','ExperienceGroup','SportFreqGroup','Order','SceneID'});
