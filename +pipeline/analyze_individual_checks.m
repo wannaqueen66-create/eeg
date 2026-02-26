@@ -2,7 +2,9 @@ function out = analyze_individual_checks(AllScene, fp_sum, cfg, tag)
 %ANALYZE_INDIVIDUAL_CHECKS Task7: individual-level checks and outlier audit.
 %
 % Goal:
-% - Provide subject-level distribution checks (box/scatter) by Group
+% - Provide subject-level distribution checks by Group
+% - Provide condition-level checks (WWR x Complexity) by Group
+% - Block2 O_alpha focused audit for abnormal points
 % - Flag potential outlier-driven effects (MAD rule)
 % - Summarize significant effects detected from task4/5/6 exported ANOVA tables
 %
@@ -44,6 +46,14 @@ if ~ismember('subject_id', T0.Properties.VariableNames)
 end
 T0.subject_id = string(T0.subject_id);
 
+% Normalize common factors if present
+if ismember('WWR', T0.Properties.VariableNames)
+    T0.WWR = normalize_wwr(T0.WWR);
+end
+if ismember('Complexity', T0.Properties.VariableNames)
+    T0.Complexity = normalize_complexity(T0.Complexity);
+end
+
 for ai = 1:numel(analyses)
     A = analyses{ai};
     gcol = string(A.gcol);
@@ -59,6 +69,7 @@ for ai = 1:numel(analyses)
     if ~exist(fp_fig,'dir'); mkdir(fp_fig); end
 
     allOut = table();
+    allCond = table();
 
     for mi = 1:numel(metrics)
         dv = metrics(mi);
@@ -66,6 +77,7 @@ for ai = 1:numel(analyses)
             continue;
         end
 
+        % ---------- subject-level mean by group ----------
         T = T0(:, {'subject_id', gcol, dv});
         T.Properties.VariableNames = {'subject_id','GroupRaw','EEGraw'};
         T.EEG = double(T.EEGraw);
@@ -76,54 +88,90 @@ for ai = 1:numel(analyses)
             continue;
         end
 
-        % Subject-level means (one value per subject)
         [G, sid, grp] = findgroups(string(T.subject_id), string(T.Group));
         mu = splitapply(@(x) mean(x,'omitnan'), T.EEG, G);
         Sub = table(sid, grp, mu, 'VariableNames', {'subject_id','Group','EEG_mean'});
 
-        % Outlier check by group: |x - median| > 3*MAD
-        isOut = false(height(Sub),1);
-        zmad = nan(height(Sub),1);
-        for g = ["Low","High"]
-            idx = string(Sub.Group)==g;
-            y = Sub.EEG_mean(idx);
-            if numel(y) < 4
-                continue;
-            end
-            med = median(y,'omitnan');
-            madv = mad(y,1); % median absolute deviation (scaled=1)
-            if madv <= eps
-                madv = std(y,'omitnan');
-                if madv <= eps; madv = 1; end
-            end
-            z = abs(y - med) ./ madv;
-            tmp = false(size(y));
-            tmp(z > 3) = true;
-            isOut(idx) = tmp;
-            zmad(idx) = z;
-        end
+        [isOut, zmad] = mad_outlier_by_group(Sub.EEG_mean, string(Sub.Group));
         Sub.is_outlier_mad3 = isOut;
         Sub.z_mad = zmad;
         Sub.metric = repmat(dv, height(Sub), 1);
         Sub.analysis = repmat(string(A.name), height(Sub), 1);
         allOut = [allOut; Sub]; %#ok<AGROW>
 
-        % write per-metric subject table
         writetable(Sub, fullfile(fp_tbl, sprintf('individual_subject_means_%s_%s.csv', dv, tag)));
 
-        % figure
         try
             fp_png = fullfile(fp_fig, pipeline.sanitize_filename(sprintf('individual_check_%s_%s_%s.png', tag, A.name, dv)));
             plot_individual_figure(Sub, dv, tag, A.name, fp_png);
         catch
         end
+
+        % ---------- condition-level (WWR x Complexity) ----------
+        if ismember('WWR', T0.Properties.VariableNames) && ismember('Complexity', T0.Properties.VariableNames)
+            Tc = T0(:, {'subject_id', gcol, dv, 'WWR', 'Complexity'});
+            Tc.Properties.VariableNames = {'subject_id','GroupRaw','EEGraw','WWR','Complexity'};
+            Tc.EEG = double(Tc.EEGraw);
+            Tc.Group = normalize_high_low(Tc.GroupRaw);
+            Tc = Tc(~isnan(Tc.EEG), :);
+            Tc = Tc(strlength(string(Tc.Group))>0 & strlength(string(Tc.WWR))>0 & strlength(string(Tc.Complexity))>0, :);
+            if height(Tc) >= 24
+                [Gc, sidc, grpc, wwrc, cxc] = findgroups(string(Tc.subject_id), string(Tc.Group), string(Tc.WWR), string(Tc.Complexity));
+                muc = splitapply(@(x) mean(x,'omitnan'), Tc.EEG, Gc);
+                Csub = table(sidc, grpc, wwrc, cxc, muc, 'VariableNames', {'subject_id','Group','WWR','Complexity','EEG_mean'});
+                Csub.metric = repmat(dv, height(Csub), 1);
+                Csub.analysis = repmat(string(A.name), height(Csub), 1);
+                allCond = [allCond; Csub]; %#ok<AGROW>
+
+                writetable(Csub, fullfile(fp_tbl, sprintf('individual_condition_means_%s_%s.csv', dv, tag)));
+                try
+                    fp_png2 = fullfile(fp_fig, pipeline.sanitize_filename(sprintf('individual_condition_box_%s_%s_%s.png', tag, A.name, dv)));
+                    plot_condition_box(Csub, dv, tag, A.name, fp_png2);
+                catch
+                end
+            end
+        end
     end
 
-    % Write merged outlier table
+    % Write merged tables
     if height(allOut) > 0
         writetable(allOut, fullfile(fp_tbl, sprintf('individual_checks_merged_%s.csv', tag)));
         OutOnly = allOut(logical(allOut.is_outlier_mad3), :);
         writetable(OutOnly, fullfile(fp_tbl, sprintf('individual_outliers_mad3_%s.csv', tag)));
+
+        % Top-N outlier influence on group difference
+        Infl = compute_topN_influence(allOut, 3);
+        writetable(Infl, fullfile(fp_tbl, sprintf('individual_topN_influence_%s.csv', tag)));
+    else
+        Infl = table();
+    end
+
+    if height(allCond) > 0
+        writetable(allCond, fullfile(fp_tbl, sprintf('individual_condition_means_merged_%s.csv', tag)));
+    end
+
+    % Block2 O_alpha focused audit
+    Oa = table();
+    try
+        if ismember('O_alpha', T0.Properties.VariableNames) && ismember('block_id', T0.Properties.VariableNames) && ismember('cycle_in_block', T0.Properties.VariableNames)
+            Tb = T0(:, {'subject_id', gcol, 'O_alpha', 'block_id', 'cycle_in_block'});
+            Tb.Properties.VariableNames = {'subject_id','GroupRaw','EEG','block_id','cycle_in_block'};
+            Tb.Group = normalize_high_low(Tb.GroupRaw);
+            Tb = Tb(~isnan(double(Tb.EEG)) & strlength(string(Tb.Group))>0, :);
+            Tb = Tb(double(Tb.block_id)==2 & double(Tb.cycle_in_block)>=1 & double(Tb.cycle_in_block)<=6, :);
+            if height(Tb) > 0
+                Tb.EEG = double(Tb.EEG);
+                [isOut2, z2] = mad_outlier_by_cycle_group(Tb.EEG, double(Tb.cycle_in_block), string(Tb.Group));
+                Tb.is_outlier_mad3 = isOut2;
+                Tb.z_mad = z2;
+                Oa = Tb;
+                writetable(Oa, fullfile(fp_tbl, sprintf('block2_oalpha_points_%s.csv', tag)));
+
+                fp_png3 = fullfile(fp_fig, pipeline.sanitize_filename(sprintf('block2_oalpha_audit_%s_%s.png', tag, A.name)));
+                plot_block2_oalpha_audit(Oa, tag, A.name, fp_png3);
+            end
+        end
+    catch
     end
 
     % Significant effects scan from task4/5/6 tables
@@ -136,11 +184,90 @@ for ai = 1:numel(analyses)
     % report
     try
         fp_md = fullfile(fp_rep, sprintf('individual_checks_report_%s.md', tag));
-        write_report(fp_md, A.name, tag, allOut, Sig);
+        write_report(fp_md, A.name, tag, allOut, allCond, Oa, Sig, Infl);
     catch
     end
 end
 
+end
+
+function [isOut, zmad] = mad_outlier_by_group(y, grp)
+isOut = false(numel(y),1);
+zmad = nan(numel(y),1);
+for g = ["Low","High"]
+    idx = grp==g;
+    yg = y(idx);
+    if numel(yg) < 4
+        continue;
+    end
+    med = median(yg,'omitnan');
+    madv = mad(yg,1);
+    if madv <= eps
+        madv = std(yg,'omitnan');
+        if madv <= eps; madv = 1; end
+    end
+    z = abs(yg-med)./madv;
+    tmp = false(size(yg));
+    tmp(z>3) = true;
+    isOut(idx) = tmp;
+    zmad(idx) = z;
+end
+end
+
+function [isOut, zmad] = mad_outlier_by_cycle_group(y, cycle, grp)
+isOut = false(numel(y),1);
+zmad = nan(numel(y),1);
+for c = 1:6
+    for g = ["Low","High"]
+        idx = (cycle==c) & (grp==g);
+        yg = y(idx);
+        if numel(yg) < 4
+            continue;
+        end
+        med = median(yg,'omitnan');
+        madv = mad(yg,1);
+        if madv <= eps
+            madv = std(yg,'omitnan');
+            if madv <= eps; madv = 1; end
+        end
+        z = abs(yg-med)./madv;
+        tmp = false(size(yg));
+        tmp(z>3) = true;
+        isOut(idx) = tmp;
+        zmad(idx) = z;
+    end
+end
+end
+
+function Infl = compute_topN_influence(allOut, N)
+Infl = table('Size',[0 7], ...
+    'VariableTypes', {'string','double','double','double','double','double','double'}, ...
+    'VariableNames', {'metric','N','diff_full_HighMinusLow','diff_dropTopN','delta','n_total','n_dropped'});
+
+if nargin<2; N=3; end
+mets = unique(string(allOut.metric));
+for m = mets'
+    X = allOut(string(allOut.metric)==m, :);
+    if height(X) < 8
+        continue;
+    end
+    muH = mean(X.EEG_mean(string(X.Group)=="High"), 'omitnan');
+    muL = mean(X.EEG_mean(string(X.Group)=="Low"), 'omitnan');
+    d0 = muH - muL;
+
+    [~, idx] = sort(abs(double(X.z_mad)), 'descend');
+    idx = idx(~isnan(idx));
+    k = min(N, numel(idx));
+    keep = true(height(X),1);
+    keep(idx(1:k)) = false;
+    Y = X(keep,:);
+
+    muH2 = mean(Y.EEG_mean(string(Y.Group)=="High"), 'omitnan');
+    muL2 = mean(Y.EEG_mean(string(Y.Group)=="Low"), 'omitnan');
+    d1 = muH2 - muL2;
+
+    Infl = [Infl; {m, N, d0, d1, d1-d0, height(X), k}]; %#ok<AGROW>
+end
 end
 
 function plot_individual_figure(Sub, dv, tag, analysisName, fp_png)
@@ -161,11 +288,10 @@ for gi=1:2
     se = std(y,'omitnan')/sqrt(numel(y));
     errorbar(ax, gi, mu, se, 'o', 'Color', cols(gi,:), 'MarkerFaceColor', cols(gi,:), 'LineWidth',1.4, 'DisplayName', char(g));
 
-    % highlight outliers (red ring)
     yy = Sub.EEG_mean(string(Sub.Group)==g & logical(Sub.is_outlier_mad3));
     if ~isempty(yy)
         xx = gi + zeros(size(yy));
-        scatter(ax, xx, yy, 60, 'r', 'o', 'LineWidth',1.2, 'DisplayName', sprintf('%s outlier', g));
+        scatter(ax, xx, yy, 60, 'r', 'o', 'LineWidth',1.2, 'HandleVisibility','off');
     end
 end
 
@@ -175,6 +301,91 @@ ylabel(ax, dv);
 grid(ax,'on');
 title(ax, sprintf('Task7 individual check | %s | %s [%s]', analysisName, dv, tag), 'Interpreter','none');
 legend(ax,'Location','best');
+
+pipeline.export_figure_png(fig, fp_png, 300);
+try; close(fig); catch; end
+end
+
+function plot_condition_box(Csub, dv, tag, analysisName, fp_png)
+set(0,'DefaultFigureVisible','off');
+fig = figure('Color','w','Position',[70 70 1200 420]);
+
+cxLevels = ["ComplexityLow","ComplexityHigh"];
+wwrLevels = ["15","45","75"];
+cols = [0.2 0.5 0.9; 0.9 0.4 0.2];
+
+for ci=1:2
+    cx = cxLevels(ci);
+    ax = subplot(1,2,ci); hold(ax,'on');
+    title(ax, char(cx));
+
+    xbase = 1:3;
+    for gi=1:2
+        g = ["Low","High"];
+        gg = g(gi);
+        for wi=1:3
+            w = wwrLevels(wi);
+            y = Csub.EEG_mean(string(Csub.Complexity)==cx & string(Csub.WWR)==w & string(Csub.Group)==gg);
+            if isempty(y); continue; end
+            x0 = xbase(wi) + (gi-1.5)*0.18;
+            try
+                boxchart(ax, repmat(x0, numel(y),1), y, 'BoxWidth',0.22, 'MarkerStyle','none', 'BoxFaceColor', cols(gi,:), 'BoxFaceAlpha',0.25);
+            catch
+                % fallback if boxchart unavailable
+                q = quantile(y,[0.25 0.5 0.75]);
+                plot(ax,[x0-0.08 x0+0.08],[q(2) q(2)],'-','Color',cols(gi,:),'LineWidth',2);
+            end
+            xj = x0 + (rand(size(y))-0.5)*0.08;
+            scatter(ax, xj, y, 14, cols(gi,:), 'filled', 'MarkerFaceAlpha',0.55, 'HandleVisibility','off');
+        end
+    end
+
+    set(ax,'XTick',1:3,'XTickLabel',cellstr(wwrLevels));
+    xlabel(ax,'WWR');
+    ylabel(ax, dv);
+    grid(ax,'on');
+    legend(ax,{'Low','High'}, 'Location','best');
+end
+
+sgtitle(sprintf('Task7 condition-level box/scatter | %s | %s [%s]', analysisName, dv, tag), 'Interpreter','none');
+pipeline.export_figure_png(fig, fp_png, 300);
+try; close(fig); catch; end
+end
+
+function plot_block2_oalpha_audit(Tb, tag, analysisName, fp_png)
+set(0,'DefaultFigureVisible','off');
+fig = figure('Color','w','Position',[90 90 980 420]);
+ax = axes(fig); hold(ax,'on');
+
+cols = [0.2 0.5 0.9; 0.9 0.4 0.2];
+groups = ["Low","High"];
+for gi=1:2
+    g = groups(gi);
+    for c=1:6
+        y = Tb.EEG(string(Tb.Group)==g & double(Tb.cycle_in_block)==c);
+        if isempty(y); continue; end
+        x0 = c + (gi-1.5)*0.15;
+        x = x0 + (rand(size(y))-0.5)*0.08;
+        scatter(ax, x, y, 16, cols(gi,:), 'filled', 'MarkerFaceAlpha',0.55, 'HandleVisibility','off');
+
+        yo = Tb.EEG(string(Tb.Group)==g & double(Tb.cycle_in_block)==c & logical(Tb.is_outlier_mad3));
+        if ~isempty(yo)
+            xo = x0 + zeros(size(yo));
+            scatter(ax, xo, yo, 56, 'r', 'o', 'LineWidth',1.1, 'HandleVisibility','off');
+        end
+
+        mu = mean(y,'omitnan');
+        se = std(y,'omitnan')/sqrt(numel(y));
+        errorbar(ax, x0, mu, se, 'o', 'Color', cols(gi,:), 'MarkerFaceColor', cols(gi,:), 'LineWidth',1.2, 'HandleVisibility','off');
+    end
+end
+
+set(ax,'XTick',1:6,'XTickLabel',{'B2-1','B2-2','B2-3','B2-4','B2-5','B2-6'});
+xlabel(ax,'Block2 cycle');
+ylabel(ax,'O_alpha');
+grid(ax,'on');
+title(ax, sprintf('Task7 Block2 O_alpha audit | %s [%s]', analysisName, tag), 'Interpreter','none');
+legend(ax, {'Low','High'}, 'Location','best');
 
 pipeline.export_figure_png(fig, fp_png, 300);
 try; close(fig); catch; end
@@ -242,7 +453,7 @@ function tk = infer_task_from_path(fp)
 s = lower(string(fp));
 if contains(s,'task4_core_lmm_suite')
     tk = "task4";
-elseif contains(s,'task5_peakindex_invertedu') || contains(s,'task5_peakindex_invertedu')
+elseif contains(s,'task5_peakindex_invertedu')
     tk = "task5";
 elseif contains(s,'task6_obeta_special')
     tk = "task6";
@@ -251,20 +462,27 @@ else
 end
 end
 
-function write_report(fp_md, analysisName, tag, allOut, Sig)
+function write_report(fp_md, analysisName, tag, allOut, allCond, Oa, Sig, Infl)
 lines = strings(0,1);
 lines(end+1) = sprintf('# Task7 Individual checks | %s | %s', analysisName, tag);
 lines(end+1) = '';
 lines(end+1) = 'This report checks whether significant effects may be driven by a few extreme subjects.';
 lines(end+1) = '';
 
-if ~isempty(allOut)
+if ~isempty(allOut) && height(allOut)>0
     nAll = height(allOut);
     nOut = sum(logical(allOut.is_outlier_mad3));
     lines(end+1) = sprintf('- Total subject-level points: %d', nAll);
     lines(end+1) = sprintf('- MAD>3 outliers flagged: %d', nOut);
-    lines(end+1) = '';
 end
+if ~isempty(allCond) && height(allCond)>0
+    lines(end+1) = sprintf('- Condition-level subject means (WWR×Complexity) rows: %d', height(allCond));
+end
+if ~isempty(Oa) && height(Oa)>0
+    lines(end+1) = sprintf('- Block2 O_alpha points audited: %d', height(Oa));
+    lines(end+1) = sprintf('- Block2 O_alpha MAD>3 points: %d', sum(logical(Oa.is_outlier_mad3)));
+end
+lines(end+1) = '';
 
 if isempty(Sig) || height(Sig)==0
     lines(end+1) = '## Significant effects scan';
@@ -278,10 +496,20 @@ else
     end
 end
 
+if ~isempty(Infl) && height(Infl)>0
+    lines(end+1) = '';
+    lines(end+1) = '## Top-N outlier influence on High-Low difference';
+    lines(end+1) = 'metric | diff_full | diff_dropTopN | delta';
+    lines(end+1) = '---|---:|---:|---:';
+    for i=1:height(Infl)
+        lines(end+1) = sprintf('%s|%.6g|%.6g|%.6g', string(Infl.metric(i)), Infl.diff_full_HighMinusLow(i), Infl.diff_dropTopN(i), Infl.delta(i));
+    end
+end
+
 lines(end+1) = '';
 lines(end+1) = '## Files';
-lines(end+1) = '- tables: subject means, merged checks, outlier list, significant effects table';
-lines(end+1) = '- figures: per-metric distribution plots with outlier markers';
+lines(end+1) = '- tables: subject means, condition means, outlier list, significant effects table, topN influence';
+lines(end+1) = '- figures: per-metric subject distribution, condition-level box/scatter, Block2 O_alpha audit';
 
 fid = fopen(fp_md,'w');
 for i=1:numel(lines)
@@ -299,4 +527,32 @@ g(ismember(sl,["high","1","高","h"])) = "High";
 g(ismember(sl,["low","0","低","l"])) = "Low";
 mask = (s=="High" | s=="Low");
 g(mask) = s(mask);
+end
+
+function w = normalize_wwr(x)
+w = string(x);
+w = strtrim(w);
+for i=1:numel(w)
+    tok = regexp(char(w(i)), '(\d+)', 'tokens', 'once');
+    if ~isempty(tok)
+        w(i) = string(str2double(tok{1}));
+    end
+end
+ok = ismember(w,["15","45","75"]);
+w(~ok) = "";
+end
+
+function c = normalize_complexity(x)
+c = string(x);
+c = strtrim(c);
+cl = lower(c);
+out = repmat("", numel(c), 1);
+out(ismember(cl,["low","0","c0","complexitylow"])) = "ComplexityLow";
+out(ismember(cl,["high","1","c1","complexityhigh"])) = "ComplexityHigh";
+out(c=="ComplexityLow") = "ComplexityLow";
+out(c=="ComplexityHigh") = "ComplexityHigh";
+isNum = ~isnan(str2double(c));
+out(isNum & str2double(c)==0) = "ComplexityLow";
+out(isNum & str2double(c)==1) = "ComplexityHigh";
+c = out;
 end
