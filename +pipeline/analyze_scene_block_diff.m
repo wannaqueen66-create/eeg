@@ -45,7 +45,7 @@ for bi=1:numel(branches)
 end
 
 % required columns
-req = {'subject_id','cond','block_id'};
+req = {'subject_id','block_id'};
 for i=1:numel(req)
     if ~ismember(req{i}, AllScene.Properties.VariableNames)
         warning('analyze_scene_block_diff: missing required column %s. Skipping.', req{i});
@@ -62,10 +62,7 @@ catch
 end
 
 T = AllScene;
-try
-    T.cond = string(T.cond);
-end
-T = T(lower(strtrim(string(T.cond)))=="view", :);
+% scene_level tables are view-only; `cond` may not exist here
 
 % select scene
 sceneMask = true(height(T),1);

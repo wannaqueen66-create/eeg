@@ -41,7 +41,7 @@ if exist('fitlme','file') ~= 2
 end
 
 % Required columns
-req = {'subject_id','cond','scene_id'};
+req = {'subject_id','scene_id'};
 for i=1:numel(req)
     if ~ismember(req{i}, AllScene.Properties.VariableNames)
         warning('analyze_trialindex_lmm: missing required column %s. Skipping.', req{i});
@@ -59,8 +59,14 @@ catch
 end
 
 T = AllScene;
-T.cond = string(T.cond);
-T = T(lower(strtrim(string(T.cond)))=="view", :);
+% scene_level tables are view-only; `cond` may not exist here
+try
+    if ismember('cond', T.Properties.VariableNames)
+        T.cond = string(T.cond);
+        T = T(lower(strtrim(string(T.cond)))=="view", :);
+    end
+catch
+end
 
 % TrialIndex: default use scene_id (1..12)
 TrialIndex = double(T.scene_id);

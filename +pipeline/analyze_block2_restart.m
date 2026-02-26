@@ -11,7 +11,8 @@ function out = analyze_block2_restart(AllScene, fp_sum, cfg, tag)
 %   figures/<tag>/*.png (paper-friendly paired plots)
 %
 % Requires columns in AllScene:
-%   subject_id, cond, block_id, cycle_in_block
+%   subject_id, block_id, cycle_in_block
+% Note: summarize_bandpower_outputs merges per-subject *_scene_level.csv which are view-only and do NOT include `cond`.
 %   metrics: O_theta, F_theta, O_alpha, O_beta (configurable)
 % Optional grouping columns:
 %   Experience, SportFreq  (values: High/Low or 高/低 or 1/0)
@@ -35,7 +36,7 @@ if ~exist(fp_rep,'dir'); mkdir(fp_rep); end
 if ~exist(fp_fig,'dir'); mkdir(fp_fig); end
 
 % --- required columns ---
-req = {'subject_id','cond','block_id','cycle_in_block'};
+req = {'subject_id','block_id','cycle_in_block'};
 for i=1:numel(req)
     if ~ismember(req{i}, AllScene.Properties.VariableNames)
         warning('analyze_block2_restart: missing required column %s. Skipping.', req{i});
@@ -52,13 +53,8 @@ try
 catch
 end
 
-% filter Block2 view
+% filter Block2 (scene_level tables are already view-only)
 T = AllScene;
-try
-    T.cond = string(T.cond);
-end
-viewMask = (lower(strtrim(string(T.cond)))=="view");
-T = T(viewMask, :);
 T = T(double(T.block_id)==2, :);
 
 if isempty(T) || height(T)==0
