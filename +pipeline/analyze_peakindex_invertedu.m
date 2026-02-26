@@ -60,17 +60,19 @@ T0.Complexity = normalize_complexity(T0.Complexity);
 for ai = 1:numel(analyses)
     A = analyses{ai};
     gcol = string(A.gcol);
-    if ~ismember(gcol, T0.Properties.VariableNames)
+    if ~ismember(gcol, string(T0.Properties.VariableNames))
         continue;
     end
+    gcolc = char(gcol);
 
     for mi = 1:numel(metrics)
         dv = metrics(mi);
-        if ~ismember(dv, T0.Properties.VariableNames)
+        if ~ismember(dv, string(T0.Properties.VariableNames))
             continue;
         end
+        dvc = char(dv);
 
-        T = T0(:, {'subject_id','WWR','Complexity',gcol,dv});
+        T = T0(:, {'subject_id','WWR','Complexity',gcolc,dvc});
         T.Properties.VariableNames = {'subject_id','WWR','Complexity','GroupRaw','EEGraw'};
         T.EEG = double(T.EEGraw);
         T.Group = normalize_high_low(T.GroupRaw);

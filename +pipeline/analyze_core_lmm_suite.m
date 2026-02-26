@@ -95,15 +95,17 @@ for mi = 1:numel(metrics)
     for ai=1:numel(analyses)
         A = analyses{ai};
         gcol = string(A.gcol);
-        if ~ismember(gcol, T0.Properties.VariableNames)
+        if ~ismember(gcol, string(T0.Properties.VariableNames))
             continue;
         end
+        gcolc = char(gcol);
+        dvc = char(dv);
 
         % Prepare analysis table
-        T = T0(:, {'subject_id','WWR','Complexity',gcol,dv});
+        T = T0(:, {'subject_id','WWR','Complexity',gcolc,dvc});
         T.Properties.VariableNames{4} = 'GroupRaw';
         % GroupRaw comes from canonical group columns (ExperienceGroup/SportFreqGroup)
-        T.EEG = double(T.(dv));
+        T.EEG = double(T.(dvc));
         T.Group = normalize_high_low(T.GroupRaw);
         T = remove_missing_rows(T);
         if height(T) < 20

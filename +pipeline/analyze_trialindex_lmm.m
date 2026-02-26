@@ -112,9 +112,10 @@ analyses = { ...
 for ai=1:numel(analyses)
     A = analyses{ai};
     gcol = string(A.gcol);
-    if ~ismember(gcol, T.Properties.VariableNames)
+    if ~ismember(gcol, string(T.Properties.VariableNames))
         continue;
     end
+    gcolc = char(gcol);
 
     % Need WWR + Complexity for the requested model
     if ~ismember('WWR', T.Properties.VariableNames) || ~ismember('Complexity', T.Properties.VariableNames)
@@ -123,7 +124,7 @@ for ai=1:numel(analyses)
     end
 
     % Keep only High/Low
-    grp = string(T.(gcol));
+    grp = string(T.(gcolc));
     use = (grp=="High" | grp=="Low");
     Ta = T(use,:);
 
@@ -133,7 +134,7 @@ for ai=1:numel(analyses)
 
     % Categorical encoding
     Ta.Subject = categorical(string(Ta.subject_id));
-    Ta.Group = categorical(string(Ta.(gcol)));
+    Ta.Group = categorical(string(Ta.(gcolc)));
     Ta.WWR = categorical(string(Ta.WWR));
     Ta.Complexity = categorical(string(Ta.Complexity));
 
@@ -147,14 +148,15 @@ for ai=1:numel(analyses)
 
     for mi=1:numel(metrics)
         m = string(metrics(mi));
-        if ~ismember(m, Ta.Properties.VariableNames)
+        mc = char(m);
+        if ~ismember(m, string(Ta.Properties.VariableNames))
             continue;
         end
 
-        Y = double(Ta.(m));
+        Y = double(Ta.(mc));
         ok = ~isnan(Y);
         Tm = Ta(ok,:);
-        Tm.Y = double(Tm.(m));
+        Tm.Y = double(Tm.(mc));
 
         if height(Tm) < 30
             continue;

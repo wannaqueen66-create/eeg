@@ -57,9 +57,10 @@ end
 for ai = 1:numel(analyses)
     A = analyses{ai};
     gcol = string(A.gcol);
-    if ~ismember(gcol, T0.Properties.VariableNames)
+    if ~ismember(gcol, string(T0.Properties.VariableNames))
         continue;
     end
+    gcolc = char(gcol);
 
     fp_tbl = fullfile(fp_root, 'tables', tag, A.name);
     fp_rep = fullfile(fp_root, 'reports', tag, A.name);
@@ -78,7 +79,8 @@ for ai = 1:numel(analyses)
         end
 
         % ---------- subject-level mean by group ----------
-        T = T0(:, {'subject_id', gcol, dv});
+        dvc = char(dv);
+        T = T0(:, {'subject_id', gcolc, dvc});
         T.Properties.VariableNames = {'subject_id','GroupRaw','EEGraw'};
         T.EEG = double(T.EEGraw);
         T.Group = normalize_high_low(T.GroupRaw);
@@ -109,7 +111,7 @@ for ai = 1:numel(analyses)
 
         % ---------- condition-level (WWR x Complexity) ----------
         if ismember('WWR', T0.Properties.VariableNames) && ismember('Complexity', T0.Properties.VariableNames)
-            Tc = T0(:, {'subject_id', gcol, dv, 'WWR', 'Complexity'});
+            Tc = T0(:, {'subject_id', gcolc, dvc, 'WWR', 'Complexity'});
             Tc.Properties.VariableNames = {'subject_id','GroupRaw','EEGraw','WWR','Complexity'};
             Tc.EEG = double(Tc.EEGraw);
             Tc.Group = normalize_high_low(Tc.GroupRaw);
@@ -154,7 +156,7 @@ for ai = 1:numel(analyses)
     Oa = table();
     try
         if ismember('O_alpha', T0.Properties.VariableNames) && ismember('block_id', T0.Properties.VariableNames) && ismember('cycle_in_block', T0.Properties.VariableNames)
-            Tb = T0(:, {'subject_id', gcol, 'O_alpha', 'block_id', 'cycle_in_block'});
+            Tb = T0(:, {'subject_id', gcolc, 'O_alpha', 'block_id', 'cycle_in_block'});
             Tb.Properties.VariableNames = {'subject_id','GroupRaw','EEG','block_id','cycle_in_block'};
             Tb.Group = normalize_high_low(Tb.GroupRaw);
             Tb = Tb(~isnan(double(Tb.EEG)) & strlength(string(Tb.Group))>0, :);

@@ -53,13 +53,15 @@ for tg = tags
         % 1) main effects
         lines(end+1) = '#### 1) Main effects (Task4 Model1)';
         rows = collect_task4_terms(fp_sum, tag, a, metrics, 'model1_main_effects', ["WWR","Complexity","Group"]);
-        lines = [lines; render_rows(rows, {'metric','term','F','p','direction'})]; %#ok<AGROW>
+        tmp = render_rows(rows, {'metric','term','F','p','direction'});
+        lines = [lines; tmp(:)]; %#ok<AGROW>
         lines(end+1) = '';
 
         % 2) two-way
         lines(end+1) = '#### 2) Two-way interactions (Task4 Model2)';
         rows2 = collect_task4_terms(fp_sum, tag, a, metrics, 'model2_two_way', ["WWR:Complexity","WWR:Group","Complexity:Group"]);
-        lines = [lines; render_rows(rows2, {'metric','term','F','p'})]; %#ok<AGROW>
+        tmp = render_rows(rows2, {'metric','term','F','p'});
+        lines = [lines; tmp(:)]; %#ok<AGROW>
         lines(end+1) = '';
 
         % 3) three-way only significant
@@ -71,7 +73,8 @@ for tg = tags
             p = toNumField(rows3,'p');
             keep = ~isnan(p) & p < 0.05;
             if any(keep)
-                lines = [lines; render_rows(rows3(keep,:), {'metric','term','F','p'})]; %#ok<AGROW>
+                tmp = render_rows(rows3(keep,:), {'metric','term','F','p'});
+                lines = [lines; tmp(:)]; %#ok<AGROW>
             else
                 lines(end+1) = '- no significant three-way interaction (p < 0.05)';
             end
@@ -81,13 +84,15 @@ for tg = tags
         % 4) sequence control
         lines(end+1) = '#### 4) Sequence control (Task3 TrialIndex model)';
         rows4 = collect_task3_terms(fp_sum, tag, a, metrics, ["TrialIndex","Group:TrialIndex"]);
-        lines = [lines; render_rows(rows4, {'metric','term','F','p'})]; %#ok<AGROW>
+        tmp = render_rows(rows4, {'metric','term','F','p'});
+        lines = [lines; tmp(:)]; %#ok<AGROW>
         lines(end+1) = '';
 
         % Significant-only digest + one-line direction summary
         lines(end+1) = '#### Significant-only digest (p < 0.05)';
         Sig = build_sig_digest(rows, rows2, rows3, rows4);
-        lines = [lines; render_sig_rows(Sig)]; %#ok<AGROW>
+        tmp = render_sig_rows(Sig);
+        lines = [lines; tmp(:)]; %#ok<AGROW>
         lines(end+1) = summarize_sig_sentence(Sig, tag, a);
         lines(end+1) = '';
 

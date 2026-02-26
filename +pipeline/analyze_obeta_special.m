@@ -51,11 +51,12 @@ end
 for ai=1:numel(analyses)
     A = analyses{ai};
     gcol = string(A.gcol);
-    if ~ismember(gcol, T0.Properties.VariableNames)
+    if ~ismember(gcol, string(T0.Properties.VariableNames))
         continue;
     end
+    gcolc = char(gcol);
 
-    vars = {'subject_id','O_beta',gcol};
+    vars = {'subject_id','O_beta',gcolc};
     if ismember('WWR', T0.Properties.VariableNames)
         vars{end+1} = 'WWR';
     end
