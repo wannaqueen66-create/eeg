@@ -344,6 +344,22 @@ catch ME
     fprintf(2, '[WARN] analyze_obeta_special(qc) failed: %s\n', ME.message);
 end
 
+% Analysis-2/task7: individual-level checks + outlier-driven risk audit (raw + qc)
+try
+    pipeline.analyze_individual_checks(AllScene, fp_sum, cfg, 'raw');
+catch ME
+    fprintf(2, '[WARN] analyze_individual_checks(raw) failed: %s\n', ME.message);
+end
+try
+    if exist('AllScene_qc','var') && ~isempty(AllScene_qc)
+        pipeline.analyze_individual_checks(AllScene_qc, fp_sum, cfg, 'qc');
+    else
+        pipeline.analyze_individual_checks(AllScene, fp_sum, cfg, 'qc');
+    end
+catch ME
+    fprintf(2, '[WARN] analyze_individual_checks(qc) failed: %s\n', ME.message);
+end
+
 % In tidy layout, topo outputs land under summary/figures/topo/<tag>/.
 % If user expects files but none exist, they should check warnings above or ensure topo_long + chanlocs exist.
 
