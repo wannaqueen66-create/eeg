@@ -19,7 +19,35 @@ end
 
 cfg = pipeline.load_config(config_path);
 fp_out = pipeline.get_output_root(input_folder, cfg);
-fp_sum = pipeline.get_summary_dir(input_folder, cfg);
+
+% Summary base directory is stable under output root
+fp_sum_base = pipeline.get_summary_dir(input_folder, cfg);
+fp_sum = fp_sum_base;
+
+% Optional: timestamp summary outputs only (keeps per-subject outputs stable)
+try
+    if isfield(cfg,'timestamp_summary_only') && logical(cfg.timestamp_summary_only)
+        ts = datestr(now, 'yyyymmdd_HHMMSS');
+        subdir = 'runs';
+        if isfield(cfg,'summary_runs_subdir') && ~isempty(cfg.summary_runs_subdir)
+            subdir = char(string(cfg.summary_runs_subdir));
+        end
+        fp_sum = fullfile(fp_sum_base, subdir, sprintf('summary_%s', ts));
+        if ~exist(fp_sum,'dir'); mkdir(fp_sum); end
+
+        % pointer to latest run
+        try
+            fp_ptr = fullfile(fp_sum_base, 'latest_run.txt');
+            fid = fopen(fp_ptr,'w');
+            if fid>0
+                fprintf(fid, '%s\n', fp_sum);
+                fclose(fid);
+            end
+        catch
+        end
+    end
+catch
+end
 
 % Ensure summary-stage logs are written to summary/pipeline.log
 % (Users often run summarize_bandpower_outputs separately after batch runs.)

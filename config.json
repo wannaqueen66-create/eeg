@@ -25,6 +25,8 @@
   "gamma_mode": "logabs_only",
   "write_gamma_relative": false,
   "timestamp_output_root": false,
+  "timestamp_summary_only": true,
+  "summary_runs_subdir": "runs",
   "qc_apply": true,
   "qc_hf_threshold": 0.4,
   "qc_view_bad_frac_threshold": 0.3,
