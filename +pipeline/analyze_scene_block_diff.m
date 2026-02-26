@@ -7,11 +7,15 @@ function out = analyze_scene_block_diff(AllScene, fp_sum, cfg, tag, scene_name)
 % For each subject and metric (default: O_theta, F_theta, O_alpha, O_beta),
 % compute: diff = Block2 - Block1 for the target scene.
 %
-% Writes (per tag raw/qc):
-%   tables/<tag>/scene_blockdiff_subjectlevel_<tag>.csv
-%   tables/<tag>/scene_blockdiff_stats_<tag>.csv
-%   reports/<tag>/scene_blockdiff_report_<tag>.md
-%   figures/<tag>/*.png (paper-friendly paired plots)
+% Writes (per tag raw/qc) with 3 branches:
+%   all/         (all subjects)
+%   experience/  (Experience High/Low)
+%   sportfreq/   (SportFreq High/Low)
+% Each branch writes:
+%   tables/<branch>/scene_blockdiff_subjectlevel_<tag>.csv
+%   tables/<branch>/scene_blockdiff_stats_<tag>.csv
+%   reports/<branch>/scene_blockdiff_report_<tag>.md
+%   figures/<branch>/*.png (paper-friendly paired plots)
 
 if nargin < 4 || isempty(tag)
     tag = 'raw';
@@ -27,12 +31,18 @@ out = struct();
 
 % output dirs
 fp_root = fullfile(fp_sum, 'analysis-2', 'task2_C1W45_block_diff');
-fp_tbl = fullfile(fp_root, 'tables', tag);
-fp_rep = fullfile(fp_root, 'reports', tag);
-fp_fig = fullfile(fp_root, 'figures', tag);
-if ~exist(fp_tbl,'dir'); mkdir(fp_tbl); end
-if ~exist(fp_rep,'dir'); mkdir(fp_rep); end
-if ~exist(fp_fig,'dir'); mkdir(fp_fig); end
+
+branches = ["all","experience","sportfreq"];
+fp_tbl = struct(); fp_rep = struct(); fp_fig = struct();
+for bi=1:numel(branches)
+    b = char(branches(bi));
+    fp_tbl.(b) = fullfile(fp_root, 'tables', tag, b);
+    fp_rep.(b) = fullfile(fp_root, 'reports', tag, b);
+    fp_fig.(b) = fullfile(fp_root, 'figures', tag, b);
+    if ~exist(fp_tbl.(b),'dir'); mkdir(fp_tbl.(b)); end
+    if ~exist(fp_rep.(b),'dir'); mkdir(fp_rep.(b)); end
+    if ~exist(fp_fig.(b),'dir'); mkdir(fp_fig.(b)); end
+end
 
 % required columns
 req = {'subject_id','cond','block_id'};
@@ -136,73 +146,63 @@ end
 S = cell2table(rows, 'VariableNames', {'subject_id','metric','block1','block2','diff','Experience','SportFreq'});
 S.scene_name = repmat(string(scene_name), height(S), 1);
 
-fp_sub = fullfile(fp_tbl, sprintf('scene_blockdiff_subjectlevel_%s.csv', tag));
-writetable(S, fp_sub);
-
-% stats per group
-statsRows = {};
-groupTypes = ["Experience","SportFreq"];
-for gi=1:numel(groupTypes)
-    gcol = groupTypes(gi);
-    if ~ismember(gcol, S.Properties.VariableNames)
-        continue;
-    end
-    for g = ["Low","High"]
-        for mi=1:numel(metrics)
-            m = string(metrics(mi));
-            X = S(S.metric==m & string(S.(gcol))==g, :);
-            if height(X) < 3
-                continue;
-            end
-            d = double(X.diff);
-            n = sum(~isnan(d));
-            if n < 3
-                continue;
-            end
-            md = mean(d,'omitnan');
-            sd = std(d,'omitnan');
-            sem = sd / sqrt(n);
-            dz = md / sd;
-
-            try
-                [~, p, ~, st] = ttest(double(X.block2), double(X.block1));
-                tstat = st.tstat;
-                df = st.df;
-            catch
-                p = NaN; tstat = NaN; df = NaN;
-            end
-            try
-                p_sr = signrank(double(X.block2), double(X.block1));
-            catch
-                p_sr = NaN;
-            end
-
-            statsRows(end+1,:) = {gcol, g, m, n, md, sem, tstat, df, p, dz, p_sr}; %#ok<AGROW>
-        end
-    end
-end
-
-Stats = cell2table(statsRows, 'VariableNames', {
-    'GroupType','Group','metric','N','mean_diff','sem_diff','t','df','p_ttest','cohen_dz','p_signrank'});
-
-fp_stats = fullfile(fp_tbl, sprintf('scene_blockdiff_stats_%s.csv', tag));
-writetable(Stats, fp_stats);
-
-% figures
+% --- branch: all subjects ---
+fp_sub_all = fullfile(fp_tbl.all, sprintf('scene_blockdiff_subjectlevel_%s.csv', tag));
+writetable(S, fp_sub_all);
+Stats_all = pipeline.compute_blockdiff_stats(S, metrics, "all", "");
+fp_stats_all = fullfile(fp_tbl.all, sprintf('scene_blockdiff_stats_%s.csv', tag));
+writetable(Stats_all, fp_stats_all);
 try
-    plot_paired_figures(S, metrics, fp_fig, tag, scene_name);
+    plot_all_figures(S, metrics, fp_fig.all, tag, scene_name);
 catch ME
-    fprintf(2,'[WARN] analyze_scene_block_diff: failed plotting figures: %s\n', ME.message);
+    fprintf(2,'[WARN] analyze_scene_block_diff: failed plotting all figures: %s\n', ME.message);
+end
+fp_md_all = fullfile(fp_rep.all, sprintf('scene_blockdiff_report_%s.md', tag));
+write_report_md(fp_md_all, tag, metrics, scene_name, usedSceneKey, fp_sub_all, fp_stats_all, Stats_all, fp_fig.all, "all");
+
+% --- branch: Experience groups ---
+if ismember('Experience', S.Properties.VariableNames) && any(strlength(strtrim(string(S.Experience)))>0)
+    fp_sub_ex = fullfile(fp_tbl.experience, sprintf('scene_blockdiff_subjectlevel_%s.csv', tag));
+    writetable(S, fp_sub_ex);
+    Stats_ex = pipeline.compute_blockdiff_stats(S, metrics, "group", "Experience");
+    fp_stats_ex = fullfile(fp_tbl.experience, sprintf('scene_blockdiff_stats_%s.csv', tag));
+    writetable(Stats_ex, fp_stats_ex);
+    try
+        plot_group_figures(S, metrics, fp_fig.experience, tag, scene_name, "Experience");
+    catch ME
+        fprintf(2,'[WARN] analyze_scene_block_diff: failed plotting Experience figures: %s\n', ME.message);
+    end
+    fp_md_ex = fullfile(fp_rep.experience, sprintf('scene_blockdiff_report_%s.md', tag));
+    write_report_md(fp_md_ex, tag, metrics, scene_name, usedSceneKey, fp_sub_ex, fp_stats_ex, Stats_ex, fp_fig.experience, "experience");
+else
+    Stats_ex = table(); fp_sub_ex = ""; fp_stats_ex = ""; fp_md_ex = "";
 end
 
-% report
-fp_md = fullfile(fp_rep, sprintf('scene_blockdiff_report_%s.md', tag));
-write_report_md(fp_md, tag, metrics, scene_name, usedSceneKey, fp_sub, fp_stats, Stats, fp_fig);
+% --- branch: SportFreq groups ---
+if ismember('SportFreq', S.Properties.VariableNames) && any(strlength(strtrim(string(S.SportFreq)))>0)
+    fp_sub_sf = fullfile(fp_tbl.sportfreq, sprintf('scene_blockdiff_subjectlevel_%s.csv', tag));
+    writetable(S, fp_sub_sf);
+    Stats_sf = pipeline.compute_blockdiff_stats(S, metrics, "group", "SportFreq");
+    fp_stats_sf = fullfile(fp_tbl.sportfreq, sprintf('scene_blockdiff_stats_%s.csv', tag));
+    writetable(Stats_sf, fp_stats_sf);
+    try
+        plot_group_figures(S, metrics, fp_fig.sportfreq, tag, scene_name, "SportFreq");
+    catch ME
+        fprintf(2,'[WARN] analyze_scene_block_diff: failed plotting SportFreq figures: %s\n', ME.message);
+    end
+    fp_md_sf = fullfile(fp_rep.sportfreq, sprintf('scene_blockdiff_report_%s.md', tag));
+    write_report_md(fp_md_sf, tag, metrics, scene_name, usedSceneKey, fp_sub_sf, fp_stats_sf, Stats_sf, fp_fig.sportfreq, "sportfreq");
+else
+    Stats_sf = table(); fp_sub_sf = ""; fp_stats_sf = ""; fp_md_sf = "";
+end
 
-out.subjectlevel_csv = fp_sub;
-out.stats_csv = fp_stats;
-out.report_md = fp_md;
-out.fig_dir = fp_fig;
+out.subjectlevel_csv = fp_sub_all;
+out.stats_csv = fp_stats_all;
+out.report_md = fp_md_all;
+out.fig_dir = fp_fig.all;
+out.branch_all = struct('subjectlevel_csv',fp_sub_all,'stats_csv',fp_stats_all,'report_md',fp_md_all,'fig_dir',fp_fig.all);
+out.branch_experience = struct('subjectlevel_csv',fp_sub_ex,'stats_csv',fp_stats_ex,'report_md',fp_md_ex,'fig_dir',fp_fig.experience);
+out.branch_sportfreq = struct('subjectlevel_csv',fp_sub_sf,'stats_csv',fp_stats_sf,'report_md',fp_md_sf,'fig_dir',fp_fig.sportfreq);
 end
 
 function y = normalize_high_low(x)
@@ -214,65 +214,42 @@ y(s=="high") = "High";
 y(s=="low")  = "Low";
 end
 
-function plot_paired_figures(S, metrics, fp_fig, tag, scene_name)
-if nargin<5; scene_name = ""; end
-
-set(0,'DefaultFigureVisible','off');
-
-% pick group types if present
-groupTypes = ["Experience","SportFreq"];
-for gi=1:numel(groupTypes)
-    gcol = groupTypes(gi);
-    if ~ismember(gcol, S.Properties.VariableNames)
+function plot_all_figures(S, metrics, fp_fig, tag, scene_name)
+if nargin<5; scene_name=""; end
+for mi=1:numel(metrics)
+    m = string(metrics(mi));
+    X = S(S.metric==m,:);
+    if height(X) < 3
         continue;
     end
-    for g = ["Low","High"]
-        for mi=1:numel(metrics)
-            m = string(metrics(mi));
-            X = S(S.metric==m & string(S.(gcol))==g, :);
-            if height(X) < 3
-                continue;
-            end
+    ttl = sprintf('%s | %s | All subjects | Block2 - Block1 [%s]', scene_name, m, tag);
+    fp = fullfile(fp_fig, pipeline.sanitize_filename(sprintf('scene_blockdiff_%s_all_%s_%s.png', tag, m, scene_name)));
+    pipeline.plot_paired_summary(double(X.block1), double(X.block2), 'Block1','Block2', ttl, char(m), fp);
+end
+end
 
-            y1 = double(X.block1);
-            y2 = double(X.block2);
-            n = numel(y1);
+function plot_group_figures(S, metrics, fp_fig, tag, scene_name, gcol)
+if nargin<5; scene_name=""; end
+if nargin<6; gcol="Experience"; end
 
-            fig = figure('Position',[100 100 780 420], 'Color','w');
-            hold on;
-            for i=1:n
-                plot([1 2], [y1(i) y2(i)], '-', 'Color', [0.7 0.7 0.7], 'LineWidth', 1);
-            end
-            scatter(ones(n,1)*1, y1, 30, 'filled', 'MarkerFaceColor',[0.2 0.5 0.9]);
-            scatter(ones(n,1)*2, y2, 30, 'filled', 'MarkerFaceColor',[0.9 0.4 0.2]);
-
-            mu1 = mean(y1,'omitnan'); mu2 = mean(y2,'omitnan');
-            se1 = std(y1,'omitnan')/sqrt(n); se2 = std(y2,'omitnan')/sqrt(n);
-            errorbar(1, mu1, se1, 'k', 'LineWidth', 2);
-            errorbar(2, mu2, se2, 'k', 'LineWidth', 2);
-
-            xlim([0.6 2.4]);
-            set(gca,'XTick',[1 2],'XTickLabel',{'Block1','Block2'});
-            grid on;
-            title(sprintf('%s | %s | %s=%s | %s [%s]', scene_name, m, gcol, g, 'Block2 - Block1', tag), 'Interpreter','none');
-            ylabel(char(m));
-
-            fn = pipeline.sanitize_filename(sprintf('scene_blockdiff_%s_%s_%s_%s_%s.png', tag, lower(gcol), lower(g), m, scene_name));
-            fp = fullfile(fp_fig, fn);
-            try
-                exportgraphics(fig, fp, 'Resolution', 300);
-            catch
-                saveas(fig, fp);
-            end
-            try; close(fig); catch; end
+for g = ["Low","High"]
+    for mi=1:numel(metrics)
+        m = string(metrics(mi));
+        X = S(S.metric==m & string(S.(gcol))==g, :);
+        if height(X) < 3
+            continue;
         end
+        ttl = sprintf('%s | %s | %s=%s | Block2 - Block1 [%s]', scene_name, m, gcol, g, tag);
+        fp = fullfile(fp_fig, pipeline.sanitize_filename(sprintf('scene_blockdiff_%s_%s_%s_%s_%s.png', tag, lower(gcol), lower(g), m, scene_name)));
+        pipeline.plot_paired_summary(double(X.block1), double(X.block2), 'Block1','Block2', ttl, char(m), fp);
     end
 end
 end
 
-function write_report_md(fp_md, tag, metrics, scene_name, usedSceneKey, fp_sub, fp_stats, Stats, fp_fig)
+function write_report_md(fp_md, tag, metrics, scene_name, usedSceneKey, fp_sub, fp_stats, Stats, fp_fig, branchName)
 lines = {};
-lines{end+1} = sprintf('# Scene block difference (%s)', tag);
+if nargin<10; branchName=""; end
+lines{end+1} = sprintf('# Scene block difference (%s) [%s]', tag, string(branchName));
 lines{end+1} = '';
 lines{end+1} = sprintf('Target scene: **%s** (selected by %s)', string(scene_name), string(usedSceneKey));
 lines{end+1} = '';
