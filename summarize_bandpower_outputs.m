@@ -220,7 +220,7 @@ catch ME
     fprintf(2, '[WARN] plot_group_topoplots failed: %s\n', ME.message);
 end
 
-% Analysis-2: Block2 restart effect (raw + qc)
+% Analysis-2/task1: Block2 restart effect (raw + qc)
 try
     pipeline.analyze_block2_restart(AllScene, fp_sum, cfg, 'raw');
 catch ME
@@ -234,6 +234,22 @@ try
     end
 catch ME
     fprintf(2, '[WARN] analyze_block2_restart(qc) failed: %s\n', ME.message);
+end
+
+% Analysis-2/task2: C1W45 (WWR45_C1) scene, compare Block1 vs Block2 (raw + qc)
+try
+    pipeline.analyze_scene_block_diff(AllScene, fp_sum, cfg, 'raw', "WWR45_C1");
+catch ME
+    fprintf(2, '[WARN] analyze_scene_block_diff(raw) failed: %s\n', ME.message);
+end
+try
+    if exist('AllScene_qc','var') && ~isempty(AllScene_qc)
+        pipeline.analyze_scene_block_diff(AllScene_qc, fp_sum, cfg, 'qc', "WWR45_C1");
+    else
+        pipeline.analyze_scene_block_diff(AllScene, fp_sum, cfg, 'qc', "WWR45_C1");
+    end
+catch ME
+    fprintf(2, '[WARN] analyze_scene_block_diff(qc) failed: %s\n', ME.message);
 end
 
 % In tidy layout, topo outputs land under summary/figures/topo/<tag>/.

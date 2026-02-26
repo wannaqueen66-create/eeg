@@ -1,11 +1,14 @@
 function out = analyze_block2_restart(AllScene, fp_sum, cfg, tag)
 %ANALYZE_BLOCK2_RESTART Block2 restart effect: compare Block2 first scene vs mean of remaining 5.
 %
-% Output root (requested by user): <summary>/analysis-2/
+% Uses pipeline.plot_paired_summary for figures.
+%
+% Output root (requested by user): <summary>/analysis-2/task1_block2_restart/
 % Writes (per tag: raw/qc):
 %   tables/<tag>/block2_restart_subjectlevel_<tag>.csv
 %   tables/<tag>/block2_restart_stats_<tag>.csv
 %   reports/<tag>/block2_restart_report_<tag>.md
+%   figures/<tag>/*.png (paper-friendly paired plots)
 %
 % Requires columns in AllScene:
 %   subject_id, cond, block_id, cycle_in_block
@@ -23,11 +26,13 @@ end
 out = struct();
 
 % --- output dirs ---
-fp_a2 = fullfile(fp_sum, 'analysis-2');
-fp_tbl = fullfile(fp_a2, 'tables', tag);
-fp_rep = fullfile(fp_a2, 'reports', tag);
+fp_root = fullfile(fp_sum, 'analysis-2', 'task1_block2_restart');
+fp_tbl = fullfile(fp_root, 'tables', tag);
+fp_rep = fullfile(fp_root, 'reports', tag);
+fp_fig = fullfile(fp_root, 'figures', tag);
 if ~exist(fp_tbl,'dir'); mkdir(fp_tbl); end
 if ~exist(fp_rep,'dir'); mkdir(fp_rep); end
+if ~exist(fp_fig,'dir'); mkdir(fp_fig); end
 
 % --- required columns ---
 req = {'subject_id','cond','block_id','cycle_in_block'};
@@ -181,13 +186,21 @@ Stats = cell2table(statsRows, 'VariableNames', {
 fp_stats = fullfile(fp_tbl, sprintf('block2_restart_stats_%s.csv', tag));
 writetable(Stats, fp_stats);
 
+% paper-friendly figures
+try
+    plot_paired_figures(S, metrics, fp_fig, tag);
+catch ME
+    fprintf(2, '[WARN] analyze_block2_restart: failed plotting figures: %s\n', ME.message);
+end
+
 % report markdown
 fp_md = fullfile(fp_rep, sprintf('block2_restart_report_%s.md', tag));
-write_report_md(fp_md, tag, metrics, fp_sub, fp_stats, Stats);
+write_report_md(fp_md, tag, metrics, fp_sub, fp_stats, Stats, fp_fig);
 
 out.subjectlevel_csv = fp_sub;
 out.stats_csv = fp_stats;
 out.report_md = fp_md;
+out.fig_dir = fp_fig;
 end
 
 function y = normalize_high_low(x)
@@ -204,7 +217,37 @@ y(s=="high") = "High";
 y(s=="low")  = "Low";
 end
 
-function write_report_md(fp_md, tag, metrics, fp_sub, fp_stats, Stats)
+function plot_paired_figures(S, metrics, fp_fig, tag)
+% Paper-friendly paired plots per metric, within each group type and group.
+
+set(0,'DefaultFigureVisible','off');
+
+if nargin<4; tag='raw'; end
+
+groupTypes = ["Experience","SportFreq"];
+for gi=1:numel(groupTypes)
+    gcol = groupTypes(gi);
+    if ~ismember(gcol, S.Properties.VariableNames)
+        continue;
+    end
+    for g = ["Low","High"]
+        for mi=1:numel(metrics)
+            m = string(metrics(mi));
+            X = S(S.metric==m & string(S.(gcol))==g, :);
+            if height(X) < 3
+                continue;
+            end
+            y1 = double(X.block2_first);
+            y2 = double(X.block2_rest_mean);
+            ttl = sprintf('Block2 restart | %s | %s=%s | %s [%s]', m, gcol, g, 'first - mean(rest)', tag);
+            fp = fullfile(fp_fig, pipeline.sanitize_filename(sprintf('block2_restart_%s_%s_%s_%s.png', tag, lower(gcol), lower(g), m)));
+            pipeline.plot_paired_summary(y1, y2, 'B2-1', 'B2-2..6 mean', ttl, char(m), fp);
+        end
+    end
+end
+end
+
+function write_report_md(fp_md, tag, metrics, fp_sub, fp_stats, Stats, fp_fig)
 lines = {};
 lines{end+1} = sprintf('# Block2 restart analysis (%s)', tag);
 lines{end+1} = '';
@@ -215,6 +258,12 @@ lines{end+1} = '';
 lines{end+1} = 'Outputs:';
 lines{end+1} = sprintf('- Subject-level table: `%s`', fp_sub);
 lines{end+1} = sprintf('- Stats table: `%s`', fp_stats);
+try
+    if nargin>=7 && strlength(string(fp_fig))>0
+        lines{end+1} = sprintf('- Figures dir: `%s`', fp_fig);
+    end
+catch
+end
 lines{end+1} = '';
 lines{end+1} = 'Metrics:';
 lines{end+1} = sprintf('- %s', strjoin(string(metrics), ', '));
