@@ -71,11 +71,18 @@ if isempty(Tall) || height(Tall)==0
     return;
 end
 
+% Canonical subject id (robust join key)
+try
+    Tall._sid = canonical_subject_id(Tall.subject_id);
+catch
+    Tall._sid = strtrim(string(Tall.subject_id));
+end
+
 % Apply QC inclusion list (optional)
 try
     if isfield(cfg,'qc_include_subjects') && ~isempty(cfg.qc_include_subjects)
-        inc = string(cfg.qc_include_subjects);
-        Tall = Tall(ismember(string(Tall.subject_id), inc), :);
+        inc = canonical_subject_id(cfg.qc_include_subjects);
+        Tall = Tall(ismember(Tall._sid, inc), :);
     end
 catch
 end
@@ -128,15 +135,15 @@ if ~ismember('Experience', Tall.Properties.VariableNames) || ~ismember('SportFre
         end
 
         if ~isempty(map) && ismember('subject_id', map.Properties.VariableNames)
-            % Reduce to unique subject rows
-            sidm = string(map.subject_id);
+            sidm = canonical_subject_id(map.subject_id);
             [~, ia] = unique(sidm, 'stable');
             map = map(ia,:);
+            sidm = sidm(ia);
 
             if ~ismember('SportFreqGroup', Tall.Properties.VariableNames)
                 sf = repmat("", height(Tall), 1);
                 if ismember('SportFreqGroup', map.Properties.VariableNames)
-                    [tf, loc] = ismember(string(Tall.subject_id), string(map.subject_id));
+                    [tf, loc] = ismember(Tall._sid, sidm);
                     sf(tf) = strtrim(string(map.SportFreqGroup(loc(tf))));
                 end
                 Tall.SportFreqGroup = sf;
@@ -145,7 +152,7 @@ if ~ismember('Experience', Tall.Properties.VariableNames) || ~ismember('SportFre
             if ~ismember('ExperienceGroup', Tall.Properties.VariableNames)
                 ex = repmat("", height(Tall), 1);
                 if ismember('ExperienceGroup', map.Properties.VariableNames)
-                    [tf, loc] = ismember(string(Tall.subject_id), string(map.subject_id));
+                    [tf, loc] = ismember(Tall._sid, sidm);
                     ex(tf) = strtrim(string(map.ExperienceGroup(loc(tf))));
                 end
                 Tall.ExperienceGroup = ex;
@@ -185,11 +192,12 @@ try
         if exist(f_scene,'file')
             M = readtable(f_scene, 'TextType','string');
             if ismember('subject_id', M.Properties.VariableNames)
-                sidm = strtrim(string(M.subject_id));
+                sidm = canonical_subject_id(M.subject_id);
                 [~, ia] = unique(sidm, 'stable');
                 M = M(ia,:);
+                sidm = sidm(ia);
 
-                [tf, loc] = ismember(strtrim(string(Tall.subject_id)), sidm);
+                [tf, loc] = ismember(Tall._sid, sidm);
 
                 if needExG
                     ex = repmat("", height(Tall), 1);
@@ -230,7 +238,12 @@ if hasSf
     validSf = any(sf=="high" | sf=="low" | sf=="高" | sf=="低" | sf=="1" | sf=="0" | sf=="h" | sf=="l");
 end
 if ~(validEx || validSf)
-    warning('plot_group_topoplots: ExperienceGroup/SportFreqGroup not found in topo_long and could not be attached from summary tables. No group topoplots were generated.');
+    try
+        nSubTopo = numel(unique(Tall._sid));
+    catch
+        nSubTopo = NaN;
+    end
+    warning('plot_group_topoplots: ExperienceGroup/SportFreqGroup not found in topo_long and could not be attached from summary tables. No group topoplots were generated. topo_subjects=%g', nSubTopo);
     return;
 end
 
@@ -352,4 +365,16 @@ g(s=="low"  | s=="0" | s=="低" | s=="l") = "Low";
 t = strtrim(string(x));
 g(t=="High") = "High";
 g(t=="Low") = "Low";
+end
+
+function sid = canonical_subject_id(x)
+sid = strtrim(string(x));
+sid = replace(sid, "\", "/");
+% keep basename if accidental path appears
+for i=1:numel(sid)
+    parts = split(sid(i), "/");
+    sid(i) = parts(end);
+end
+sid = regexprep(sid, '\\.set$', '', 'ignorecase');
+sid = strtrim(sid);
 end

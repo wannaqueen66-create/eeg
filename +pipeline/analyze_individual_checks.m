@@ -387,7 +387,7 @@ xlabel(ax,'Block2 cycle');
 ylabel(ax,'O_alpha');
 grid(ax,'on');
 title(ax, sprintf('Task7 Block2 O_alpha audit | %s [%s]', analysisName, tag), 'Interpreter','none');
-legend(ax, {'Low','High'}, 'Location','best');
+legend(ax, 'off');
 
 pipeline.export_figure_png(fig, fp_png, 300);
 try; close(fig); catch; end
