@@ -134,8 +134,10 @@ for ai=1:numel(analyses)
     % prepare dirs
     fp_tbl2 = fullfile(fp_tbl, char(A.name));
     fp_rep2 = fullfile(fp_rep, char(A.name));
+    fp_fig2 = fullfile(fp_root, 'figures', tag, char(A.name));
     if ~exist(fp_tbl2,'dir'); mkdir(fp_tbl2); end
     if ~exist(fp_rep2,'dir'); mkdir(fp_rep2); end
+    if ~exist(fp_fig2,'dir'); mkdir(fp_fig2); end
 
     for mi=1:numel(metrics)
         m = string(metrics(mi));
@@ -186,14 +188,22 @@ for ai=1:numel(analyses)
             fp_an = "";
         end
 
+        % Paper-friendly figure: trend over TrialIndex by Group
+        try
+            pipeline.plot_trialindex_trend(Tready, A.name, m, tag, fp_fig2, lme);
+        catch ME
+            fprintf(2, '[WARN] analyze_trialindex_lmm: plot_trialindex_trend failed for %s (%s): %s\n', m, A.name, ME.message);
+        end
+
         % Report md (highlight TrialIndex + Group:TrialIndex)
         fp_md = fullfile(fp_rep2, pipeline.sanitize_filename(sprintf('trialindex_lmm_report_%s_%s.md', m, tag)));
-        write_report(fp_md, A.name, m, tag, fp_ready, fp_fe, fp_an, lme, AN);
+        write_report(fp_md, A.name, m, tag, fp_ready, fp_fe, fp_an, lme, AN, fp_fig2);
 
         out.(char(A.name)).(char(m)).ready = fp_ready;
         out.(char(A.name)).(char(m)).fixed = fp_fe;
         out.(char(A.name)).(char(m)).anova = fp_an;
         out.(char(A.name)).(char(m)).report = fp_md;
+        out.(char(A.name)).(char(m)).fig_dir = fp_fig2;
     end
 end
 end
@@ -243,7 +253,7 @@ c(s=="low") = "ComplexityLow";
 c(s=="high") = "ComplexityHigh";
 end
 
-function write_report(fp_md, analysisName, metric, tag, fp_ready, fp_fe, fp_an, lme, AN)
+function write_report(fp_md, analysisName, metric, tag, fp_ready, fp_fe, fp_an, lme, AN, fp_fig)
 lines = {};
 lines{end+1} = sprintf('# TrialIndex LMM (%s) – %s [%s]', string(analysisName), string(metric), string(tag));
 lines{end+1} = '';
@@ -260,6 +270,12 @@ lines{end+1} = 'Outputs:';
 lines{end+1} = sprintf('- analysis-ready long table: `%s`', fp_ready);
 if strlength(string(fp_fe))>0; lines{end+1} = sprintf('- fixed effects: `%s`', fp_fe); end
 if strlength(string(fp_an))>0; lines{end+1} = sprintf('- ANOVA: `%s`', fp_an); end
+try
+    if nargin>=10 && strlength(string(fp_fig))>0
+        lines{end+1} = sprintf('- figures dir: `%s`', fp_fig);
+    end
+catch
+end
 lines{end+1} = '';
 
 % Try extract specific coefficient rows
