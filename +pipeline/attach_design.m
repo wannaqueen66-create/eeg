@@ -13,12 +13,13 @@ if ~ismember('scene_id', Tin.Properties.VariableNames)
     return;
 end
 
-sid = string(subject_id);
+sid = canonical_subject_id_local(subject_id);
+map_sid = canonical_subject_id_local(designMap.subject_id);
 
-M = designMap(designMap.subject_id==sid, :);
+M = designMap(map_sid==sid, :);
 if height(M)==0
-    % allow matching when design uses different whitespace
-    M = designMap(strtrim(designMap.subject_id)==strtrim(sid), :);
+    % allow matching when design uses different whitespace/case fallback
+    M = designMap(strtrim(lower(map_sid))==strtrim(lower(sid)), :);
 end
 if height(M)==0
     return;
@@ -41,4 +42,15 @@ end
 
 Tout = J;
 
+end
+
+function sid = canonical_subject_id_local(x)
+sid = strtrim(string(x));
+sid = replace(sid, "\", "/");
+for i=1:numel(sid)
+    parts = split(sid(i), "/");
+    sid(i) = parts(end);
+end
+sid = regexprep(sid, '\\.set$', '', 'ignorecase');
+sid = strtrim(sid);
 end

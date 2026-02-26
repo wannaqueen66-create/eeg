@@ -44,7 +44,7 @@ if isLong && ~isWide
     if ~ismember('Block', vars);     error('Long design file missing Block'); end
     if ~ismember('Position', vars);  error('Long design file missing Position'); end
 
-    subj = strtrim(T.SubjectID);
+    subj = canonical_subject_id_local(T.SubjectID);
     block_id = double(T.Block);
     cycle_in_block = double(T.Position);
     scene_id = (block_id-1).*6 + cycle_in_block;
@@ -156,7 +156,7 @@ rows = table('Size',[0 10], ...
     'VariableNames', {'subject_id','scene_id','scene_name','WWR','Cond','Complexity','SportFreq','Experience','Order','design_file'});
 
 for r = 1:height(T)
-    sid = strtrim(subj(r));
+    sid = canonical_subject_id_local(subj(r));
     for s = 1:12
         col_scene = sprintf('trial%02d_scene', s);
         col_WWR   = sprintf('trial%02d_WWR', s);
@@ -179,4 +179,15 @@ end
 
 MapLong = rows;
 
+end
+
+function sid = canonical_subject_id_local(x)
+sid = strtrim(string(x));
+sid = replace(sid, "\", "/");
+for i=1:numel(sid)
+    parts = split(sid(i), "/");
+    sid(i) = parts(end);
+end
+sid = regexprep(sid, '\\.set$', '', 'ignorecase');
+sid = strtrim(sid);
 end
