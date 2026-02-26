@@ -220,6 +220,22 @@ catch ME
     fprintf(2, '[WARN] plot_group_topoplots failed: %s\n', ME.message);
 end
 
+% Analysis-2: Block2 restart effect (raw + qc)
+try
+    pipeline.analyze_block2_restart(AllScene, fp_sum, cfg, 'raw');
+catch ME
+    fprintf(2, '[WARN] analyze_block2_restart(raw) failed: %s\n', ME.message);
+end
+try
+    if exist('AllScene_qc','var') && ~isempty(AllScene_qc)
+        pipeline.analyze_block2_restart(AllScene_qc, fp_sum, cfg, 'qc');
+    else
+        pipeline.analyze_block2_restart(AllScene, fp_sum, cfg, 'qc');
+    end
+catch ME
+    fprintf(2, '[WARN] analyze_block2_restart(qc) failed: %s\n', ME.message);
+end
+
 % In tidy layout, topo outputs land under summary/figures/topo/<tag>/.
 % If user expects files but none exist, they should check warnings above or ensure topo_long + chanlocs exist.
 
