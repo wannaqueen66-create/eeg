@@ -107,26 +107,8 @@ else
     title(ax, ttl, 'Interpreter','none');
 end
 
-% Remove axes toolbar from exports (MATLAB newer versions)
-try
-    axtoolbar(ax, []);
-catch
-end
-try
-    disableDefaultInteractivity(ax);
-catch
-end
-try
-    fig.ToolBar = 'none';
-    fig.MenuBar = 'none';
-catch
-end
-
+% Export
 fp = fullfile(fp_out, pipeline.sanitize_filename(sprintf('trialindex_trend_%s_%s_%s.png', tag, analysisName, metric)));
-try
-    exportgraphics(fig, fp, 'Resolution', 300);
-catch
-    saveas(fig, fp);
-end
+pipeline.export_figure_png(fig, fp, 300);
 try; close(fig); catch; end
 end

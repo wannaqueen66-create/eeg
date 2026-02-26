@@ -171,17 +171,7 @@ try
 catch
 end
 
-try
-    fig.ToolBar = 'none';
-    fig.MenuBar = 'none';
-catch
-end
-
 fp = fullfile(fp_out, pipeline.sanitize_filename(sprintf('trialindex_trend_facets_%s_%s_%s.png', tag, analysisName, metric)));
-try
-    exportgraphics(fig, fp, 'Resolution', 300);
-catch
-    saveas(fig, fp);
-end
+pipeline.export_figure_png(fig, fp, 300);
 try; close(fig); catch; end
 end

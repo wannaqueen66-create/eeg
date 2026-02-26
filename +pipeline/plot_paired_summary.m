@@ -33,10 +33,6 @@ grid on;
 title(ttl, 'Interpreter','none');
 ylabel(ylab);
 
-try
-    exportgraphics(fig, fp_out, 'Resolution', 300);
-catch
-    saveas(fig, fp_out);
-end
+pipeline.export_figure_png(fig, fp_out, 300);
 try; close(fig); catch; end
 end
