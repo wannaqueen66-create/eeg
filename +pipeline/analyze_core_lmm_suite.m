@@ -625,10 +625,12 @@ for ai=1:numel(analyses)
     for c=1:numel(mets)
         tr = T(string(T.metric)==mets(c),:);
         if isempty(tr), continue; end
-        Z(1,c) = double(tr.beta_linear(1));
-        Z(2,c) = double(tr.beta_quadratic(1));
-        P(1,c) = double(tr.p_linear(1));
-        P(2,c) = double(tr.p_quadratic(1));
+        % With imagesc + YDir='normal': row1 is bottom, row2 is top.
+        % Force display order: top=linear, bottom=quadratic.
+        Z(1,c) = double(tr.beta_quadratic(1));
+        Z(2,c) = double(tr.beta_linear(1));
+        P(1,c) = double(tr.p_quadratic(1));
+        P(2,c) = double(tr.p_linear(1));
     end
 
     set(0,'DefaultFigureVisible','off');
