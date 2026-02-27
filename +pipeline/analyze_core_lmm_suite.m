@@ -555,14 +555,36 @@ for ai=1:numel(analyses)
             end
         end
     end
-    V = -log10(max(Z, realmin));
+    try
+        nZero = sum(Z(:)==0, 'omitnan');
+        if nZero > 0
+            fprintf(2,'[WARN] task4 factor overview (%s/%s): detected %d zero p-values; display will clamp p at floor for color scaling.\n', tag, an, nZero);
+        end
+    catch
+    end
+    % Display transform for p-values (robust to p=0 underflow):
+    % - keep raw p in text annotations
+    % - clamp only for visualization to avoid saturated ~307 colorbars
+    pFloor = 1e-12;
+    Zdisp = Z;
+    Zdisp(~isfinite(Zdisp)) = NaN;
+    Zdisp = min(max(Zdisp, pFloor), 1);
+    V = -log10(Zdisp);
 
     set(0,'DefaultFigureVisible','off');
     fig = figure('Color','w','Position',[90 90 1180 420]);
     ax = axes(fig); hold(ax,'on');
-    imagesc(ax, V); set(ax,'YDir','normal'); axis(ax,'tight');
+    hImg = imagesc(ax, V);
+    hImg.AlphaData = ~isnan(V);
+    set(ax,'YDir','normal'); axis(ax,'tight');
     colormap(ax, parula(256));
-    cb = colorbar(ax); cb.Label.String = '-log10(p)';
+    cb = colorbar(ax); cb.Label.String = '-log10(p) (clamped)';
+    vmax = max(V(:),[],'omitnan');
+    if isempty(vmax) || ~isfinite(vmax)
+        vmax = 1;
+    end
+    vmax = max(1, min(vmax, -log10(pFloor)));
+    caxis(ax, [0 vmax]);
     set(ax,'XTick',1:numel(cols),'XTickLabel',labels);
     set(ax,'YTick',1:numel(mets),'YTickLabel',cellstr(mets));
     xtickangle(ax,20);
