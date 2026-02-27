@@ -146,6 +146,9 @@ for ai=1:numel(analyses)
     if ~exist(fp_rep2,'dir'); mkdir(fp_rep2); end
     if ~exist(fp_fig2,'dir'); mkdir(fp_fig2); end
 
+    % collect per-metric key stats for one-page overview figure
+    SumRows = table();
+
     for mi=1:numel(metrics)
         m = string(metrics(mi));
         mc = char(m);
@@ -212,11 +215,32 @@ for ai=1:numel(analyses)
         fp_md = fullfile(fp_rep2, pipeline.sanitize_filename(sprintf('trialindex_lmm_report_%s_%s.md', m, tag)));
         write_report(fp_md, A.name, m, tag, fp_ready, fp_fe, fp_an, lme, AN, fp_fig2);
 
+        % Collect summary row for overview figure/table
+        try
+            [ti_est, ti_p, gti_est, gti_p, n_sub, n_row] = extract_trialindex_key_stats(lme, AN, Tready);
+            r = table(string(A.name), m, n_sub, n_row, ti_est, ti_p, gti_est, gti_p, ...
+                'VariableNames', {'analysis','metric','n_subjects','n_rows','trialindex_est','trialindex_p','gti_est','gti_p'});
+            SumRows = [SumRows; r]; %#ok<AGROW>
+        catch
+        end
+
         out.(char(A.name)).(char(m)).ready = fp_ready;
         out.(char(A.name)).(char(m)).fixed = fp_fe;
         out.(char(A.name)).(char(m)).anova = fp_an;
         out.(char(A.name)).(char(m)).report = fp_md;
         out.(char(A.name)).(char(m)).fig_dir = fp_fig2;
+    end
+
+    % one-page, paper-friendly overview for this grouping analysis
+    try
+        if ~isempty(SumRows) && height(SumRows)>0
+            fp_sumcsv = fullfile(fp_tbl2, pipeline.sanitize_filename(sprintf('trialindex_lmm_summary_%s.csv', tag)));
+            writetable(SumRows, fp_sumcsv);
+            fp_over = fullfile(fp_fig2, pipeline.sanitize_filename(sprintf('trialindex_lmm_overview_%s_%s.png', tag, A.name)));
+            plot_trialindex_overview(SumRows, metrics, string(A.name), tag, fp_over);
+        end
+    catch ME
+        fprintf(2, '[WARN] analyze_trialindex_lmm: failed overview for %s: %s\n', A.name, ME.message);
     end
 end
 end
@@ -266,6 +290,116 @@ c(s=="low") = "ComplexityLow";
 c(s=="high") = "ComplexityHigh";
 end
 
+function [ti_est, ti_p, gti_est, gti_p, n_sub, n_row] = extract_trialindex_key_stats(lme, AN, Tready)
+ti_est = NaN; ti_p = NaN; gti_est = NaN; gti_p = NaN;
+n_sub = NaN; n_row = NaN;
+try
+    n_sub = numel(unique(string(Tready.subject_id)));
+    n_row = height(Tready);
+catch
+end
+
+try
+    C = lme.Coefficients;
+    rn = string(C.Name);
+    i1 = find(rn=="TrialIndex",1,'first');
+    if ~isempty(i1)
+        ti_est = double(C.Estimate(i1));
+        ti_p = double(C.pValue(i1));
+    end
+    i2 = find(contains(rn,"TrialIndex") & contains(rn,"Group"),1,'first');
+    if ~isempty(i2)
+        gti_est = double(C.Estimate(i2));
+        gti_p = double(C.pValue(i2));
+    end
+catch
+end
+
+% Prefer ANOVA p-values when available
+try
+    if ~isempty(AN) && all(ismember({'Term','pValue'}, AN.Properties.VariableNames))
+        tt = string(AN.Term);
+        i1 = find(tt=="TrialIndex",1,'first');
+        if ~isempty(i1)
+            ti_p = double(AN.pValue(i1));
+        end
+        i2 = find(contains(tt,"Group") & contains(tt,"TrialIndex"),1,'first');
+        if ~isempty(i2)
+            gti_p = double(AN.pValue(i2));
+        end
+    end
+catch
+end
+end
+
+function plot_trialindex_overview(SumRows, metrics, analysisName, tag, fp_png)
+% Paper-friendly task3 overview:
+% - row1: TrialIndex slope (estimate)
+% - row2: Group×TrialIndex slope (estimate)
+% - each cell annotates p and N
+
+M = string(metrics(:));
+nC = numel(M);
+
+Z = nan(2, nC);   % estimates
+P = nan(2, nC);   % p-values
+NS = nan(1, nC);  % n subjects
+NR = nan(1, nC);  % n rows
+for c=1:nC
+    m = M(c);
+    i = find(string(SumRows.metric)==m,1,'first');
+    if isempty(i), continue; end
+    Z(1,c) = double(SumRows.trialindex_est(i));
+    Z(2,c) = double(SumRows.gti_est(i));
+    P(1,c) = double(SumRows.trialindex_p(i));
+    P(2,c) = double(SumRows.gti_p(i));
+    NS(c) = double(SumRows.n_subjects(i));
+    NR(c) = double(SumRows.n_rows(i));
+end
+
+set(0,'DefaultFigureVisible','off');
+fig = figure('Color','w','Position',[90 90 1200 420]);
+ax = axes(fig); hold(ax,'on');
+imagesc(ax, Z);
+set(ax,'YDir','normal');
+axis(ax,'tight');
+colormap(ax, parula(256));
+cb = colorbar(ax); cb.Label.String = 'LMM coefficient estimate';
+
+mx = max(abs(Z(:)),[],'omitnan');
+if isempty(mx) || ~isfinite(mx) || mx==0, mx = 0.01; end
+caxis(ax,[-mx mx]);
+
+set(ax,'XTick',1:nC,'XTickLabel',cellstr(M));
+set(ax,'YTick',[1 2],'YTickLabel',{'TrialIndex','Group×TrialIndex'});
+xtickangle(ax,20);
+
+title(ax, sprintf('Task3 TrialIndex LMM overview | %s [%s]', analysisName, tag), 'Interpreter','none');
+
+for c=1:nC
+    for r=1:2
+        if isnan(Z(r,c)), continue; end
+        pp = P(r,c);
+        star = '';
+        if ~isnan(pp)
+            if pp < 0.001, star='***';
+            elseif pp < 0.01, star='**';
+            elseif pp < 0.05, star='*';
+            end
+        end
+        if r==1
+            txt = sprintf('β=%.3g%s\np=%.3g\nNsub=%d', Z(r,c), star, pp, round(NS(c)));
+        else
+            txt = sprintf('β=%.3g%s\np=%.3g', Z(r,c), star, pp);
+        end
+        text(ax,c,r,txt,'HorizontalAlignment','center','VerticalAlignment','middle','FontSize',9);
+    end
+end
+
+pipeline.export_figure_png(fig, fp_png, 300);
+try; close(fig); catch; end
+end
+
 function write_report(fp_md, analysisName, metric, tag, fp_ready, fp_fe, fp_an, lme, AN, fp_fig)
 lines = {};
 lines{end+1} = sprintf('# TrialIndex LMM (%s) – %s [%s]', string(analysisName), string(metric), string(tag));
@@ -283,6 +417,7 @@ lines{end+1} = 'Outputs:';
 lines{end+1} = sprintf('- analysis-ready long table: `%s`', fp_ready);
 if strlength(string(fp_fe))>0; lines{end+1} = sprintf('- fixed effects: `%s`', fp_fe); end
 if strlength(string(fp_an))>0; lines{end+1} = sprintf('- ANOVA: `%s`', fp_an); end
+lines{end+1} = '- overview PNG/table are written at the grouping-analysis level (see figures dir and `trialindex_lmm_summary_<tag>.csv`).';
 try
     if nargin>=10 && strlength(string(fp_fig))>0
         lines{end+1} = sprintf('- figures dir: `%s`', fp_fig);
