@@ -198,7 +198,8 @@ for ai=1:numel(analyses)
             FE = lme.Coefficients;
             fp_fe = fullfile(fp_tbl2, pipeline.sanitize_filename(sprintf('lmm_fixed_effects_%s_%s.csv', m, tag)));
             writetable(FE, fp_fe);
-        catch
+        catch ME
+            fprintf(2,'[WARN] analyze_trialindex_lmm: failed to write fixed effects for %s (%s): %s\n', m, A.name, ME.message);
             fp_fe = "";
         end
 
@@ -207,7 +208,8 @@ for ai=1:numel(analyses)
             AN = anova(lme);
             fp_an = fullfile(fp_tbl2, pipeline.sanitize_filename(sprintf('lmm_anova_%s_%s.csv', m, tag)));
             writetable(AN, fp_an);
-        catch
+        catch ME
+            fprintf(2,'[WARN] analyze_trialindex_lmm: failed to write ANOVA for %s (%s): %s\n', m, A.name, ME.message);
             AN = table();
             fp_an = "";
         end
