@@ -543,12 +543,10 @@ end
 mets = string(Sum.metric);
 n = numel(mets);
 
-% rows to display
-rowNames = {'Outlier rate (%)','Influence |Δ| change (%)','Direction flip (0/1)','Robustness score (A=3,B=2,C=1)'};
+% With imagesc + YDir='normal', row1 is bottom and row4 is top.
+% Force display order: top=Outlier, then Influence, then Direction flip, bottom=Score.
+rowNames = {'Robustness score (A=3,B=2,C=1) [bottom]','Direction flip (0/1)','Influence |Δ| change (%)','Outlier rate (%) [top]'};
 Z = nan(4,n);
-Z(1,:) = Sum.outlier_rate_pct;
-Z(2,:) = Sum.influence_abs_pct;
-Z(3,:) = double(Sum.direction_flip);
 sc = zeros(n,1);
 for i=1:n
     if Sum.robustness_score(i)=="A", sc(i)=3;
@@ -556,7 +554,10 @@ for i=1:n
     else, sc(i)=1;
     end
 end
-Z(4,:) = sc;
+Z(1,:) = sc;
+Z(2,:) = double(Sum.direction_flip);
+Z(3,:) = Sum.influence_abs_pct;
+Z(4,:) = Sum.outlier_rate_pct;
 
 set(0,'DefaultFigureVisible','off');
 fig = figure('Color','w','Position',[90 90 1200 420]);
@@ -576,13 +577,13 @@ for r=1:4
         if isnan(Z(r,c)), continue; end
         switch r
             case 1
-                txt = sprintf('%.1f%%', Z(r,c));
-            case 2
-                txt = sprintf('%.1f%%', Z(r,c));
-            case 3
-                txt = sprintf('%d', round(Z(r,c)));
-            otherwise
                 txt = sprintf('%s', char(Sum.robustness_score(c)));
+            case 2
+                txt = sprintf('%d', round(Z(r,c)));
+            case 3
+                txt = sprintf('%.1f%%', Z(r,c));
+            otherwise
+                txt = sprintf('%.1f%%', Z(r,c));
         end
         text(ax,c,r,txt,'HorizontalAlignment','center','VerticalAlignment','middle','FontSize',9,'FontWeight','bold');
     end

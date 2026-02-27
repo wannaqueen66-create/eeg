@@ -144,13 +144,16 @@ end
 
 function write_lme_tables(lme, fp_tbl, stem)
 try
-    writetable(lme.Coefficients, fullfile(fp_tbl, sprintf('%s_fixed_effects.csv', stem)));
-catch
+    C = to_table_compat(lme.Coefficients);
+    writetable(C, fullfile(fp_tbl, sprintf('%s_fixed_effects.csv', stem)));
+catch ME
+    warning('analyze_obeta_special: failed to write fixed effects (%s): %s', stem, ME.message);
 end
 try
-    A = anova(lme,'DFMethod','Satterthwaite');
+    A = to_table_compat(anova(lme,'DFMethod','Satterthwaite'));
     writetable(A, fullfile(fp_tbl, sprintf('%s_anova.csv', stem)));
-catch
+catch ME
+    warning('analyze_obeta_special: failed to write ANOVA (%s): %s', stem, ME.message);
 end
 end
 
@@ -252,7 +255,7 @@ end
 function [est, se, p] = extract_group_term(lme)
 est = NaN; se = NaN; p = NaN;
 try
-    C = lme.Coefficients;
+    C = to_table_compat(lme.Coefficients);
     names = string(C.Name);
     idx = find(contains(lower(names),'group'),1,'first');
     if isempty(idx)
@@ -264,7 +267,7 @@ try
 
     % Prefer ANOVA Group p when available
     try
-        A = anova(lme,'DFMethod','Satterthwaite');
+        A = to_table_compat(anova(lme,'DFMethod','Satterthwaite'));
         if ismember('Term', A.Properties.VariableNames) && ismember('pValue', A.Properties.VariableNames)
             t = string(A.Term);
             ia = find(contains(lower(t),'group'),1,'first');
@@ -323,6 +326,26 @@ for i=1:numel(lines)
     fprintf(fid, '%s\n', lines(i));
 end
 fclose(fid);
+end
+
+function Ttbl = to_table_compat(X)
+if istable(X)
+    Ttbl = X;
+    return;
+end
+try
+    if isa(X,'dataset')
+        Ttbl = dataset2table(X);
+        return;
+    end
+catch
+end
+try
+    Ttbl = struct2table(X);
+    return;
+catch
+end
+error('Unsupported output type for table export: %s', class(X));
 end
 
 function w = normalize_wwr(x)

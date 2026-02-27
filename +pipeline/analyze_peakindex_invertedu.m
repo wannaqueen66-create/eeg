@@ -141,13 +141,16 @@ for ai = 1:numel(analyses)
 
         % export tables
         try
-            writetable(lme.Coefficients, fullfile(fp_tbl, sprintf('peakindex_lmm_fixed_effects_%s_%s.csv', dv, tag)));
-        catch
+            C = to_table_compat(lme.Coefficients);
+            writetable(C, fullfile(fp_tbl, sprintf('peakindex_lmm_fixed_effects_%s_%s.csv', dv, tag)));
+        catch ME
+            warning('analyze_peakindex_invertedu: failed to write fixed effects (%s/%s/%s): %s', tag, A.name, dv, ME.message);
         end
         try
-            Aov = anova(lme,'DFMethod','Satterthwaite');
+            Aov = to_table_compat(anova(lme,'DFMethod','Satterthwaite'));
             writetable(Aov, fullfile(fp_tbl, sprintf('peakindex_lmm_anova_%s_%s.csv', dv, tag)));
-        catch
+        catch ME
+            warning('analyze_peakindex_invertedu: failed to write ANOVA (%s/%s/%s): %s', tag, A.name, dv, ME.message);
         end
 
         % report
@@ -244,7 +247,7 @@ catch
 end
 
 try
-    C = lme.Coefficients;
+    C = to_table_compat(lme.Coefficients);
     rn = string(C.Name);
     iG = find(contains(rn,'Group'),1,'first');
     iC = find(contains(rn,'Complexity'),1,'first');
@@ -254,7 +257,7 @@ try
     if ~isempty(iCG), bCG = double(C.Estimate(iCG)); pCG = double(C.pValue(iCG)); end
 
     try
-        A = anova(lme,'DFMethod','Satterthwaite');
+        A = to_table_compat(anova(lme,'DFMethod','Satterthwaite'));
         if all(ismember({'Term','pValue'}, A.Properties.VariableNames))
             tt = string(A.Term);
             jG = find(contains(tt,'Group') & ~contains(tt,':'),1,'first');
@@ -299,7 +302,7 @@ cb = colorbar(ax); cb.Label.String = 'effect / estimate';
 mx = max(abs(Z(:)),[],'omitnan'); if isempty(mx)||~isfinite(mx)||mx==0, mx=0.01; end
 caxis(ax,[-mx mx]);
 set(ax,'XTick',1:nC,'XTickLabel',cellstr(M));
-set(ax,'YTick',1:4,'YTickLabel',{'PeakIndex mean','Group','Complexity','Complexity×Group'});
+set(ax,'YTick',1:4,'YTickLabel',{'Complexity×Group [bottom]','Complexity','Group','PeakIndex mean [top]'});
 xtickangle(ax,20);
 title(ax, sprintf('Task5 PeakIndex overview | %s [%s]', analysisName, tag), 'Interpreter','none');
 
@@ -311,9 +314,13 @@ for r=1:4
             if p<0.001, star='***'; elseif p<0.01, star='**'; elseif p<0.05, star='*'; end
         end
         if r==1
-            txt = sprintf('%.3g%s\np=%.3g\nN=%d', Z(r,c), star, p, round(N(c)));
+            txt = sprintf('Cx×G β=%.3g%s\np=%.3g', Z(r,c), star, p);
+        elseif r==2
+            txt = sprintf('Cx β=%.3g%s\np=%.3g', Z(r,c), star, p);
+        elseif r==3
+            txt = sprintf('G β=%.3g%s\np=%.3g', Z(r,c), star, p);
         else
-            txt = sprintf('β=%.3g%s\np=%.3g', Z(r,c), star, p);
+            txt = sprintf('PI mean=%.3g%s\np=%.3g\nN=%d', Z(r,c), star, p, round(N(c)));
         end
         text(ax,c,r,txt,'HorizontalAlignment','center','VerticalAlignment','middle','FontSize',8);
     end
@@ -365,6 +372,26 @@ for i=1:numel(lines)
     fprintf(fid, '%s\n', lines(i));
 end
 fclose(fid);
+end
+
+function Ttbl = to_table_compat(X)
+if istable(X)
+    Ttbl = X;
+    return;
+end
+try
+    if isa(X,'dataset')
+        Ttbl = dataset2table(X);
+        return;
+    end
+catch
+end
+try
+    Ttbl = struct2table(X);
+    return;
+catch
+end
+error('Unsupported output type for table export: %s', class(X));
 end
 
 function w = normalize_wwr(x)
