@@ -640,7 +640,7 @@ for ai=1:numel(analyses)
     mx = max(abs(Z(:)),[],'omitnan'); if isempty(mx)||~isfinite(mx)||mx==0, mx=0.01; end
     caxis(ax,[-mx mx]);
     set(ax,'XTick',1:numel(mets),'XTickLabel',cellstr(mets));
-    set(ax,'YTick',[1 2],'YTickLabel',{'linear (WWRc)','quadratic (WWRc2)'});
+    set(ax,'YTick',[1 2],'YTickLabel',{'quadratic (WWRc2) [bottom]','linear (WWRc) [top]'});
     xtickangle(ax,20);
     title(ax, sprintf('Task4 trend overview | %s [%s]', an, tag), 'Interpreter','none');
 
