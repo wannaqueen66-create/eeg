@@ -57,7 +57,8 @@ catch
 end
 
 % Which metrics get 3-way (factor suite)
-metrics3 = ["O_alpha","F_theta"];
+% Default: run 3-way on all core metrics (can still override via config)
+metrics3 = ["O_theta","F_theta","O_alpha","O_beta"];
 try
     if isfield(cfg,'task4_factor_threeway_metrics') && ~isempty(cfg.task4_factor_threeway_metrics)
         metrics3 = string(cfg.task4_factor_threeway_metrics);
