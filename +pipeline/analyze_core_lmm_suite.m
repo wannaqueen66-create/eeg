@@ -286,15 +286,17 @@ end
 function write_lme_tables(lme, fp_tbl, stem)
 % fixed effects
 try
-    C = lme.Coefficients;
+    C = to_table_compat(lme.Coefficients);
     writetable(C, fullfile(fp_tbl, sprintf('%s_fixed_effects.csv', stem)));
-catch
+catch ME
+    fprintf(2,'[WARN] task4 write_lme_tables fixed failed (%s): %s\n', stem, ME.message);
 end
 % anova table
 try
-    A = anova(lme,'DFMethod','Satterthwaite');
+    A = to_table_compat(anova(lme,'DFMethod','Satterthwaite'));
     writetable(A, fullfile(fp_tbl, sprintf('%s_anova.csv', stem)));
-catch
+catch ME
+    fprintf(2,'[WARN] task4 write_lme_tables anova failed (%s): %s\n', stem, ME.message);
 end
 end
 
@@ -467,7 +469,7 @@ end
 function [pWWR, pCx, pGrp, pWxC, pWxG, pCxG, p3] = extract_factor_pvals(lme2, lme3, did3)
 pWWR = NaN; pCx = NaN; pGrp = NaN; pWxC = NaN; pWxG = NaN; pCxG = NaN; p3 = NaN;
 try
-    A2 = anova(lme2,'DFMethod','Satterthwaite');
+    A2 = to_table_compat(anova(lme2,'DFMethod','Satterthwaite'));
     if all(ismember({'Term','pValue'}, A2.Properties.VariableNames))
         tt = string(A2.Term);
         pWWR = get_term_p(tt, A2.pValue, "WWR");
@@ -476,18 +478,22 @@ try
         pWxC = get_interaction_p(tt, A2.pValue, ["WWR","Complexity"]);
         pWxG = get_interaction_p(tt, A2.pValue, ["WWR","Group"]);
         pCxG = get_interaction_p(tt, A2.pValue, ["Complexity","Group"]);
+    else
+        fprintf(2,'[WARN] task4 extract_factor_pvals: ANOVA missing Term/pValue columns.\n');
     end
-catch
+catch ME
+    fprintf(2,'[WARN] task4 extract_factor_pvals A2 failed: %s\n', ME.message);
 end
 if did3 && ~isempty(lme3)
     try
-        A3 = anova(lme3,'DFMethod','Satterthwaite');
+        A3 = to_table_compat(anova(lme3,'DFMethod','Satterthwaite'));
         if all(ismember({'Term','pValue'}, A3.Properties.VariableNames))
             tt3 = string(A3.Term);
             i3 = find(contains(tt3,"WWR") & contains(tt3,"Complexity") & contains(tt3,"Group"),1,'first');
             if ~isempty(i3), p3 = double(A3.pValue(i3)); end
         end
-    catch
+    catch ME
+        fprintf(2,'[WARN] task4 extract_factor_pvals A3 failed: %s\n', ME.message);
     end
 end
 end
@@ -507,32 +513,34 @@ end
 function [bL, pL, bQ2, pQ2] = extract_trend_stats(lmeL, lmeQ)
 bL = NaN; pL = NaN; bQ2 = NaN; pQ2 = NaN;
 try
-    CL = lmeL.Coefficients; nL = string(CL.Name);
+    CL = to_table_compat(lmeL.Coefficients); nL = string(CL.Name);
     iL = find(nL=="WWRc",1,'first');
     if ~isempty(iL)
         bL = double(CL.Estimate(iL));
         pL = double(CL.pValue(iL));
     end
-    AL = anova(lmeL,'DFMethod','Satterthwaite');
+    AL = to_table_compat(anova(lmeL,'DFMethod','Satterthwaite'));
     if all(ismember({'Term','pValue'}, AL.Properties.VariableNames))
         iLa = find(string(AL.Term)=="WWRc",1,'first');
         if ~isempty(iLa), pL = double(AL.pValue(iLa)); end
     end
-catch
+catch ME
+    fprintf(2,'[WARN] task4 extract_trend_stats linear failed: %s\n', ME.message);
 end
 try
-    CQ = lmeQ.Coefficients; nQ = string(CQ.Name);
+    CQ = to_table_compat(lmeQ.Coefficients); nQ = string(CQ.Name);
     iQ = find(nQ=="WWRc2",1,'first');
     if ~isempty(iQ)
         bQ2 = double(CQ.Estimate(iQ));
         pQ2 = double(CQ.pValue(iQ));
     end
-    AQ = anova(lmeQ,'DFMethod','Satterthwaite');
+    AQ = to_table_compat(anova(lmeQ,'DFMethod','Satterthwaite'));
     if all(ismember({'Term','pValue'}, AQ.Properties.VariableNames))
         iQa = find(string(AQ.Term)=="WWRc2",1,'first');
         if ~isempty(iQa), pQ2 = double(AQ.pValue(iQa)); end
     end
-catch
+catch ME
+    fprintf(2,'[WARN] task4 extract_trend_stats quadratic failed: %s\n', ME.message);
 end
 end
 
@@ -650,6 +658,26 @@ for ai=1:numel(analyses)
     pipeline.export_figure_png(fig, fp, 300);
     try; close(fig); catch; end
 end
+end
+
+function Ttbl = to_table_compat(X)
+if istable(X)
+    Ttbl = X;
+    return;
+end
+try
+    if isa(X,'dataset')
+        Ttbl = dataset2table(X);
+        return;
+    end
+catch
+end
+try
+    Ttbl = struct2table(X);
+    return;
+catch
+end
+error('Unsupported output type for table export: %s', class(X));
 end
 
 function w = normalize_wwr(x)
