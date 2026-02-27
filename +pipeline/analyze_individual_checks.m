@@ -183,6 +183,21 @@ for ai = 1:numel(analyses)
     catch
     end
 
+    % audit summary + overview + scorecard
+    try
+        Sum = build_audit_summary(allOut, Oa, Infl);
+        if ~isempty(Sum) && height(Sum) > 0
+            writetable(Sum, fullfile(fp_tbl, 'task7_audit_summary.csv'));
+
+            fp_png_over = fullfile(fp_fig, 'task7_audit_overview.png');
+            plot_audit_overview(Sum, tag, A.name, fp_png_over);
+
+            fp_png_card = fullfile(fp_fig, 'task7_audit_scorecard.png');
+            plot_audit_scorecard(Sum, tag, A.name, fp_png_card);
+        end
+    catch
+    end
+
     % report
     try
         fp_md = fullfile(fp_rep, sprintf('individual_checks_report_%s.md', tag));
@@ -592,6 +607,78 @@ end
 annotation(fig,'textbox',[0.01 0.01 0.98 0.08], ...
     'String','Score rule: A=stable; B=moderate sensitivity; C=high sensitivity (influence>40% or direction flip).', ...
     'EdgeColor','none','HorizontalAlignment','center');
+
+pipeline.export_figure_png(fig, fp_png, 300);
+try; close(fig); catch; end
+end
+
+function plot_audit_scorecard(Sum, tag, analysisName, fp_png)
+% Task7 scorecard: compact 4-row table style figure.
+% Required columns in Sum:
+%   outlier_rate_pct, influence_abs_pct, direction_flip, robustness_score
+
+if isempty(Sum) || height(Sum)==0
+    return;
+end
+
+mets = string(Sum.metric);
+n = numel(mets);
+
+% Convert robustness score to numeric for consistent color scaling
+sc = nan(n,1);
+for i=1:n
+    if Sum.robustness_score(i)=="A", sc(i)=3;
+    elseif Sum.robustness_score(i)=="B", sc(i)=2;
+    elseif Sum.robustness_score(i)=="C", sc(i)=1;
+    else, sc(i)=nan;
+    end
+end
+
+Z = nan(4,n);
+Z(1,:) = Sum.outlier_rate_pct;
+Z(2,:) = Sum.influence_abs_pct;
+Z(3,:) = double(Sum.direction_flip);
+Z(4,:) = sc;
+
+rowNames = {
+  'Outlier rate (%)',
+  'Influence |\Delta| change (%)',
+  'Direction flip (0/1)',
+  'Robustness score (A/B/C)'
+};
+
+set(0,'DefaultFigureVisible','off');
+fig = figure('Color','w','Position',[80 80 1200 380]);
+ax = axes(fig); hold(ax,'on');
+imagesc(ax, Z);
+set(ax,'YDir','normal'); axis(ax,'tight');
+colormap(ax, parula(256));
+cb = colorbar(ax); cb.Label.String = 'value';
+
+set(ax,'XTick',1:n,'XTickLabel',cellstr(mets));
+set(ax,'YTick',1:4,'YTickLabel',rowNames);
+xtickangle(ax,20);
+
+title(ax, sprintf('Task7 audit scorecard | %s [%s]', analysisName, tag), 'Interpreter','none');
+
+% annotate values
+for r=1:4
+    for c=1:n
+        if isnan(Z(r,c)), continue; end
+        if r==3
+            txt = sprintf('%d', round(Z(r,c)));
+        elseif r==4
+            txt = sprintf('%s', char(Sum.robustness_score(c)));
+        else
+            txt = sprintf('%.1f%%', Z(r,c));
+        end
+        text(ax,c,r,txt,'HorizontalAlignment','center','VerticalAlignment','middle','FontSize',10,'FontWeight','bold');
+    end
+end
+
+annotation(fig,'textbox',[0.01 0.01 0.98 0.08], ...
+  'String','Metrics: (1) Outlier rate, (2) Top-N influence, (3) Direction flip, (4) Robustness score.', ...
+  'EdgeColor','none','HorizontalAlignment','center');
 
 pipeline.export_figure_png(fig, fp_png, 300);
 try; close(fig); catch; end
