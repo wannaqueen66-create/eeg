@@ -393,12 +393,13 @@ for c=1:nC
     m = M(c);
     i = find(string(SumRows.metric)==m,1,'first');
     if isempty(i), continue; end
-    % Force row order for display robustness:
-    % row 1 (top): TrialIndex, row 2 (bottom): Group×TrialIndex
-    Z(1,c) = double(SumRows.trialindex_est(i));
-    Z(2,c) = double(SumRows.gti_est(i));
-    P(1,c) = double(SumRows.trialindex_p(i));
-    P(2,c) = double(SumRows.gti_p(i));
+    % With imagesc + YDir='normal', row 1 is displayed at the BOTTOM.
+    % So we store rows as:
+    % row 1 (bottom): Group×TrialIndex, row 2 (top): TrialIndex
+    Z(1,c) = double(SumRows.gti_est(i));
+    Z(2,c) = double(SumRows.trialindex_est(i));
+    P(1,c) = double(SumRows.gti_p(i));
+    P(2,c) = double(SumRows.trialindex_p(i));
     NS(c) = double(SumRows.n_subjects(i));
     NR(c) = double(SumRows.n_rows(i));
 end
@@ -417,7 +418,7 @@ if isempty(mx) || ~isfinite(mx) || mx==0, mx = 0.01; end
 caxis(ax,[-mx mx]);
 
 set(ax,'XTick',1:nC,'XTickLabel',cellstr(M));
-set(ax,'YTick',[1 2],'YTickLabel',{'TrialIndex (top)','Group×TrialIndex (bottom)'});
+set(ax,'YTick',[1 2],'YTickLabel',{'Group×TrialIndex (bottom)','TrialIndex (top)'});
 xtickangle(ax,20);
 
 title(ax, sprintf('Task3 TrialIndex LMM overview | %s [%s]', analysisName, tag), 'Interpreter','none');
@@ -434,9 +435,9 @@ for c=1:nC
             end
         end
         if r==1
-            txt = sprintf('TI β=%.3g%s\np=%.3g\nNsub=%d', Z(r,c), star, pp, round(NS(c)));
-        else
             txt = sprintf('GTI β=%.3g%s\np=%.3g', Z(r,c), star, pp);
+        else
+            txt = sprintf('TI β=%.3g%s\np=%.3g\nNsub=%d', Z(r,c), star, pp, round(NS(c)));
         end
         text(ax,c,r,txt,'HorizontalAlignment','center','VerticalAlignment','middle','FontSize',9);
     end
