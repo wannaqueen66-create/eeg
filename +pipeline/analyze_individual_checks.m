@@ -321,6 +321,10 @@ for ci=1:2
     ax = subplot(1,2,ci); hold(ax,'on');
     title(ax, char(cx));
 
+    % explicit legend proxies to avoid auto-binding to wrong box objects
+    hLow = scatter(ax, nan, nan, 26, cols(1,:), 'filled', 'MarkerFaceAlpha',0.55, 'DisplayName','Low');
+    hHigh = scatter(ax, nan, nan, 26, cols(2,:), 'filled', 'MarkerFaceAlpha',0.55, 'DisplayName','High');
+
     xbase = 1:3;
     for gi=1:2
         g = ["Low","High"];
@@ -331,11 +335,11 @@ for ci=1:2
             if isempty(y); continue; end
             x0 = xbase(wi) + (gi-1.5)*0.18;
             try
-                boxchart(ax, repmat(x0, numel(y),1), y, 'BoxWidth',0.22, 'MarkerStyle','none', 'BoxFaceColor', cols(gi,:), 'BoxFaceAlpha',0.25);
+                boxchart(ax, repmat(x0, numel(y),1), y, 'BoxWidth',0.22, 'MarkerStyle','none', 'BoxFaceColor', cols(gi,:), 'BoxFaceAlpha',0.25, 'HandleVisibility','off');
             catch
                 % fallback if boxchart unavailable
                 q = quantile(y,[0.25 0.5 0.75]);
-                plot(ax,[x0-0.08 x0+0.08],[q(2) q(2)],'-','Color',cols(gi,:),'LineWidth',2);
+                plot(ax,[x0-0.08 x0+0.08],[q(2) q(2)],'-','Color',cols(gi,:),'LineWidth',2, 'HandleVisibility','off');
             end
             xj = x0 + (rand(size(y))-0.5)*0.08;
             scatter(ax, xj, y, 14, cols(gi,:), 'filled', 'MarkerFaceAlpha',0.55, 'HandleVisibility','off');
@@ -346,7 +350,7 @@ for ci=1:2
     xlabel(ax,'WWR');
     ylabel(ax, dv);
     grid(ax,'on');
-    legend(ax,{'Low','High'}, 'Location','best');
+    legend(ax,[hLow hHigh], 'Location','best');
 end
 
 sgtitle(sprintf('Task7 condition-level box/scatter | %s | %s [%s]', analysisName, dv, tag), 'Interpreter','none');
