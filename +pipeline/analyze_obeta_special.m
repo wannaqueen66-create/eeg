@@ -221,6 +221,7 @@ if hasB && isfinite(eB)
     set(ax1,'XTick',[1 2],'XTickLabel',{'Model A','Model B'});
     xlim(ax1,[0.5 2.5]);
 else
+    ciB = [NaN NaN];
     set(ax1,'XTick',1,'XTickLabel',{'Model A'});
     xlim(ax1,[0.5 1.5]);
 end
@@ -229,6 +230,14 @@ ylabel(ax1, 'Group Estimate (High vs Low)');
 title(ax1, 'Group effect size');
 grid(ax1,'on');
 
+% Add numeric labels on left panel (beta + 95%CI + p)
+text(ax1, 1, eA, sprintf('  β=%.4g\n  95%%CI=[%.4g, %.4g]\n  p=%.4g', eA, ciA(1), ciA(2), pA), ...
+    'VerticalAlignment','bottom','HorizontalAlignment','left','FontSize',8,'Color',[0.1 0.3 0.6]);
+if hasB && isfinite(eB)
+    text(ax1, 2, eB, sprintf('  β=%.4g\n  95%%CI=[%.4g, %.4g]\n  p=%.4g', eB, ciB(1), ciB(2), pB), ...
+        'VerticalAlignment','bottom','HorizontalAlignment','left','FontSize',8,'Color',[0.6 0.2 0.1]);
+end
+
 % Right panel: p-values as -log10(p)
 ax2 = subplot(1,2,2); hold(ax2,'on');
 if hasB && isfinite(pB)
@@ -236,11 +245,14 @@ if hasB && isfinite(pB)
     bar(ax2, [1 2], vals, 0.5);
     set(ax2,'XTick',[1 2],'XTickLabel',{'Model A','Model B'});
     xlim(ax2,[0.5 2.5]);
+    text(ax2,1,vals(1),sprintf('  p=%.4g',pA),'VerticalAlignment','bottom','HorizontalAlignment','left','FontSize',8);
+    text(ax2,2,vals(2),sprintf('  p=%.4g',pB),'VerticalAlignment','bottom','HorizontalAlignment','left','FontSize',8);
 else
     vals = -log10(max(pA,realmin));
     bar(ax2, 1, vals, 0.5);
     set(ax2,'XTick',1,'XTickLabel',{'Model A'});
     xlim(ax2,[0.5 1.5]);
+    text(ax2,1,vals,sprintf('  p=%.4g',pA),'VerticalAlignment','bottom','HorizontalAlignment','left','FontSize',8);
 end
 yline(ax2, -log10(0.05), 'r--', 'p=0.05', 'LabelVerticalAlignment','bottom');
 ylabel(ax2, '-log10(p)');
