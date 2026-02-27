@@ -361,6 +361,12 @@ ax = axes(fig); hold(ax,'on');
 
 cols = [0.2 0.5 0.9; 0.9 0.4 0.2];
 groups = ["Low","High"];
+
+% legend proxy handles
+hLow = scatter(ax, nan, nan, 26, cols(1,:), 'filled', 'MarkerFaceAlpha',0.7, 'DisplayName','Low points');
+hHigh = scatter(ax, nan, nan, 26, cols(2,:), 'filled', 'MarkerFaceAlpha',0.7, 'DisplayName','High points');
+hOut = scatter(ax, nan, nan, 64, 'r', 'o', 'LineWidth',1.1, 'DisplayName','MAD>3 outlier');
+
 for gi=1:2
     g = groups(gi);
     for c=1:6
@@ -387,7 +393,7 @@ xlabel(ax,'Block2 cycle');
 ylabel(ax,'O_alpha');
 grid(ax,'on');
 title(ax, sprintf('Task7 Block2 O_alpha audit | %s [%s]', analysisName, tag), 'Interpreter','none');
-legend(ax, 'off');
+legend(ax, [hLow hHigh hOut], 'Location','best');
 
 pipeline.export_figure_png(fig, fp_png, 300);
 try; close(fig); catch; end
