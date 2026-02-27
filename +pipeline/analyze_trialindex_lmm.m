@@ -132,11 +132,24 @@ for ai=1:numel(analyses)
         continue;
     end
 
-    % Categorical encoding
+    % Categorical encoding (enforce reference levels to avoid sign ambiguity)
+    % Reference levels: Group=Low, WWR=15, Complexity=ComplexityLow (when present)
     Ta.Subject = categorical(string(Ta.subject_id));
-    Ta.Group = categorical(string(Ta.(gcolc)));
+    Ta.Group = categorical(string(Ta.(gcolc)), {'Low','High'});
     Ta.WWR = categorical(string(Ta.WWR));
     Ta.Complexity = categorical(string(Ta.Complexity));
+    try
+        if any(categories(Ta.WWR)=="15")
+            Ta.WWR = reordercats(Ta.WWR, ["15"; setdiff(categories(Ta.WWR),"15","stable")]);
+        end
+    catch
+    end
+    try
+        if any(categories(Ta.Complexity)=="ComplexityLow")
+            Ta.Complexity = reordercats(Ta.Complexity, ["ComplexityLow"; setdiff(categories(Ta.Complexity),"ComplexityLow","stable")]);
+        end
+    catch
+    end
 
     % prepare dirs
     fp_tbl2 = fullfile(fp_tbl, char(A.name));
