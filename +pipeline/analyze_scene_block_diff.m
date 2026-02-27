@@ -154,6 +154,14 @@ try
 catch ME
     fprintf(2,'[WARN] analyze_scene_block_diff: failed plotting all figures: %s\n', ME.message);
 end
+try
+    if ~isempty(Stats_all) && height(Stats_all)>0
+        fp_ov_all = fullfile(fp_fig.all, pipeline.sanitize_filename(sprintf('scene_blockdiff_overview_%s_all_%s.png', tag, scene_name)));
+        plot_branch_overview(Stats_all, metrics, tag, scene_name, "all", fp_ov_all);
+    end
+catch ME
+    fprintf(2,'[WARN] analyze_scene_block_diff: failed plotting all overview: %s\n', ME.message);
+end
 fp_md_all = fullfile(fp_rep.all, sprintf('scene_blockdiff_report_%s.md', tag));
 write_report_md(fp_md_all, tag, metrics, scene_name, usedSceneKey, fp_sub_all, fp_stats_all, Stats_all, fp_fig.all, "all");
 
@@ -168,6 +176,14 @@ if ismember('Experience', S.Properties.VariableNames) && any(strlength(strtrim(s
         plot_group_figures(S, metrics, fp_fig.experience, tag, scene_name, "Experience");
     catch ME
         fprintf(2,'[WARN] analyze_scene_block_diff: failed plotting Experience figures: %s\n', ME.message);
+    end
+    try
+        if ~isempty(Stats_ex) && height(Stats_ex)>0
+            fp_ov_ex = fullfile(fp_fig.experience, pipeline.sanitize_filename(sprintf('scene_blockdiff_overview_%s_experience_%s.png', tag, scene_name)));
+            plot_branch_overview(Stats_ex, metrics, tag, scene_name, "experience", fp_ov_ex);
+        end
+    catch ME
+        fprintf(2,'[WARN] analyze_scene_block_diff: failed plotting Experience overview: %s\n', ME.message);
     end
     fp_md_ex = fullfile(fp_rep.experience, sprintf('scene_blockdiff_report_%s.md', tag));
     write_report_md(fp_md_ex, tag, metrics, scene_name, usedSceneKey, fp_sub_ex, fp_stats_ex, Stats_ex, fp_fig.experience, "experience");
@@ -186,6 +202,14 @@ if ismember('SportFreq', S.Properties.VariableNames) && any(strlength(strtrim(st
         plot_group_figures(S, metrics, fp_fig.sportfreq, tag, scene_name, "SportFreq");
     catch ME
         fprintf(2,'[WARN] analyze_scene_block_diff: failed plotting SportFreq figures: %s\n', ME.message);
+    end
+    try
+        if ~isempty(Stats_sf) && height(Stats_sf)>0
+            fp_ov_sf = fullfile(fp_fig.sportfreq, pipeline.sanitize_filename(sprintf('scene_blockdiff_overview_%s_sportfreq_%s.png', tag, scene_name)));
+            plot_branch_overview(Stats_sf, metrics, tag, scene_name, "sportfreq", fp_ov_sf);
+        end
+    catch ME
+        fprintf(2,'[WARN] analyze_scene_block_diff: failed plotting SportFreq overview: %s\n', ME.message);
     end
     fp_md_sf = fullfile(fp_rep.sportfreq, sprintf('scene_blockdiff_report_%s.md', tag));
     write_report_md(fp_md_sf, tag, metrics, scene_name, usedSceneKey, fp_sub_sf, fp_stats_sf, Stats_sf, fp_fig.sportfreq, "sportfreq");
@@ -243,6 +267,89 @@ for g = ["Low","High"]
 end
 end
 
+function plot_branch_overview(Stats, metrics, tag, scene_name, branchName, fp_png)
+% Paper-friendly task2 overview per branch
+% - rows: all (one row) or group rows (Low/High)
+% - cols: metrics
+% - cell color: mean(diff=Block2-Block1)
+% - text: N, p_ttest, p_signrank, dz
+
+set(0,'DefaultFigureVisible','off');
+
+M = string(metrics(:));
+nC = numel(M);
+
+if isempty(Stats)
+    return;
+end
+
+% Build row labels from available GroupType/Group in stats
+if all(ismember({'GroupType','Group'}, Stats.Properties.VariableNames))
+    rowKeys = unique(string(Stats.GroupType)+"|"+string(Stats.Group), 'stable');
+else
+    rowKeys = "all|All";
+end
+nR = numel(rowKeys);
+
+Z = nan(nR,nC); P = nan(nR,nC); PSR = nan(nR,nC); DZ = nan(nR,nC); NN = nan(nR,nC);
+for r=1:nR
+    parts = split(rowKeys(r),'|');
+    gt = parts(1); g = parts(2);
+    for c=1:nC
+        m = M(c);
+        idx = string(Stats.metric)==m;
+        if ismember('GroupType', Stats.Properties.VariableNames)
+            idx = idx & string(Stats.GroupType)==gt;
+        end
+        if ismember('Group', Stats.Properties.VariableNames)
+            idx = idx & string(Stats.Group)==g;
+        end
+        if any(idx)
+            i = find(idx,1,'first');
+            if ismember('mean_diff', Stats.Properties.VariableNames), Z(r,c)=double(Stats.mean_diff(i)); end
+            if ismember('p_ttest', Stats.Properties.VariableNames), P(r,c)=double(Stats.p_ttest(i)); end
+            if ismember('p_signrank', Stats.Properties.VariableNames), PSR(r,c)=double(Stats.p_signrank(i)); end
+            if ismember('cohen_dz', Stats.Properties.VariableNames), DZ(r,c)=double(Stats.cohen_dz(i)); end
+            if ismember('N', Stats.Properties.VariableNames), NN(r,c)=double(Stats.N(i)); end
+        end
+    end
+end
+
+fig = figure('Color','w','Position',[90 90 1200 480]);
+ax = axes(fig); hold(ax,'on');
+imagesc(ax, Z); axis(ax,'tight'); set(ax,'YDir','normal');
+colormap(ax, parula(256));
+cb = colorbar(ax); cb.Label.String = 'mean diff = Block2 - Block1';
+mx = max(abs(Z(:)),[],'omitnan');
+if isempty(mx) || ~isfinite(mx) || mx==0, mx = 0.01; end
+caxis(ax,[-mx mx]);
+
+set(ax,'XTick',1:nC,'XTickLabel',cellstr(M));
+set(ax,'YTick',1:nR,'YTickLabel',cellstr(replace(rowKeys,'|',' | ')));
+xtickangle(ax,20);
+
+title(ax, sprintf('Task2 scene block-diff overview | %s | %s [%s]', scene_name, branchName, tag), 'Interpreter','none');
+
+for r=1:nR
+    for c=1:nC
+        if isnan(Z(r,c)); continue; end
+        star = '';
+        if ~isnan(P(r,c))
+            if P(r,c) < 0.001, star='***';
+            elseif P(r,c) < 0.01, star='**';
+            elseif P(r,c) < 0.05, star='*';
+            end
+        end
+        txt = sprintf('N=%d\nΔ=%.3g%s\np=%.3g\nsr=%.3g\ndz=%.2f', ...
+            round(NN(r,c)), Z(r,c), star, P(r,c), PSR(r,c), DZ(r,c));
+        text(ax,c,r,txt,'HorizontalAlignment','center','VerticalAlignment','middle','FontSize',8);
+    end
+end
+
+pipeline.export_figure_png(fig, fp_png, 300);
+try; close(fig); catch; end
+end
+
 function write_report_md(fp_md, tag, metrics, scene_name, usedSceneKey, fp_sub, fp_stats, Stats, fp_fig, branchName)
 lines = {};
 if nargin<10; branchName=""; end
@@ -258,6 +365,7 @@ lines{end+1} = 'Outputs:';
 lines{end+1} = sprintf('- Subject-level: `%s`', fp_sub);
 lines{end+1} = sprintf('- Stats: `%s`', fp_stats);
 lines{end+1} = sprintf('- Figures: `%s`', fp_fig);
+lines{end+1} = sprintf('- Overview figure: `%s`', fullfile(fp_fig, pipeline.sanitize_filename(sprintf('scene_blockdiff_overview_%s_%s_%s.png', tag, branchName, scene_name))));
 lines{end+1} = '';
 lines{end+1} = 'Metrics:';
 lines{end+1} = sprintf('- %s', strjoin(string(metrics), ', '));
