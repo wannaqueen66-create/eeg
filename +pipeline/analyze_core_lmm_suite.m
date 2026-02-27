@@ -562,16 +562,13 @@ for ai=1:numel(analyses)
         end
     catch
     end
-    % Display transform for p-values (robust to p=0 underflow):
-    % - keep raw p in text annotations
-    % - use very small floor only for zeros/underflow
-    % - robust color scaling by percentile to avoid one-color saturation
-    pFloor = 1e-300;
-    Zdisp = Z;
-    Zdisp(~isfinite(Zdisp)) = NaN;
-    Zdisp(Zdisp <= 0) = pFloor;
-    Zdisp = min(Zdisp, 1);
-    V = -log10(Zdisp);
+    % Significance-tier heatmap for robust readability across MATLAB versions:
+    % 0 = ns (p>=0.05), 1 = * (p<0.05), 2 = ** (p<0.01), 3 = *** (p<0.001)
+    V = nan(size(Z));
+    V(isfinite(Z)) = 0;
+    V(isfinite(Z) & Z<0.05) = 1;
+    V(isfinite(Z) & Z<0.01) = 2;
+    V(isfinite(Z) & Z<0.001) = 3;
 
     set(0,'DefaultFigureVisible','off');
     fig = figure('Color','w','Position',[90 90 1180 420]);
@@ -580,18 +577,8 @@ for ai=1:numel(analyses)
     hImg.AlphaData = ~isnan(V);
     set(ax,'YDir','normal'); axis(ax,'tight');
     colormap(ax, parula(256));
-    cb = colorbar(ax); cb.Label.String = '-log10(p)';
-    v = V(isfinite(V));
-    if isempty(v)
-        vmax = 5;
-    else
-        vmax = prctile(v, 95);
-        if ~isfinite(vmax) || vmax <= 0
-            vmax = max(v);
-        end
-        vmax = max(3, min(vmax, 60));
-    end
-    caxis(ax, [0 vmax]);
+    cb = colorbar(ax); cb.Label.String = 'significance tier (0=ns,1=*,2=**,3=***)';
+    caxis(ax, [0 3]);
     set(ax,'XTick',1:numel(cols),'XTickLabel',labels);
     set(ax,'YTick',1:numel(mets),'YTickLabel',cellstr(mets));
     xtickangle(ax,20);
