@@ -189,6 +189,16 @@ catch ME
     fprintf(2, '[WARN] analyze_block2_restart: failed plotting figures: %s\n', ME.message);
 end
 
+% overview figure (paper-friendly summary of mean_diff / p / dz)
+try
+    if ~isempty(Stats) && height(Stats)>0
+        fp_over = fullfile(fp_fig, pipeline.sanitize_filename(sprintf('block2_restart_overview_%s.png', tag)));
+        plot_overview_figure(Stats, metrics, tag, fp_over);
+    end
+catch ME
+    fprintf(2, '[WARN] analyze_block2_restart: failed overview figure: %s\n', ME.message);
+end
+
 % report markdown
 fp_md = fullfile(fp_rep, sprintf('block2_restart_report_%s.md', tag));
 write_report_md(fp_md, tag, metrics, fp_sub, fp_stats, Stats, fp_fig);
@@ -243,6 +253,96 @@ for gi=1:numel(groupTypes)
 end
 end
 
+function plot_overview_figure(Stats, metrics, tag, fp_png)
+% Paper-friendly task1 overview:
+% - rows: GroupType x Group
+% - cols: metrics
+% - cell color: mean_diff
+% - text: N, p_ttest, p_signrank, dz
+
+set(0,'DefaultFigureVisible','off');
+
+GT = ["Experience","SportFreq"];
+G  = ["Low","High"];
+rows = strings(0,1);
+for gi=1:numel(GT)
+    for gj=1:numel(G)
+        rows(end+1,1) = GT(gi)+"|"+G(gj); %#ok<AGROW>
+    end
+end
+nR = numel(rows);
+M = string(metrics(:));
+nC = numel(M);
+
+Z = nan(nR,nC);
+P = nan(nR,nC);
+PSR = nan(nR,nC);
+DZ = nan(nR,nC);
+NN = nan(nR,nC);
+
+for r=1:nR
+    parts = split(rows(r),'|');
+    gt = parts(1); g = parts(2);
+    for c=1:nC
+        m = M(c);
+        idx = string(Stats.GroupType)==gt & string(Stats.Group)==g & string(Stats.metric)==m;
+        if any(idx)
+            i = find(idx,1,'first');
+            Z(r,c) = double(Stats.mean_diff(i));
+            P(r,c) = double(Stats.p_ttest(i));
+            PSR(r,c)= double(Stats.p_signrank(i));
+            DZ(r,c)= double(Stats.cohen_dz(i));
+            NN(r,c)= double(Stats.N(i));
+        end
+    end
+end
+
+fig = figure('Color','w','Position',[80 80 1300 560]);
+ax = axes(fig); hold(ax,'on');
+
+imagesc(ax, Z);
+axis(ax,'tight');
+set(ax,'YDir','normal');
+colormap(ax, parula(256));
+cb = colorbar(ax);
+cb.Label.String = 'mean diff = B2-1 - mean(B2-2..6)';
+
+% Symmetric color scaling around 0 for sign readability
+mx = max(abs(Z(:)),[],'omitnan');
+if isempty(mx) || ~isfinite(mx) || mx==0
+    mx = 0.01;
+end
+caxis(ax, [-mx mx]);
+
+set(ax,'XTick',1:nC,'XTickLabel',cellstr(M));
+set(ax,'YTick',1:nR,'YTickLabel',cellstr(replace(rows, '|', ' | ')));
+xtickangle(ax, 20);
+
+title(ax, sprintf('Task1 Block2 restart overview [%s]', tag), 'Interpreter','none');
+
+% annotate each cell
+for r=1:nR
+    for c=1:nC
+        if isnan(Z(r,c)); continue; end
+        star = '';
+        if ~isnan(P(r,c))
+            if P(r,c) < 0.001, star = '***';
+            elseif P(r,c) < 0.01, star = '**';
+            elseif P(r,c) < 0.05, star = '*';
+            end
+        end
+        txt = sprintf('N=%d\nΔ=%.3g%s\np=%.3g\nsr=%.3g\ndz=%.2f', ...
+            round(NN(r,c)), Z(r,c), star, P(r,c), PSR(r,c), DZ(r,c));
+        text(ax, c, r, txt, 'HorizontalAlignment','center', 'VerticalAlignment','middle', ...
+            'Color','k', 'FontSize',8, 'FontWeight','normal');
+    end
+end
+
+grid(ax,'off');
+pipeline.export_figure_png(fig, fp_png, 300);
+try; close(fig); catch; end
+end
+
 function write_report_md(fp_md, tag, metrics, fp_sub, fp_stats, Stats, fp_fig)
 lines = {};
 lines{end+1} = sprintf('# Block2 restart analysis (%s)', tag);
@@ -257,6 +357,7 @@ lines{end+1} = sprintf('- Stats table: `%s`', fp_stats);
 try
     if nargin>=7 && strlength(string(fp_fig))>0
         lines{end+1} = sprintf('- Figures dir: `%s`', fp_fig);
+        lines{end+1} = sprintf('- Overview figure: `%s`', fullfile(fp_fig, pipeline.sanitize_filename(sprintf('block2_restart_overview_%s.png', tag))));
     end
 catch
 end
