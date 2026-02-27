@@ -286,10 +286,13 @@ Z = nan(4,nC); P = nan(4,nC); N = nan(1,nC);
 for c=1:nC
     i = find(string(SumRows.metric)==M(c),1,'first');
     if isempty(i), continue; end
-    Z(1,c) = double(SumRows.mean_peakindex(i));   P(1,c) = double(SumRows.p_vs_zero(i));
-    Z(2,c) = double(SumRows.beta_group(i));       P(2,c) = double(SumRows.p_group(i));
-    Z(3,c) = double(SumRows.beta_complexity(i));  P(3,c) = double(SumRows.p_complexity(i));
-    Z(4,c) = double(SumRows.beta_cxg(i));         P(4,c) = double(SumRows.p_cxg(i));
+    % With imagesc + YDir='normal': row1 is bottom, row4 is top.
+    % Display order fixed as:
+    % row1(bottom)=Cx×G, row2=Cx, row3=Group, row4(top)=PeakIndex mean.
+    Z(1,c) = double(SumRows.beta_cxg(i));         P(1,c) = double(SumRows.p_cxg(i));
+    Z(2,c) = double(SumRows.beta_complexity(i));  P(2,c) = double(SumRows.p_complexity(i));
+    Z(3,c) = double(SumRows.beta_group(i));       P(3,c) = double(SumRows.p_group(i));
+    Z(4,c) = double(SumRows.mean_peakindex(i));   P(4,c) = double(SumRows.p_vs_zero(i));
     N(c)   = double(SumRows.n_subjects(i));
 end
 
