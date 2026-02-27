@@ -86,6 +86,9 @@ T0.Complexity = normalize_complexity(T0.Complexity);
 % helper to build dirs
 mk = @(p) (exist(p,'dir')||mkdir(p));
 
+FactorSummary = table();
+TrendSummary = table();
+
 for mi = 1:numel(metrics)
     dv = string(metrics{mi});
     if ~ismember(dv, T0.Properties.VariableNames)
@@ -177,6 +180,15 @@ for mi = 1:numel(metrics)
         catch
         end
 
+        % Collect factor summary row (paper overview)
+        try
+            [pWWR, pCx, pGrp, pWxC, pWxG, pCxG, p3] = extract_factor_pvals(lme2, lme3, did3);
+            rr = table(string(A.name), dv, pWWR, pCx, pGrp, pWxC, pWxG, pCxG, p3, ...
+                'VariableNames', {'analysis','metric','p_WWR','p_Complexity','p_Group','p_WWRxComplexity','p_WWRxGroup','p_ComplexityxGroup','p_threeway'});
+            FactorSummary = [FactorSummary; rr]; %#ok<AGROW>
+        catch
+        end
+
         % ===== trend suite =====
         fp_tbl_t = fullfile(fp_trend, 'tables', tag, A.name);
         fp_rep_t = fullfile(fp_trend, 'reports', tag, A.name);
@@ -220,7 +232,43 @@ for mi = 1:numel(metrics)
         catch
         end
 
+        % Collect trend summary row (paper overview)
+        try
+            [bL, pL, bQ2, pQ2] = extract_trend_stats(lmeL, lmeQ);
+            rt = table(string(A.name), dv, bL, pL, bQ2, pQ2, ...
+                'VariableNames', {'analysis','metric','beta_linear','p_linear','beta_quadratic','p_quadratic'});
+            TrendSummary = [TrendSummary; rt]; %#ok<AGROW>
+        catch
+        end
+
     end
+end
+
+% Write overview summary tables + paper-friendly overview figures
+try
+    if ~isempty(FactorSummary) && height(FactorSummary)>0
+        fp_tbl_over = fullfile(fp_factor, 'tables', tag, 'overview');
+        fp_fig_over = fullfile(fp_factor, 'figures', tag, 'overview');
+        mk(fp_tbl_over); mk(fp_fig_over);
+        fp_csv = fullfile(fp_tbl_over, sprintf('task4_factor_summary_%s.csv', tag));
+        writetable(FactorSummary, fp_csv);
+        plot_task4_factor_overview(FactorSummary, tag, fp_fig_over);
+    end
+catch ME
+    warning('analyze_core_lmm_suite: factor overview failed: %s', ME.message);
+end
+
+try
+    if ~isempty(TrendSummary) && height(TrendSummary)>0
+        fp_tbl_over_t = fullfile(fp_trend, 'tables', tag, 'overview');
+        fp_fig_over_t = fullfile(fp_trend, 'figures', tag, 'overview');
+        mk(fp_tbl_over_t); mk(fp_fig_over_t);
+        fp_csv_t = fullfile(fp_tbl_over_t, sprintf('task4_trend_summary_%s.csv', tag));
+        writetable(TrendSummary, fp_csv_t);
+        plot_task4_trend_overview(TrendSummary, tag, fp_fig_over_t);
+    end
+catch ME
+    warning('analyze_core_lmm_suite: trend overview failed: %s', ME.message);
 end
 
 end
@@ -414,6 +462,173 @@ for i=1:numel(lines)
     fprintf(fid,'%s\n', lines(i));
 end
 fclose(fid);
+end
+
+function [pWWR, pCx, pGrp, pWxC, pWxG, pCxG, p3] = extract_factor_pvals(lme2, lme3, did3)
+pWWR = NaN; pCx = NaN; pGrp = NaN; pWxC = NaN; pWxG = NaN; pCxG = NaN; p3 = NaN;
+try
+    A2 = anova(lme2,'DFMethod','Satterthwaite');
+    if all(ismember({'Term','pValue'}, A2.Properties.VariableNames))
+        tt = string(A2.Term);
+        pWWR = get_term_p(tt, A2.pValue, "WWR");
+        pCx  = get_term_p(tt, A2.pValue, "Complexity");
+        pGrp = get_term_p(tt, A2.pValue, "Group");
+        pWxC = get_interaction_p(tt, A2.pValue, ["WWR","Complexity"]);
+        pWxG = get_interaction_p(tt, A2.pValue, ["WWR","Group"]);
+        pCxG = get_interaction_p(tt, A2.pValue, ["Complexity","Group"]);
+    end
+catch
+end
+if did3 && ~isempty(lme3)
+    try
+        A3 = anova(lme3,'DFMethod','Satterthwaite');
+        if all(ismember({'Term','pValue'}, A3.Properties.VariableNames))
+            tt3 = string(A3.Term);
+            i3 = find(contains(tt3,"WWR") & contains(tt3,"Complexity") & contains(tt3,"Group"),1,'first');
+            if ~isempty(i3), p3 = double(A3.pValue(i3)); end
+        end
+    catch
+    end
+end
+end
+
+function p = get_term_p(tt, pv, name)
+p = NaN;
+idx = find(tt==name,1,'first');
+if ~isempty(idx), p = double(pv(idx)); end
+end
+
+function p = get_interaction_p(tt, pv, names)
+p = NaN;
+idx = find(contains(tt,names(1)) & contains(tt,names(2)) & contains(tt,":"),1,'first');
+if ~isempty(idx), p = double(pv(idx)); end
+end
+
+function [bL, pL, bQ2, pQ2] = extract_trend_stats(lmeL, lmeQ)
+bL = NaN; pL = NaN; bQ2 = NaN; pQ2 = NaN;
+try
+    CL = lmeL.Coefficients; nL = string(CL.Name);
+    iL = find(nL=="WWRc",1,'first');
+    if ~isempty(iL)
+        bL = double(CL.Estimate(iL));
+        pL = double(CL.pValue(iL));
+    end
+    AL = anova(lmeL,'DFMethod','Satterthwaite');
+    if all(ismember({'Term','pValue'}, AL.Properties.VariableNames))
+        iLa = find(string(AL.Term)=="WWRc",1,'first');
+        if ~isempty(iLa), pL = double(AL.pValue(iLa)); end
+    end
+catch
+end
+try
+    CQ = lmeQ.Coefficients; nQ = string(CQ.Name);
+    iQ = find(nQ=="WWRc2",1,'first');
+    if ~isempty(iQ)
+        bQ2 = double(CQ.Estimate(iQ));
+        pQ2 = double(CQ.pValue(iQ));
+    end
+    AQ = anova(lmeQ,'DFMethod','Satterthwaite');
+    if all(ismember({'Term','pValue'}, AQ.Properties.VariableNames))
+        iQa = find(string(AQ.Term)=="WWRc2",1,'first');
+        if ~isempty(iQa), pQ2 = double(AQ.pValue(iQa)); end
+    end
+catch
+end
+end
+
+function plot_task4_factor_overview(FS, tag, fp_fig_over)
+analyses = unique(string(FS.analysis),'stable');
+if isempty(analyses), return; end
+for ai=1:numel(analyses)
+    an = analyses(ai);
+    T = FS(string(FS.analysis)==an,:);
+    mets = unique(string(T.metric),'stable');
+    cols = {'p_WWR','p_Complexity','p_Group','p_WWRxComplexity','p_WWRxGroup','p_ComplexityxGroup','p_threeway'};
+    labels = {'WWR','Cx','Group','WWR×Cx','WWR×Group','Cx×Group','3-way'};
+    Z = nan(numel(mets), numel(cols));
+    for r=1:numel(mets)
+        tr = T(string(T.metric)==mets(r),:);
+        if isempty(tr), continue; end
+        for c=1:numel(cols)
+            if ismember(cols{c}, tr.Properties.VariableNames)
+                Z(r,c) = double(tr.(cols{c})(1));
+            end
+        end
+    end
+    V = -log10(max(Z, realmin));
+
+    set(0,'DefaultFigureVisible','off');
+    fig = figure('Color','w','Position',[90 90 1180 420]);
+    ax = axes(fig); hold(ax,'on');
+    imagesc(ax, V); set(ax,'YDir','normal'); axis(ax,'tight');
+    colormap(ax, parula(256));
+    cb = colorbar(ax); cb.Label.String = '-log10(p)';
+    set(ax,'XTick',1:numel(cols),'XTickLabel',labels);
+    set(ax,'YTick',1:numel(mets),'YTickLabel',cellstr(mets));
+    xtickangle(ax,20);
+    title(ax, sprintf('Task4 factor overview | %s [%s]', an, tag), 'Interpreter','none');
+
+    for r=1:size(Z,1)
+        for c=1:size(Z,2)
+            if isnan(Z(r,c)), continue; end
+            star=''; p=Z(r,c);
+            if p<0.001, star='***'; elseif p<0.01, star='**'; elseif p<0.05, star='*'; end
+            text(ax,c,r,sprintf('p=%.3g%s',p,star),'HorizontalAlignment','center','VerticalAlignment','middle','FontSize',8);
+        end
+    end
+
+    fp = fullfile(fp_fig_over, pipeline.sanitize_filename(sprintf('task4_factor_overview_%s_%s.png', tag, an)));
+    pipeline.export_figure_png(fig, fp, 300);
+    try; close(fig); catch; end
+end
+end
+
+function plot_task4_trend_overview(TS, tag, fp_fig_over_t)
+analyses = unique(string(TS.analysis),'stable');
+if isempty(analyses), return; end
+for ai=1:numel(analyses)
+    an = analyses(ai);
+    T = TS(string(TS.analysis)==an,:);
+    mets = unique(string(T.metric),'stable');
+    Z = nan(2, numel(mets));
+    P = nan(2, numel(mets));
+    for c=1:numel(mets)
+        tr = T(string(T.metric)==mets(c),:);
+        if isempty(tr), continue; end
+        Z(1,c) = double(tr.beta_linear(1));
+        Z(2,c) = double(tr.beta_quadratic(1));
+        P(1,c) = double(tr.p_linear(1));
+        P(2,c) = double(tr.p_quadratic(1));
+    end
+
+    set(0,'DefaultFigureVisible','off');
+    fig = figure('Color','w','Position',[90 90 1180 400]);
+    ax = axes(fig); hold(ax,'on');
+    imagesc(ax, Z); set(ax,'YDir','normal'); axis(ax,'tight');
+    colormap(ax, parula(256));
+    cb = colorbar(ax); cb.Label.String = 'beta';
+    mx = max(abs(Z(:)),[],'omitnan'); if isempty(mx)||~isfinite(mx)||mx==0, mx=0.01; end
+    caxis(ax,[-mx mx]);
+    set(ax,'XTick',1:numel(mets),'XTickLabel',cellstr(mets));
+    set(ax,'YTick',[1 2],'YTickLabel',{'linear (WWRc)','quadratic (WWRc2)'});
+    xtickangle(ax,20);
+    title(ax, sprintf('Task4 trend overview | %s [%s]', an, tag), 'Interpreter','none');
+
+    for r=1:2
+        for c=1:numel(mets)
+            if isnan(Z(r,c)), continue; end
+            p=P(r,c); star='';
+            if ~isnan(p)
+                if p<0.001, star='***'; elseif p<0.01, star='**'; elseif p<0.05, star='*'; end
+            end
+            text(ax,c,r,sprintf('β=%.3g\np=%.3g%s',Z(r,c),p,star),'HorizontalAlignment','center','VerticalAlignment','middle','FontSize',8);
+        end
+    end
+
+    fp = fullfile(fp_fig_over_t, pipeline.sanitize_filename(sprintf('task4_trend_overview_%s_%s.png', tag, an)));
+    pipeline.export_figure_png(fig, fp, 300);
+    try; close(fig); catch; end
+end
 end
 
 function w = normalize_wwr(x)
