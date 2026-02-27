@@ -65,6 +65,8 @@ for ai = 1:numel(analyses)
     end
     gcolc = char(gcol);
 
+    SumRows = table();
+
     for mi = 1:numel(metrics)
         dv = metrics(mi);
         if ~ismember(dv, string(T0.Properties.VariableNames))
@@ -161,6 +163,30 @@ for ai = 1:numel(analyses)
             plot_peakindex_figure(K, dv, tag, A.name, fp_png);
         catch
         end
+
+        % collect overview stats row
+        try
+            [nsub, mu_all, se_all, p0, bG, pG, bC, pC, bCG, pCG] = extract_peakindex_summary(K, lme);
+            rr = table(string(A.name), dv, nsub, mu_all, se_all, p0, bG, pG, bC, pC, bCG, pCG, ...
+                'VariableNames', {'analysis','metric','n_subjects','mean_peakindex','sem_peakindex','p_vs_zero', ...
+                                  'beta_group','p_group','beta_complexity','p_complexity','beta_cxg','p_cxg'});
+            SumRows = [SumRows; rr]; %#ok<AGROW>
+        catch
+        end
+    end
+
+    % overview outputs for this grouping analysis
+    try
+        if ~isempty(SumRows) && height(SumRows)>0
+            fp_tbl_over = fullfile(fp_root, 'tables', tag, A.name);
+            fp_fig_over = fullfile(fp_root, 'figures', tag, A.name);
+            fp_csv_over = fullfile(fp_tbl_over, sprintf('peakindex_summary_%s.csv', tag));
+            writetable(SumRows, fp_csv_over);
+            fp_png_over = fullfile(fp_fig_over, pipeline.sanitize_filename(sprintf('peakindex_overview_%s_%s.png', tag, A.name)));
+            plot_peakindex_overview(SumRows, metrics, tag, A.name, fp_png_over);
+        end
+    catch ME
+        warning('analyze_peakindex_invertedu: overview failed (%s): %s', A.name, ME.message);
     end
 end
 
@@ -202,6 +228,97 @@ for i=1:min(2,numel(levelsCx))
 end
 
 sgtitle(sprintf('Task5 PeakIndex | %s | %s [%s]', analysisName, dv, tag), 'Interpreter','none');
+pipeline.export_figure_png(fig, fp_png, 300);
+try; close(fig); catch; end
+end
+
+function [nsub, mu_all, se_all, p0, bG, pG, bC, pC, bCG, pCG] = extract_peakindex_summary(K, lme)
+nsub = numel(unique(string(K.Subject)));
+mu_all = mean(K.PeakIndex,'omitnan');
+se_all = std(K.PeakIndex,'omitnan')/sqrt(sum(~isnan(K.PeakIndex)));
+p0 = NaN; bG = NaN; pG = NaN; bC = NaN; pC = NaN; bCG = NaN; pCG = NaN;
+
+try
+    [~, p0] = ttest(K.PeakIndex, 0);
+catch
+end
+
+try
+    C = lme.Coefficients;
+    rn = string(C.Name);
+    iG = find(contains(rn,'Group'),1,'first');
+    iC = find(contains(rn,'Complexity'),1,'first');
+    iCG = find(contains(rn,'Complexity') & contains(rn,'Group'),1,'first');
+    if ~isempty(iG),  bG = double(C.Estimate(iG)); pG = double(C.pValue(iG)); end
+    if ~isempty(iC),  bC = double(C.Estimate(iC)); pC = double(C.pValue(iC)); end
+    if ~isempty(iCG), bCG = double(C.Estimate(iCG)); pCG = double(C.pValue(iCG)); end
+
+    try
+        A = anova(lme,'DFMethod','Satterthwaite');
+        if all(ismember({'Term','pValue'}, A.Properties.VariableNames))
+            tt = string(A.Term);
+            jG = find(contains(tt,'Group') & ~contains(tt,':'),1,'first');
+            jC = find(contains(tt,'Complexity') & ~contains(tt,':'),1,'first');
+            jCG = find(contains(tt,'Complexity') & contains(tt,'Group') & contains(tt,':'),1,'first');
+            if ~isempty(jG),  pG = double(A.pValue(jG)); end
+            if ~isempty(jC),  pC = double(A.pValue(jC)); end
+            if ~isempty(jCG), pCG = double(A.pValue(jCG)); end
+        end
+    catch
+    end
+catch
+end
+end
+
+function plot_peakindex_overview(SumRows, metrics, tag, analysisName, fp_png)
+% Paper-friendly task5 overview
+% row1: mean PeakIndex (+ p vs 0)
+% row2: Group effect
+% row3: Complexity effect
+% row4: Complexity×Group interaction
+
+M = string(metrics(:));
+nC = numel(M);
+Z = nan(4,nC); P = nan(4,nC); N = nan(1,nC);
+for c=1:nC
+    i = find(string(SumRows.metric)==M(c),1,'first');
+    if isempty(i), continue; end
+    Z(1,c) = double(SumRows.mean_peakindex(i));   P(1,c) = double(SumRows.p_vs_zero(i));
+    Z(2,c) = double(SumRows.beta_group(i));       P(2,c) = double(SumRows.p_group(i));
+    Z(3,c) = double(SumRows.beta_complexity(i));  P(3,c) = double(SumRows.p_complexity(i));
+    Z(4,c) = double(SumRows.beta_cxg(i));         P(4,c) = double(SumRows.p_cxg(i));
+    N(c)   = double(SumRows.n_subjects(i));
+end
+
+set(0,'DefaultFigureVisible','off');
+fig = figure('Color','w','Position',[90 90 1200 520]);
+ax = axes(fig); hold(ax,'on');
+imagesc(ax, Z); set(ax,'YDir','normal'); axis(ax,'tight');
+colormap(ax, parula(256));
+cb = colorbar(ax); cb.Label.String = 'effect / estimate';
+mx = max(abs(Z(:)),[],'omitnan'); if isempty(mx)||~isfinite(mx)||mx==0, mx=0.01; end
+caxis(ax,[-mx mx]);
+set(ax,'XTick',1:nC,'XTickLabel',cellstr(M));
+set(ax,'YTick',1:4,'YTickLabel',{'PeakIndex mean','Group','Complexity','Complexity×Group'});
+xtickangle(ax,20);
+title(ax, sprintf('Task5 PeakIndex overview | %s [%s]', analysisName, tag), 'Interpreter','none');
+
+for r=1:4
+    for c=1:nC
+        if isnan(Z(r,c)), continue; end
+        p = P(r,c); star='';
+        if ~isnan(p)
+            if p<0.001, star='***'; elseif p<0.01, star='**'; elseif p<0.05, star='*'; end
+        end
+        if r==1
+            txt = sprintf('%.3g%s\np=%.3g\nN=%d', Z(r,c), star, p, round(N(c)));
+        else
+            txt = sprintf('β=%.3g%s\np=%.3g', Z(r,c), star, p);
+        end
+        text(ax,c,r,txt,'HorizontalAlignment','center','VerticalAlignment','middle','FontSize',8);
+    end
+end
+
 pipeline.export_figure_png(fig, fp_png, 300);
 try; close(fig); catch; end
 end
