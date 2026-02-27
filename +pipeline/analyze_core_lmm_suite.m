@@ -564,11 +564,13 @@ for ai=1:numel(analyses)
     end
     % Display transform for p-values (robust to p=0 underflow):
     % - keep raw p in text annotations
-    % - clamp only for visualization to avoid saturated ~307 colorbars
-    pFloor = 1e-12;
+    % - use very small floor only for zeros/underflow
+    % - robust color scaling by percentile to avoid one-color saturation
+    pFloor = 1e-300;
     Zdisp = Z;
     Zdisp(~isfinite(Zdisp)) = NaN;
-    Zdisp = min(max(Zdisp, pFloor), 1);
+    Zdisp(Zdisp <= 0) = pFloor;
+    Zdisp = min(Zdisp, 1);
     V = -log10(Zdisp);
 
     set(0,'DefaultFigureVisible','off');
@@ -578,12 +580,17 @@ for ai=1:numel(analyses)
     hImg.AlphaData = ~isnan(V);
     set(ax,'YDir','normal'); axis(ax,'tight');
     colormap(ax, parula(256));
-    cb = colorbar(ax); cb.Label.String = '-log10(p) (clamped)';
-    vmax = max(V(:),[],'omitnan');
-    if isempty(vmax) || ~isfinite(vmax)
-        vmax = 1;
+    cb = colorbar(ax); cb.Label.String = '-log10(p)';
+    v = V(isfinite(V));
+    if isempty(v)
+        vmax = 5;
+    else
+        vmax = prctile(v, 95);
+        if ~isfinite(vmax) || vmax <= 0
+            vmax = max(v);
+        end
+        vmax = max(3, min(vmax, 60));
     end
-    vmax = max(1, min(vmax, -log10(pFloor)));
     caxis(ax, [0 vmax]);
     set(ax,'XTick',1:numel(cols),'XTickLabel',labels);
     set(ax,'YTick',1:numel(mets),'YTickLabel',cellstr(mets));
@@ -595,7 +602,12 @@ for ai=1:numel(analyses)
             if isnan(Z(r,c)), continue; end
             star=''; p=Z(r,c);
             if p<0.001, star='***'; elseif p<0.01, star='**'; elseif p<0.05, star='*'; end
-            text(ax,c,r,sprintf('p=%.3g%s',p,star),'HorizontalAlignment','center','VerticalAlignment','middle','FontSize',8);
+            if p==0
+                ptxt = sprintf('p<1e-300%s', star);
+            else
+                ptxt = sprintf('p=%.3g%s', p, star);
+            end
+            text(ax,c,r,ptxt,'HorizontalAlignment','center','VerticalAlignment','middle','FontSize',8,'Color',[0.1 0.1 0.1]);
         end
     end
 
