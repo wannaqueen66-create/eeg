@@ -118,10 +118,17 @@ for ai=1:numel(analyses)
         warning('analyze_obeta_special: Model B failed (%s/%s): %s', tag, A.name, ME.message);
     end
 
-    % Figure
+    % Figure 1: raw group scatter/mean
     try
         fp_png = fullfile(fp_fig, pipeline.sanitize_filename(sprintf('obeta_special_%s_%s.png', tag, A.name)));
         plot_group_obeta(T, tag, A.name, fp_png);
+    catch
+    end
+
+    % Figure 2: Model A vs Model B group-effect robustness (Estimate + p)
+    try
+        fp_png2 = fullfile(fp_fig, pipeline.sanitize_filename(sprintf('obeta_group_model_compare_%s_%s.png', tag, A.name)));
+        plot_group_model_compare(lmeA, lmeB, tag, A.name, fp_png2);
     catch
     end
 
@@ -174,6 +181,111 @@ pipeline.export_figure_png(fig, fp_png, 300);
 try; close(fig); catch; end
 end
 
+function plot_group_model_compare(lmeA, lmeB, tag, analysisName, fp_png)
+% Visual summary for task6 robustness check:
+% - left: Group(High vs Low) estimate ±95%CI in Model A/B
+% - right: Group p-values in Model A/B as -log10(p), with p=0.05 line
+
+if isempty(lmeA)
+    return;
+end
+
+% Extract Group term from fixed-effects tables
+[eA, seA, pA] = extract_group_term(lmeA);
+if isnan(eA)
+    return;
+end
+
+hasB = ~isempty(lmeB);
+if hasB
+    [eB, seB, pB] = extract_group_term(lmeB);
+else
+    eB = NaN; seB = NaN; pB = NaN;
+end
+
+set(0,'DefaultFigureVisible','off');
+fig = figure('Color','w','Position',[100 100 920 360]);
+
+% Left panel: estimate + 95% CI
+ax1 = subplot(1,2,1); hold(ax1,'on');
+ciA = [eA - 1.96*seA, eA + 1.96*seA];
+errorbar(ax1, 1, eA, eA-ciA(1), ciA(2)-eA, 'o', 'LineWidth',1.6, ...
+    'MarkerFaceColor',[0.2 0.5 0.9], 'Color',[0.2 0.5 0.9]);
+if hasB && isfinite(eB)
+    ciB = [eB - 1.96*seB, eB + 1.96*seB];
+    errorbar(ax1, 2, eB, eB-ciB(1), ciB(2)-eB, 'o', 'LineWidth',1.6, ...
+        'MarkerFaceColor',[0.9 0.4 0.2], 'Color',[0.9 0.4 0.2]);
+    set(ax1,'XTick',[1 2],'XTickLabel',{'Model A','Model B'});
+    xlim(ax1,[0.5 2.5]);
+else
+    set(ax1,'XTick',1,'XTickLabel',{'Model A'});
+    xlim(ax1,[0.5 1.5]);
+end
+yline(ax1, 0, 'k--');
+ylabel(ax1, 'Group Estimate (High vs Low)');
+title(ax1, 'Group effect size');
+grid(ax1,'on');
+
+% Right panel: p-values as -log10(p)
+ax2 = subplot(1,2,2); hold(ax2,'on');
+if hasB && isfinite(pB)
+    vals = -log10([max(pA,realmin), max(pB,realmin)]);
+    bar(ax2, [1 2], vals, 0.5);
+    set(ax2,'XTick',[1 2],'XTickLabel',{'Model A','Model B'});
+    xlim(ax2,[0.5 2.5]);
+else
+    vals = -log10(max(pA,realmin));
+    bar(ax2, 1, vals, 0.5);
+    set(ax2,'XTick',1,'XTickLabel',{'Model A'});
+    xlim(ax2,[0.5 1.5]);
+end
+yline(ax2, -log10(0.05), 'r--', 'p=0.05', 'LabelVerticalAlignment','bottom');
+ylabel(ax2, '-log10(p)');
+title(ax2, sprintf('Group p-values (A=%.3g%s)', pA, ternary(hasB && isfinite(pB), sprintf(', B=%.3g', pB), '')));
+grid(ax2,'on');
+
+sgtitle(sprintf('Task6 O_beta group robustness | %s [%s]', analysisName, tag), 'Interpreter','none');
+pipeline.export_figure_png(fig, fp_png, 300);
+try; close(fig); catch; end
+end
+
+function [est, se, p] = extract_group_term(lme)
+est = NaN; se = NaN; p = NaN;
+try
+    C = lme.Coefficients;
+    names = string(C.Name);
+    idx = find(contains(lower(names),'group'),1,'first');
+    if isempty(idx)
+        return;
+    end
+    est = double(C.Estimate(idx));
+    se  = double(C.SE(idx));
+    p   = double(C.pValue(idx));
+
+    % Prefer ANOVA Group p when available
+    try
+        A = anova(lme,'DFMethod','Satterthwaite');
+        if ismember('Term', A.Properties.VariableNames) && ismember('pValue', A.Properties.VariableNames)
+            t = string(A.Term);
+            ia = find(contains(lower(t),'group'),1,'first');
+            if ~isempty(ia)
+                p = double(A.pValue(ia));
+            end
+        end
+    catch
+    end
+catch
+end
+end
+
+function out = ternary(cond, a, b)
+if cond
+    out = a;
+else
+    out = b;
+end
+end
+
 function write_report(fp_md, tag, analysisName, T, lmeA, lmeB)
 lines = strings(0,1);
 lines(end+1) = sprintf('# Task6 O_beta special | %s | %s', analysisName, tag);
@@ -204,6 +316,7 @@ end
 lines(end+1) = '## LMM outputs';
 lines(end+1) = '- See exported fixed_effects/anova CSVs in tables/.';
 lines(end+1) = '- Compare Group effect in Model A vs Model B to assess robustness after controlling WWR & Complexity.';
+lines(end+1) = '- Visual summary PNG: `obeta_group_model_compare_<tag>_<analysis>.png` (estimate±95%CI + p-value comparison).';
 
 fid = fopen(fp_md,'w');
 for i=1:numel(lines)
