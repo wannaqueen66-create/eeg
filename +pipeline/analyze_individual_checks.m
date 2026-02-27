@@ -474,6 +474,128 @@ else
 end
 end
 
+function Sum = build_audit_summary(allOut, Oa, Infl)
+% Build a compact summary table for paper-style robustness overview.
+% Columns: metric, outlier_rate(%), block2_oalpha_outlier_rate(%),
+%          influence_abs_pct, direction_flip(flag), robustness_score(A/B/C)
+
+metrics = string(allOut.metric(:));
+metrics = unique(metrics,'stable');
+if isempty(metrics)
+    Sum = table();
+    return;
+end
+
+m = numel(metrics);
+outRate = nan(m,1);
+block2Rate = nan(m,1);
+inflPct = nan(m,1);
+flipFlag = false(m,1);
+score = strings(m,1);
+
+% Outlier rate from individual-level check
+for i=1:m
+    mm = metrics(i);
+    idx = string(allOut.metric)==mm;
+    if any(idx)
+        outRate(i) = 100*mean(double(allOut.is_outlier_mad3(idx)),'omitnan');
+    end
+
+    % influence: use first available row for this metric
+    ii = find(string(Infl.metric)==mm,1,'first');
+    if ~isempty(ii)
+        if ismember('change_abs_pct', Infl.Properties.VariableNames)
+            inflPct(i) = double(Infl.change_abs_pct(ii));
+        end
+        if all(ismember({'raw_diff','trimmed_diff'}, Infl.Properties.VariableNames))
+            rd = double(Infl.raw_diff(ii)); td = double(Infl.trimmed_diff(ii));
+            flipFlag(i) = isfinite(rd) && isfinite(td) && (sign(rd)~=sign(td)) && (rd~=0) && (td~=0);
+        end
+    end
+
+    % score rule (simple + interpretable)
+    if ~isnan(inflPct(i)) && (inflPct(i) > 40 || flipFlag(i))
+        score(i) = "C";
+    elseif (~isnan(inflPct(i)) && inflPct(i) > 20) || (~isnan(outRate(i)) && outRate(i) > 12)
+        score(i) = "B";
+    else
+        score(i) = "A";
+    end
+end
+
+% Block2 O_alpha outlier rate (same value repeated for convenience)
+if ~isempty(Oa) && ismember('is_outlier_mad3', Oa.Properties.VariableNames)
+    br = 100*mean(double(Oa.is_outlier_mad3),'omitnan');
+    block2Rate(:) = br;
+end
+
+Sum = table(metrics, outRate, block2Rate, inflPct, flipFlag, score, ...
+    'VariableNames', {'metric','outlier_rate_pct','block2_oalpha_outlier_rate_pct','influence_abs_pct','direction_flip','robustness_score'});
+end
+
+function plot_audit_overview(Sum, tag, analysisName, fp_png)
+% Paper-friendly audit overview heatmap + concise annotations.
+
+if isempty(Sum) || height(Sum)==0
+    return;
+end
+
+mets = string(Sum.metric);
+n = numel(mets);
+
+% rows to display
+rowNames = {'Outlier rate (%)','Influence |Δ| change (%)','Direction flip (0/1)','Robustness score (A=3,B=2,C=1)'};
+Z = nan(4,n);
+Z(1,:) = Sum.outlier_rate_pct;
+Z(2,:) = Sum.influence_abs_pct;
+Z(3,:) = double(Sum.direction_flip);
+sc = zeros(n,1);
+for i=1:n
+    if Sum.robustness_score(i)=="A", sc(i)=3;
+    elseif Sum.robustness_score(i)=="B", sc(i)=2;
+    else, sc(i)=1;
+    end
+end
+Z(4,:) = sc;
+
+set(0,'DefaultFigureVisible','off');
+fig = figure('Color','w','Position',[90 90 1200 420]);
+ax = axes(fig); hold(ax,'on');
+imagesc(ax, Z);
+set(ax,'YDir','normal'); axis(ax,'tight');
+colormap(ax, parula(256));
+cb = colorbar(ax); cb.Label.String = 'value';
+
+set(ax,'XTick',1:n,'XTickLabel',cellstr(mets));
+set(ax,'YTick',1:4,'YTickLabel',rowNames);
+xtickangle(ax,20);
+title(ax, sprintf('Task7 audit overview | %s [%s]', analysisName, tag), 'Interpreter','none');
+
+for r=1:4
+    for c=1:n
+        if isnan(Z(r,c)), continue; end
+        switch r
+            case 1
+                txt = sprintf('%.1f%%', Z(r,c));
+            case 2
+                txt = sprintf('%.1f%%', Z(r,c));
+            case 3
+                txt = sprintf('%d', round(Z(r,c)));
+            otherwise
+                txt = sprintf('%s', char(Sum.robustness_score(c)));
+        end
+        text(ax,c,r,txt,'HorizontalAlignment','center','VerticalAlignment','middle','FontSize',9,'FontWeight','bold');
+    end
+end
+
+annotation(fig,'textbox',[0.01 0.01 0.98 0.08], ...
+    'String','Score rule: A=stable; B=moderate sensitivity; C=high sensitivity (influence>40% or direction flip).', ...
+    'EdgeColor','none','HorizontalAlignment','center');
+
+pipeline.export_figure_png(fig, fp_png, 300);
+try; close(fig); catch; end
+end
+
 function write_report(fp_md, analysisName, tag, allOut, allCond, Oa, Sig, Infl)
 lines = strings(0,1);
 lines(end+1) = sprintf('# Task7 Individual checks | %s | %s', analysisName, tag);
