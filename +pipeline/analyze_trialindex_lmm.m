@@ -195,17 +195,20 @@ for ai=1:numel(analyses)
 
         % Fixed effects table
         try
-            FE = lme.Coefficients;
+            FEraw = lme.Coefficients;
+            FE = to_table_compat(FEraw);
             fp_fe = fullfile(fp_tbl2, pipeline.sanitize_filename(sprintf('lmm_fixed_effects_%s_%s.csv', m, tag)));
             writetable(FE, fp_fe);
         catch ME
             fprintf(2,'[WARN] analyze_trialindex_lmm: failed to write fixed effects for %s (%s): %s\n', m, A.name, ME.message);
             fp_fe = "";
+            FE = table();
         end
 
         % ANOVA table
         try
-            AN = anova(lme);
+            ANraw = anova(lme);
+            AN = to_table_compat(ANraw);
             fp_an = fullfile(fp_tbl2, pipeline.sanitize_filename(sprintf('lmm_anova_%s_%s.csv', m, tag)));
             writetable(AN, fp_an);
         catch ME
@@ -303,6 +306,32 @@ s(ismember(s,["1","c1","high","h","complexityhigh"])) = "high";
 c = repmat("", numel(s), 1);
 c(s=="low") = "ComplexityLow";
 c(s=="high") = "ComplexityHigh";
+end
+
+function Ttbl = to_table_compat(X)
+% Convert MATLAB stats outputs to table for robust writetable compatibility
+% across releases/locales where lme.Coefficients or anova(lme) may return
+% dataset/table-like objects.
+if istable(X)
+    Ttbl = X;
+    return;
+end
+
+try
+    if isa(X,'dataset')
+        Ttbl = dataset2table(X);
+        return;
+    end
+catch
+end
+
+try
+    Ttbl = struct2table(X);
+    return;
+catch
+end
+
+error('Unsupported output type for table export: %s', class(X));
 end
 
 function [ti_est, ti_p, gti_est, gti_p, n_sub, n_row] = extract_trialindex_key_stats(lme, AN, Tready)
