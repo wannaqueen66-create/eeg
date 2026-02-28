@@ -549,7 +549,7 @@ Sum = table(metrics, outRate, block2Rate, inflPct, flipFlag, score, ...
 end
 
 function plot_audit_overview(Sum, tag, analysisName, fp_png)
-% Paper-friendly audit overview heatmap + concise annotations.
+% Paper-style overview heatmap with aligned rows and readable annotations.
 
 if isempty(Sum) || height(Sum)==0
     return;
@@ -558,9 +558,9 @@ end
 mets = string(Sum.metric);
 n = numel(mets);
 
-% With imagesc + YDir='normal', row1 is bottom and row4 is top.
-% Force display order: top=Outlier, then Influence, then Direction flip, bottom=Score.
-rowNames = {'Robustness score (A=3,B=2,C=1) [bottom]','Direction flip (0/1)','Influence |Δ| change (%)','Outlier rate (%) [top]'};
+% Display order (top -> bottom): Outlier, Influence, Direction flip, Robustness.
+% With YDir='normal', row1 is bottom and row4 is top.
+rowNames = {'Robustness score (C/B/A)','Direction flip (0/1)','Influence |Δ| change (%)','Outlier rate (%)'};
 Z = nan(4,n);
 sc = zeros(n,1);
 for i=1:n
@@ -575,17 +575,26 @@ Z(3,:) = Sum.influence_abs_pct;
 Z(4,:) = Sum.outlier_rate_pct;
 
 set(0,'DefaultFigureVisible','off');
-fig = figure('Color','w','Position',[90 90 1200 420]);
-ax = axes(fig); hold(ax,'on');
+fig = figure('Color','w','Position',[90 90 1180 520]);
+ax = axes(fig,'Position',[0.12 0.20 0.78 0.70]); hold(ax,'on');
 imagesc(ax, Z);
 set(ax,'YDir','normal'); axis(ax,'tight');
 colormap(ax, parula(256));
-cb = colorbar(ax); cb.Label.String = 'value';
+cb = colorbar(ax); cb.Label.String = 'Value';
+cb.Position(2) = ax.Position(2);
+cb.Position(4) = ax.Position(4);
 
 set(ax,'XTick',1:n,'XTickLabel',cellstr(mets));
 set(ax,'YTick',1:4,'YTickLabel',rowNames);
-xtickangle(ax,20);
-title(ax, sprintf('Task7 audit overview | %s [%s]', analysisName, tag), 'Interpreter','none');
+xtickangle(ax,0);
+ax.FontName = 'Times New Roman';
+ax.FontSize = 11;
+ax.LineWidth = 0.8;
+box(ax,'off');
+grid(ax,'on');
+ax.GridAlpha = 0.06;
+ax.GridColor = [0 0 0];
+title(ax, sprintf('Task7 audit overview | %s [%s]', analysisName, tag), 'Interpreter','none', 'FontName','Times New Roman', 'FontWeight','normal');
 
 for r=1:4
     for c=1:n
@@ -595,27 +604,28 @@ for r=1:4
                 txt = sprintf('%s', char(Sum.robustness_score(c)));
             case 2
                 txt = sprintf('%d', round(Z(r,c)));
-            case 3
-                txt = sprintf('%.1f%%', Z(r,c));
             otherwise
                 txt = sprintf('%.1f%%', Z(r,c));
         end
-        text(ax,c,r,txt,'HorizontalAlignment','center','VerticalAlignment','middle','FontSize',9,'FontWeight','bold');
+        txtColor = [1 1 1];
+        if (r==4 && Z(r,c) >= 12) || r==1
+            txtColor = [0.1 0.1 0.1];
+        end
+        text(ax,c,r,txt,'HorizontalAlignment','center','VerticalAlignment','middle', ...
+            'FontSize',10,'FontWeight','bold','Color',txtColor,'FontName','Times New Roman');
     end
 end
 
-annotation(fig,'textbox',[0.01 0.01 0.98 0.08], ...
-    'String','Score rule: A=stable; B=moderate sensitivity; C=high sensitivity (influence>40% or direction flip).', ...
-    'EdgeColor','none','HorizontalAlignment','center');
+text(fig, 0.5, 0.06, 'Rule: A = stable; B = moderate sensitivity; C = high sensitivity.', ...
+    'Units','normalized','HorizontalAlignment','center','FontName','Times New Roman','FontSize',10);
 
-pipeline.export_figure_png(fig, fp_png, 300);
+pipeline.export_figure_png(fig, fp_png, 600);
 try; close(fig); catch; end
 end
 
 function plot_audit_scorecard(Sum, tag, analysisName, fp_png)
-% Task7 scorecard: compact 4-row table style figure.
-% Required columns in Sum:
-%   outlier_rate_pct, influence_abs_pct, direction_flip, robustness_score
+% Paper-style scorecard; row order aligned with overview.
+% top->bottom: Outlier, Influence, Direction flip, Robustness
 
 if isempty(Sum) || height(Sum)==0
     return;
@@ -624,7 +634,6 @@ end
 mets = string(Sum.metric);
 n = numel(mets);
 
-% Convert robustness score to numeric for consistent color scaling
 sc = nan(n,1);
 for i=1:n
     if Sum.robustness_score(i)=="A", sc(i)=3;
@@ -634,53 +643,66 @@ for i=1:n
     end
 end
 
+% With YDir='normal', row1 is bottom, row4 is top.
 Z = nan(4,n);
-Z(1,:) = Sum.outlier_rate_pct;
-Z(2,:) = Sum.influence_abs_pct;
-Z(3,:) = double(Sum.direction_flip);
-Z(4,:) = sc;
+Z(1,:) = sc;
+Z(2,:) = double(Sum.direction_flip);
+Z(3,:) = Sum.influence_abs_pct;
+Z(4,:) = Sum.outlier_rate_pct;
 
 rowNames = {
-  'Outlier rate (%)',
-  'Influence |\Delta| change (%)',
+  'Robustness score (C/B/A)',
   'Direction flip (0/1)',
-  'Robustness score (A/B/C)'
+  'Influence |\Delta| change (%)',
+  'Outlier rate (%)'
 };
 
 set(0,'DefaultFigureVisible','off');
-fig = figure('Color','w','Position',[80 80 1200 380]);
-ax = axes(fig); hold(ax,'on');
+fig = figure('Color','w','Position',[80 80 1180 520]);
+ax = axes(fig,'Position',[0.12 0.20 0.78 0.70]); hold(ax,'on');
 imagesc(ax, Z);
 set(ax,'YDir','normal'); axis(ax,'tight');
 colormap(ax, parula(256));
-cb = colorbar(ax); cb.Label.String = 'value';
+cb = colorbar(ax); cb.Label.String = 'Value';
+cb.Position(2) = ax.Position(2);
+cb.Position(4) = ax.Position(4);
 
 set(ax,'XTick',1:n,'XTickLabel',cellstr(mets));
 set(ax,'YTick',1:4,'YTickLabel',rowNames);
-xtickangle(ax,20);
+xtickangle(ax,0);
+ax.FontName = 'Times New Roman';
+ax.FontSize = 11;
+ax.LineWidth = 0.8;
+box(ax,'off');
+grid(ax,'on');
+ax.GridAlpha = 0.06;
+ax.GridColor = [0 0 0];
 
-title(ax, sprintf('Task7 audit scorecard | %s [%s]', analysisName, tag), 'Interpreter','none');
+title(ax, sprintf('Task7 audit scorecard | %s [%s]', analysisName, tag), 'Interpreter','none', 'FontName','Times New Roman', 'FontWeight','normal');
 
-% annotate values
 for r=1:4
     for c=1:n
         if isnan(Z(r,c)), continue; end
-        if r==3
+        if r==2
             txt = sprintf('%d', round(Z(r,c)));
-        elseif r==4
+        elseif r==1
             txt = sprintf('%s', char(Sum.robustness_score(c)));
         else
             txt = sprintf('%.1f%%', Z(r,c));
         end
-        text(ax,c,r,txt,'HorizontalAlignment','center','VerticalAlignment','middle','FontSize',10,'FontWeight','bold');
+        txtColor = [1 1 1];
+        if (r==4 && Z(r,c) >= 12) || r==1
+            txtColor = [0.1 0.1 0.1];
+        end
+        text(ax,c,r,txt,'HorizontalAlignment','center','VerticalAlignment','middle', ...
+            'FontSize',10,'FontWeight','bold','Color',txtColor,'FontName','Times New Roman');
     end
 end
 
-annotation(fig,'textbox',[0.01 0.01 0.98 0.08], ...
-  'String','Metrics: (1) Outlier rate, (2) Top-N influence, (3) Direction flip, (4) Robustness score.', ...
-  'EdgeColor','none','HorizontalAlignment','center');
+text(fig, 0.5, 0.06, 'Metrics: outlier rate, influence change, direction flip, robustness score.', ...
+    'Units','normalized','HorizontalAlignment','center','FontName','Times New Roman','FontSize',10);
 
-pipeline.export_figure_png(fig, fp_png, 300);
+pipeline.export_figure_png(fig, fp_png, 600);
 try; close(fig); catch; end
 end
 
