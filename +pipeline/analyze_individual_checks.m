@@ -549,7 +549,8 @@ Sum = table(metrics, outRate, block2Rate, inflPct, flipFlag, score, ...
 end
 
 function plot_audit_overview(Sum, tag, analysisName, fp_png)
-% Paper-style overview heatmap with aligned rows and readable annotations.
+% Paper-style overview as a table-like matrix.
+% Different metric types use different row-specific color rules; no shared colorbar.
 
 if isempty(Sum) || height(Sum)==0
     return;
@@ -558,63 +559,72 @@ end
 mets = string(Sum.metric);
 n = numel(mets);
 
-% Display order (top -> bottom): Outlier, Influence, Direction flip, Robustness.
-% With YDir='normal', row1 is bottom and row4 is top.
-rowNames = {'Robustness grade (C/B/A)','Direction flip (0/1)','Influence |d| change (%)','Outlier rate (%)'};
-Z = nan(4,n);
-sc = zeros(n,1);
-for i=1:n
-    if Sum.robustness_score(i)=="A", sc(i)=3;
-    elseif Sum.robustness_score(i)=="B", sc(i)=2;
-    else, sc(i)=1;
-    end
-end
-Z(1,:) = sc;
-Z(2,:) = double(Sum.direction_flip);
-Z(3,:) = Sum.influence_abs_pct;
-Z(4,:) = Sum.outlier_rate_pct;
+outlierVals = double(Sum.outlier_rate_pct(:))';
+inflVals = double(Sum.influence_abs_pct(:))';
+flipVals = double(Sum.direction_flip(:))';
+scoreVals = string(Sum.robustness_score(:))';
+
+rowNames = {'Outlier rate (%)','Influence |d| change (%)','Direction flip (0/1)','Robustness grade'};
 
 set(0,'DefaultFigureVisible','off');
-fig = figure('Color','w','Position',[60 60 1450 680]);
-ax = axes(fig,'Position',[0.18 0.22 0.68 0.66]); hold(ax,'on');
-imagesc(ax, Z);
-set(ax,'YDir','normal'); axis(ax,'tight');
-colormap(ax, parula(256));
-cb = colorbar(ax); cb.Label.String = 'Value';
-cb.Position(2) = ax.Position(2);
-cb.Position(4) = ax.Position(4);
+fig = figure('Color','w','Position',[60 60 1450 700]);
+ax = axes(fig,'Position',[0.18 0.20 0.72 0.68]); hold(ax,'on');
+set(ax,'XLim',[0.5 n+0.5],'YLim',[0.5 4.5],'YDir','reverse');
 
-set(ax,'XTick',1:n,'XTickLabel',cellstr(mets));
-set(ax,'YTick',1:4,'YTickLabel',rowNames);
-xtickangle(ax,0);
-ax.FontName = 'Times New Roman';
-ax.FontSize = 11;
-ax.LineWidth = 0.8;
-box(ax,'off');
-grid(ax,'on');
-ax.GridAlpha = 0.06;
-ax.GridColor = [0 0 0];
-title(ax, sprintf('Task7 audit overview | %s [%s]', analysisName, tag), 'Interpreter','none', 'FontName','Times New Roman', 'FontWeight','normal');
+maxOut = max([1, outlierVals]);
+maxInfl = max([1, inflVals]);
+for c = 1:n
+    % row 1: outlier
+    t = min(1, outlierVals(c)/maxOut);
+    color1 = (1-t)*[0.93 0.96 0.99] + t*[0.29 0.47 0.74];
+    rectangle(ax,'Position',[c-0.5,0.5,1,1],'FaceColor',color1,'EdgeColor',[0.85 0.85 0.85]);
+    text(ax,c,1,sprintf('%.1f%%', outlierVals(c)),'HorizontalAlignment','center','VerticalAlignment','middle', ...
+        'FontName','Times New Roman','FontSize',11,'FontWeight','bold');
 
-for r=1:4
-    for c=1:n
-        if isnan(Z(r,c)), continue; end
-        switch r
-            case 1
-                txt = sprintf('%s', char(Sum.robustness_score(c)));
-            case 2
-                txt = sprintf('%d', round(Z(r,c)));
-            otherwise
-                txt = sprintf('%.1f%%', Z(r,c));
-        end
-        txtColor = [1 1 1];
-        if (r==4 && Z(r,c) >= 12) || r==1
-            txtColor = [0.1 0.1 0.1];
-        end
-        text(ax,c,r,txt,'HorizontalAlignment','center','VerticalAlignment','middle', ...
-            'FontSize',10,'FontWeight','bold','Color',txtColor,'FontName','Times New Roman');
+    % row 2: influence
+    t = min(1, inflVals(c)/maxInfl);
+    if inflVals(c) <= eps
+        color2 = [0.96 0.96 0.96];
+    else
+        color2 = (1-t)*[0.92 0.97 0.94] + t*[0.22 0.63 0.53];
     end
+    rectangle(ax,'Position',[c-0.5,1.5,1,1],'FaceColor',color2,'EdgeColor',[0.85 0.85 0.85]);
+    text(ax,c,2,sprintf('%.1f%%', inflVals(c)),'HorizontalAlignment','center','VerticalAlignment','middle', ...
+        'FontName','Times New Roman','FontSize',11,'FontWeight','bold');
+
+    % row 3: direction flip
+    if flipVals(c) >= 0.5
+        color3 = [0.86 0.43 0.38];
+        txt3 = '1';
+    else
+        color3 = [0.94 0.94 0.94];
+        txt3 = '0';
+    end
+    rectangle(ax,'Position',[c-0.5,2.5,1,1],'FaceColor',color3,'EdgeColor',[0.85 0.85 0.85]);
+    text(ax,c,3,txt3,'HorizontalAlignment','center','VerticalAlignment','middle', ...
+        'FontName','Times New Roman','FontSize',11,'FontWeight','bold');
+
+    % row 4: robustness
+    if scoreVals(c)=="A"
+        color4 = [0.79 0.89 0.81];
+    elseif scoreVals(c)=="B"
+        color4 = [0.97 0.91 0.73];
+    else
+        color4 = [0.93 0.78 0.78];
+    end
+    rectangle(ax,'Position',[c-0.5,3.5,1,1],'FaceColor',color4,'EdgeColor',[0.85 0.85 0.85]);
+    text(ax,c,4,char(scoreVals(c)),'HorizontalAlignment','center','VerticalAlignment','middle', ...
+        'FontName','Times New Roman','FontSize',11,'FontWeight','bold');
 end
+
+set(ax,'XTick',1:n,'XTickLabel',cellstr(mets),'YTick',1:4,'YTickLabel',rowNames);
+ax.FontName = 'Times New Roman';
+ax.FontSize = 12;
+ax.LineWidth = 0.8;
+ax.TickLength = [0 0];
+box(ax,'on');
+grid(ax,'off');
+title(ax, sprintf('Task7 audit overview | %s [%s]', analysisName, tag), 'Interpreter','none', 'FontName','Times New Roman', 'FontWeight','normal', 'FontSize',14);
 
 annotation(fig,'textbox',[0.16 0.05 0.70 0.04], ...
     'String','Rule: A = stable; B = moderate sensitivity; C = high sensitivity.', ...
@@ -693,8 +703,15 @@ set([ax1 ax2], 'XTickLabel', []);
 for i=1:n
     text(ax1, x(i), Sum.outlier_rate_pct(i) + max(0.3, 0.04*max(Sum.outlier_rate_pct)), sprintf('%.1f%%', Sum.outlier_rate_pct(i)), ...
         'HorizontalAlignment','center','FontSize',10,'FontName','Times New Roman');
-    text(ax2, x(i), Sum.influence_abs_pct(i) + max(0.15, 0.06*max([1; Sum.influence_abs_pct])), sprintf('%.1f%%', Sum.influence_abs_pct(i)), ...
+
+    yi = Sum.influence_abs_pct(i);
+    textY2 = yi + max(0.12, 0.06*max([1; Sum.influence_abs_pct]));
+    if yi <= eps
+        textY2 = 0.05;
+    end
+    text(ax2, x(i), textY2, sprintf('%.1f%%', yi), ...
         'HorizontalAlignment','center','FontSize',10,'FontName','Times New Roman');
+
     text(ax3, x(i), double(Sum.direction_flip(i)) + 0.05, sprintf('%d', round(double(Sum.direction_flip(i)))), ...
         'HorizontalAlignment','center','FontSize',10,'FontName','Times New Roman');
     text(ax4, x(i), sc(i) + 0.08, char(Sum.robustness_score(i)), ...
