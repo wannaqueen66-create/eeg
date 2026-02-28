@@ -575,8 +575,8 @@ Z(3,:) = Sum.influence_abs_pct;
 Z(4,:) = Sum.outlier_rate_pct;
 
 set(0,'DefaultFigureVisible','off');
-fig = figure('Color','w','Position',[90 90 1180 520]);
-ax = axes(fig,'Position',[0.12 0.20 0.78 0.70]); hold(ax,'on');
+fig = figure('Color','w','Position',[60 60 1450 680]);
+ax = axes(fig,'Position',[0.18 0.22 0.68 0.66]); hold(ax,'on');
 imagesc(ax, Z);
 set(ax,'YDir','normal'); axis(ax,'tight');
 colormap(ax, parula(256));
@@ -616,7 +616,7 @@ for r=1:4
     end
 end
 
-annotation(fig,'textbox',[0.10 0.03 0.80 0.05], ...
+annotation(fig,'textbox',[0.16 0.05 0.70 0.04], ...
     'String','Rule: A = stable; B = moderate sensitivity; C = high sensitivity.', ...
     'EdgeColor','none','HorizontalAlignment','center', ...
     'FontName','Times New Roman','FontSize',10);
@@ -646,33 +646,33 @@ for i=1:n
 end
 
 set(0,'DefaultFigureVisible','off');
-fig = figure('Color','w','Position',[80 80 1180 760]);
-tl = tiledlayout(fig,2,2,'TileSpacing','compact','Padding','compact');
+fig = figure('Color','w','Position',[60 60 1500 980]);
+tl = tiledlayout(fig,2,2,'TileSpacing','loose','Padding','loose');
 
 ax1 = nexttile(tl,1); hold(ax1,'on');
 bar(ax1, x, Sum.outlier_rate_pct, 0.62, 'FaceColor',[0.31 0.47 0.67], 'EdgeColor','none');
-ylabel(ax1,'Outlier rate (%)');
-title(ax1,'(a) Outlier rate','FontWeight','normal');
+ylabel(ax1,'Outlier rate (%)','FontSize',12);
+title(ax1,'(a) Outlier rate','FontWeight','normal','FontSize',13);
 
 ax2 = nexttile(tl,2); hold(ax2,'on');
 bar(ax2, x, Sum.influence_abs_pct, 0.62, 'FaceColor',[0.20 0.63 0.55], 'EdgeColor','none');
-ylabel(ax2,'Influence |d| change (%)');
-title(ax2,'(b) Influence change','FontWeight','normal');
+ylabel(ax2,'Influence |d| change (%)','FontSize',12);
+title(ax2,'(b) Influence change','FontWeight','normal','FontSize',13);
 
 ax3 = nexttile(tl,3); hold(ax3,'on');
 stem(ax3, x, double(Sum.direction_flip), 'filled', 'Color',[0.72 0.34 0.26], 'LineWidth',1.1, 'MarkerSize',6);
-ylabel(ax3,'Direction flip');
+ylabel(ax3,'Direction flip','FontSize',12);
 ylim(ax3,[-0.05 1.05]);
 yticks(ax3,[0 1]);
-title(ax3,'(c) Direction flip','FontWeight','normal');
+title(ax3,'(c) Direction flip','FontWeight','normal','FontSize',13);
 
 ax4 = nexttile(tl,4); hold(ax4,'on');
 bar(ax4, x, sc, 0.62, 'FaceColor',[0.45 0.45 0.70], 'EdgeColor','none');
-ylabel(ax4,'Robustness grade');
+ylabel(ax4,'Robustness grade','FontSize',12);
 ylim(ax4,[0.5 3.5]);
 yticks(ax4,[1 2 3]);
 yticklabels(ax4,{'C','B','A'});
-title(ax4,'(d) Robustness score','FontWeight','normal');
+title(ax4,'(d) Robustness score','FontWeight','normal','FontSize',13);
 
 allAxes = [ax1 ax2 ax3 ax4];
 for k = 1:numel(allAxes)
@@ -680,13 +680,15 @@ for k = 1:numel(allAxes)
     set(ax,'XTick',x,'XTickLabel',cellstr(mets));
     xtickangle(ax,0);
     ax.FontName = 'Times New Roman';
-    ax.FontSize = 11;
+    ax.FontSize = 12;
     ax.LineWidth = 0.8;
     box(ax,'off');
     grid(ax,'on');
     ax.GridAlpha = 0.08;
     ax.GridColor = [0 0 0];
 end
+
+set([ax1 ax2], 'XTickLabel', []);
 
 for i=1:n
     text(ax1, x(i), Sum.outlier_rate_pct(i) + max(0.3, 0.04*max(Sum.outlier_rate_pct)), sprintf('%.1f%%', Sum.outlier_rate_pct(i)), ...
@@ -701,7 +703,7 @@ end
 
 xlabel(ax3,'Metric');
 xlabel(ax4,'Metric');
-title(tl, sprintf('Task7 audit scorecard | %s [%s]', analysisName, tag), 'Interpreter','none', 'FontName','Times New Roman', 'FontWeight','normal');
+title(tl, sprintf('Task7 audit scorecard | %s [%s]', analysisName, tag), 'Interpreter','none', 'FontName','Times New Roman', 'FontWeight','normal', 'FontSize',14);
 
 pipeline.export_figure_png(fig, fp_png, 600);
 try; close(fig); catch; end
