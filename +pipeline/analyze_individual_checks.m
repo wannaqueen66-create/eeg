@@ -519,12 +519,25 @@ for i=1:m
     % influence: use first available row for this metric
     ii = find(string(Infl.metric)==mm,1,'first');
     if ~isempty(ii)
+        % Preferred: precomputed percentage column (backward/forward compatible)
         if ismember('change_abs_pct', Infl.Properties.VariableNames)
             inflPct(i) = double(Infl.change_abs_pct(ii));
-        end
-        if all(ismember({'raw_diff','trimmed_diff'}, Infl.Properties.VariableNames))
-            rd = double(Infl.raw_diff(ii)); td = double(Infl.trimmed_diff(ii));
-            flipFlag(i) = isfinite(rd) && isfinite(td) && (sign(rd)~=sign(td)) && (rd~=0) && (td~=0);
+        % Current schema: compute pct from full vs trimmed High-Low differences
+        elseif all(ismember({'diff_full_HighMinusLow','diff_dropTopN'}, Infl.Properties.VariableNames))
+            d0 = double(Infl.diff_full_HighMinusLow(ii));
+            d1 = double(Infl.diff_dropTopN(ii));
+            if isfinite(d0) && isfinite(d1)
+                inflPct(i) = 100 * abs(d1 - d0) / max(abs(d0), 1e-12);
+                flipFlag(i) = (sign(d0)~=sign(d1)) && (d0~=0) && (d1~=0);
+            end
+        % Legacy schema fallback
+        elseif all(ismember({'raw_diff','trimmed_diff'}, Infl.Properties.VariableNames))
+            rd = double(Infl.raw_diff(ii));
+            td = double(Infl.trimmed_diff(ii));
+            if isfinite(rd) && isfinite(td)
+                inflPct(i) = 100 * abs(td - rd) / max(abs(rd), 1e-12);
+                flipFlag(i) = (sign(rd)~=sign(td)) && (rd~=0) && (td~=0);
+            end
         end
     end
 
