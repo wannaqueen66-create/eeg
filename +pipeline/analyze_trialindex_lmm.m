@@ -68,13 +68,12 @@ try
 catch
 end
 
-% TrialIndex: default use scene_id (1..12)
+% TrialIndex: prefer scene_id (1..12), but repair invalid rows from block/cycle when available.
 TrialIndex = double(T.scene_id);
-% if missing/invalid, try from block_id + cycle_in_block
-if all(isnan(TrialIndex)) || any(TrialIndex==0)
-    if ismember('block_id', T.Properties.VariableNames) && ismember('cycle_in_block', T.Properties.VariableNames)
-        TrialIndex = (double(T.block_id)-1)*6 + double(T.cycle_in_block);
-    end
+if ismember('block_id', T.Properties.VariableNames) && ismember('cycle_in_block', T.Properties.VariableNames)
+    TrialIndex_alt = (double(T.block_id)-1)*6 + double(T.cycle_in_block);
+    bad = ~isfinite(TrialIndex) | TrialIndex<1 | TrialIndex>12;
+    TrialIndex(bad) = TrialIndex_alt(bad);
 end
 T.TrialIndex = TrialIndex;
 
