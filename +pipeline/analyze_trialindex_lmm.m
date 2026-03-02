@@ -406,6 +406,9 @@ end
 set(0,'DefaultFigureVisible','off');
 fig = figure('Color','w','Position',[90 90 1200 420]);
 ax = axes(fig); hold(ax,'on');
+ax.FontName = 'Times New Roman';
+ax.FontSize = 12;
+ax.LineWidth = 0.8;
 imagesc(ax, Z);
 set(ax,'YDir','normal');
 axis(ax,'tight');
@@ -442,6 +445,10 @@ for c=1:nC
     end
 end
 
+box(ax,'off');
+grid(ax,'on');
+ax.GridAlpha = 0.08;
+ax.GridColor = [0 0 0];
 pipeline.export_figure_png(fig, fp_png, 300);
 try; close(fig); catch; end
 end

@@ -313,6 +313,9 @@ end
 set(0,'DefaultFigureVisible','off');
 fig = figure('Color','w','Position',[90 90 1180 400]);
 ax = axes(fig); hold(ax,'on');
+ax.FontName = 'Times New Roman';
+ax.FontSize = 12;
+ax.LineWidth = 0.8;
 imagesc(ax, Z); set(ax,'YDir','normal'); axis(ax,'tight');
 colormap(ax, [0.84 0.88 0.94; 0.28 0.60 0.38]);
 cb = colorbar(ax); cb.Ticks = [0 1]; cb.TickLabels = {'not Inverted-U','Inverted-U'}; cb.Label.String = 'PeakIndex verdict';
@@ -334,6 +337,10 @@ for r=1:2
     end
 end
 
+box(ax,'off');
+grid(ax,'on');
+ax.GridAlpha = 0.08;
+ax.GridColor = [0 0 0];
 pipeline.export_figure_png(fig, fp_png, 300);
 try; close(fig); catch; end
 end
@@ -368,9 +375,15 @@ for i=1:min(2,numel(levelsCx))
 
     xlim(ax,[0.5 2.5]);
     set(ax,'XTick',1:2,'XTickLabel',{'Low','High'});
+    ax.FontName = 'Times New Roman';
+    ax.FontSize = 11;
+    ax.LineWidth = 0.8;
+    box(ax,'off');
+    grid(ax,'on');
+    ax.GridAlpha = 0.08;
+    ax.GridColor = [0 0 0];
     ylabel(ax,'PeakIndex = EEG45 - mean(EEG15, EEG75)');
     title(ax, char(cx), 'Interpreter','none');
-    grid(ax,'on');
 end
 
 sgtitle(sprintf('Task5 PeakIndex | %s | %s [%s]', analysisName, dv, tag), 'Interpreter','none');
@@ -442,6 +455,9 @@ end
 set(0,'DefaultFigureVisible','off');
 fig = figure('Color','w','Position',[90 90 1200 520]);
 ax = axes(fig); hold(ax,'on');
+ax.FontName = 'Times New Roman';
+ax.FontSize = 12;
+ax.LineWidth = 0.8;
 imagesc(ax, Z); set(ax,'YDir','normal'); axis(ax,'tight');
 colormap(ax, parula(256));
 cb = colorbar(ax); cb.Label.String = 'effect / estimate';
@@ -472,6 +488,10 @@ for r=1:4
     end
 end
 
+box(ax,'off');
+grid(ax,'on');
+ax.GridAlpha = 0.08;
+ax.GridColor = [0 0 0];
 pipeline.export_figure_png(fig, fp_png, 300);
 try; close(fig); catch; end
 end

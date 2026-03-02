@@ -299,6 +299,9 @@ end
 
 fig = figure('Color','w','Position',[80 80 1300 560]);
 ax = axes(fig); hold(ax,'on');
+ax.FontName = 'Times New Roman';
+ax.FontSize = 12;
+ax.LineWidth = 0.8;
 
 imagesc(ax, Z);
 axis(ax,'tight');
@@ -338,7 +341,10 @@ for r=1:nR
     end
 end
 
-grid(ax,'off');
+box(ax,'off');
+grid(ax,'on');
+ax.GridAlpha = 0.08;
+ax.GridColor = [0 0 0];
 pipeline.export_figure_png(fig, fp_png, 300);
 try; close(fig); catch; end
 end

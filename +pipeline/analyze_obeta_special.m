@@ -172,6 +172,9 @@ function plot_group_obeta(T, tag, analysisName, fp_png)
 set(0,'DefaultFigureVisible','off');
 fig = figure('Color','w','Position',[100 100 760 360]);
 ax = axes(fig); hold(ax,'on');
+ax.FontName = 'Times New Roman';
+ax.FontSize = 11;
+ax.LineWidth = 0.8;
 
 groups = ["Low","High"];
 cols = [0.2 0.5 0.9; 0.9 0.4 0.2];
@@ -188,7 +191,10 @@ end
 set(ax,'XTick',1:2,'XTickLabel',{'Low','High'});
 xlim(ax,[0.5 2.5]);
 ylabel(ax,'O\_beta');
+box(ax,'off');
 grid(ax,'on');
+ax.GridAlpha = 0.08;
+ax.GridColor = [0 0 0];
 title(ax, sprintf('Task6 O\\_beta special | %s [%s]', analysisName, tag), 'Interpreter','none');
 legend(ax,'Location','best');
 pipeline.export_figure_png(fig, fp_png, 300);
@@ -222,6 +228,9 @@ fig = figure('Color','w','Position',[100 100 920 360]);
 
 % Left panel: estimate + 95% CI
 ax1 = subplot(1,2,1); hold(ax1,'on');
+ax1.FontName = 'Times New Roman';
+ax1.FontSize = 11;
+ax1.LineWidth = 0.8;
 ciA = [eA - 1.96*seA, eA + 1.96*seA];
 errorbar(ax1, 1, eA, eA-ciA(1), ciA(2)-eA, 'o', 'LineWidth',1.6, ...
     'MarkerFaceColor',[0.2 0.5 0.9], 'Color',[0.2 0.5 0.9]);
@@ -251,6 +260,9 @@ end
 
 % Right panel: p-values as -log10(p)
 ax2 = subplot(1,2,2); hold(ax2,'on');
+ax2.FontName = 'Times New Roman';
+ax2.FontSize = 11;
+ax2.LineWidth = 0.8;
 if hasB && isfinite(pB)
     vals = -log10([max(pA,realmin), max(pB,realmin)]);
     bar(ax2, [1 2], vals, 0.5);
@@ -270,6 +282,10 @@ ylabel(ax2, '-log10(p)');
 title(ax2, sprintf('Group p-values (A=%.3g%s)', pA, ternary(hasB && isfinite(pB), sprintf(', B=%.3g', pB), '')));
 grid(ax2,'on');
 
+box(ax1,'off'); box(ax2,'off');
+grid(ax1,'on'); grid(ax2,'on');
+ax1.GridAlpha = 0.08; ax2.GridAlpha = 0.08;
+ax1.GridColor = [0 0 0]; ax2.GridColor = [0 0 0];
 sgtitle(sprintf('Task6 O_beta group robustness | %s [%s]', analysisName, tag), 'Interpreter','none');
 pipeline.export_figure_png(fig, fp_png, 300);
 try; close(fig); catch; end
