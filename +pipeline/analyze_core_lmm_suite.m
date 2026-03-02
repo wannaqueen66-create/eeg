@@ -386,16 +386,10 @@ for i=1:numel(trials)
     mu(i)=mean(yy,'omitnan');
     se(i)=std(yy,'omitnan')/sqrt(numel(yy));
 end
-errorbar(ax, 1:numel(trials), mu, se, 'o-','LineWidth',1.4,'Color',[0.2 0.5 0.9], 'MarkerFaceColor',[0.2 0.5 0.9]);
+errorbar(ax, 1:numel(trials), mu, se, 'o-','LineWidth',1.4);
 set(ax,'XTick',1:numel(trials),'XTickLabel',trials);
 xtickangle(ax,0);
-ax.FontName = 'Times New Roman';
-ax.FontSize = 11;
-ax.LineWidth = 0.8;
-box(ax,'off');
 grid(ax,'on');
-ax.GridAlpha = 0.08;
-ax.GridColor = [0 0 0];
 xlabel(ax, fac);
 end
 
@@ -415,13 +409,7 @@ for j=1:numel(ll)
         'MarkerFaceColor',cols(j,:), 'DisplayName', ll{j});
 end
 set(ax,'XTick',1:numel(xl),'XTickLabel',xl);
-ax.FontName = 'Times New Roman';
-ax.FontSize = 11;
-ax.LineWidth = 0.8;
-box(ax,'off');
 grid(ax,'on');
-ax.GridAlpha = 0.08;
-ax.GridColor = [0 0 0];
 xlabel(ax, xfac);
 legend(ax,'Location','best');
 end
@@ -474,16 +462,10 @@ for i=1:3
     mu(i)=mean(yy,'omitnan');
     se(i)=std(yy,'omitnan')/sqrt(numel(yy));
 end
-errorbar(ax, 1:3, mu, se, 'o-','LineWidth',1.4,'Color',[0.2 0.5 0.9], 'MarkerFaceColor',[0.2 0.5 0.9]);
+errorbar(ax, 1:3, mu, se, 'o-','LineWidth',1.4);
 set(ax,'XTick',1:3,'XTickLabel',labels);
-ax.FontName = 'Times New Roman';
-ax.FontSize = 11;
-ax.LineWidth = 0.8;
-box(ax,'off');
-grid(ax,'on');
-ax.GridAlpha = 0.08;
-ax.GridColor = [0 0 0];
 xlabel(ax,'WWR'); ylabel(ax, dv);
+grid(ax,'on');
 title(ax, sprintf('Task4 trend screen | %s | %s [%s]', analysisName, dv, tag),'Interpreter','none');
 fp = fullfile(fp_fig, pipeline.sanitize_filename(sprintf('task4_trend_%s_%s_%s.png', tag, analysisName, dv)));
 pipeline.export_figure_png(fig, fp, 300);
@@ -670,13 +652,10 @@ for ai=1:numel(analyses)
     set(0,'DefaultFigureVisible','off');
     fig = figure('Color','w','Position',[90 90 1180 420]);
     ax = axes(fig); hold(ax,'on');
-    ax.FontName = 'Times New Roman';
-    ax.FontSize = 12;
-    ax.LineWidth = 0.8;
     hImg = imagesc(ax, V);
     hImg.AlphaData = ~isnan(V);
     set(ax,'YDir','normal'); axis(ax,'tight');
-    colormap(ax, parula(256));
+    colormap(ax, interp1([0 0.5 1], [0.72 0.34 0.26; 0.96 0.96 0.96; 0.31 0.47 0.67], linspace(0,1,256)));
     cb = colorbar(ax); cb.Label.String = 'significance tier (0=ns,1=*,2=**,3=***)';
     caxis(ax, [0 3]);
     set(ax,'XTick',1:numel(cols),'XTickLabel',labels);
@@ -699,10 +678,6 @@ for ai=1:numel(analyses)
     end
 
     fp = fullfile(fp_fig_over, pipeline.sanitize_filename(sprintf('task4_factor_overview_%s_%s.png', tag, an)));
-    box(ax,'off');
-    grid(ax,'on');
-    ax.GridAlpha = 0.08;
-    ax.GridColor = [0 0 0];
     pipeline.export_figure_png(fig, fp, 300);
     try; close(fig); catch; end
 end
@@ -736,11 +711,8 @@ for ai=1:numel(analyses)
     set(0,'DefaultFigureVisible','off');
     fig = figure('Color','w','Position',[90 90 1180 400]);
     ax = axes(fig); hold(ax,'on');
-    ax.FontName = 'Times New Roman';
-    ax.FontSize = 12;
-    ax.LineWidth = 0.8;
     imagesc(ax, Z); set(ax,'YDir','normal'); axis(ax,'tight');
-    colormap(ax, [0.84 0.88 0.94; 0.28 0.60 0.38]);
+    colormap(ax, [0.94 0.94 0.94; 0.22 0.63 0.53]);
     cb = colorbar(ax); cb.Ticks = [0 1]; cb.TickLabels = {'not Inverted-U','Inverted-U'}; cb.Label.String = 'quadratic verdict';
     caxis(ax,[0 1]);
     set(ax,'XTick',1:numel(mets),'XTickLabel',cellstr(mets));
@@ -761,10 +733,6 @@ for ai=1:numel(analyses)
     end
 
     fp = fullfile(fp_fig_over_t, pipeline.sanitize_filename(sprintf('task4_invertedu_round_overview_%s_%s.png', tag, an)));
-    box(ax,'off');
-    grid(ax,'on');
-    ax.GridAlpha = 0.08;
-    ax.GridColor = [0 0 0];
     pipeline.export_figure_png(fig, fp, 300);
     try; close(fig); catch; end
 end
@@ -793,11 +761,8 @@ for ai=1:numel(analyses)
     set(0,'DefaultFigureVisible','off');
     fig = figure('Color','w','Position',[90 90 1180 400]);
     ax = axes(fig); hold(ax,'on');
-    ax.FontName = 'Times New Roman';
-    ax.FontSize = 12;
-    ax.LineWidth = 0.8;
     imagesc(ax, Z); set(ax,'YDir','normal'); axis(ax,'tight');
-    colormap(ax, parula(256));
+    colormap(ax, interp1([0 0.5 1], [0.72 0.34 0.26; 0.96 0.96 0.96; 0.31 0.47 0.67], linspace(0,1,256)));
     cb = colorbar(ax); cb.Label.String = 'beta';
     mx = max(abs(Z(:)),[],'omitnan'); if isempty(mx)||~isfinite(mx)||mx==0, mx=0.01; end
     caxis(ax,[-mx mx]);
@@ -818,10 +783,6 @@ for ai=1:numel(analyses)
     end
 
     fp = fullfile(fp_fig_over_t, pipeline.sanitize_filename(sprintf('task4_trend_overview_%s_%s.png', tag, an)));
-    box(ax,'off');
-    grid(ax,'on');
-    ax.GridAlpha = 0.08;
-    ax.GridColor = [0 0 0];
     pipeline.export_figure_png(fig, fp, 300);
     try; close(fig); catch; end
 end

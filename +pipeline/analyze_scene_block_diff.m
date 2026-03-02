@@ -331,11 +331,8 @@ end
 
 fig = figure('Color','w','Position',[90 90 1200 480]);
 ax = axes(fig); hold(ax,'on');
-ax.FontName = 'Times New Roman';
-ax.FontSize = 12;
-ax.LineWidth = 0.8;
 imagesc(ax, Z); axis(ax,'tight'); set(ax,'YDir','normal');
-colormap(ax, parula(256));
+colormap(ax, interp1([0 0.5 1], [0.72 0.34 0.26; 0.96 0.96 0.96; 0.31 0.47 0.67], linspace(0,1,256)));
 cb = colorbar(ax); cb.Label.String = 'mean diff = Block2 - Block1';
 mx = max(abs(Z(:)),[],'omitnan');
 if isempty(mx) || ~isfinite(mx) || mx==0, mx = 0.01; end
@@ -363,10 +360,6 @@ for r=1:nR
     end
 end
 
-box(ax,'off');
-grid(ax,'on');
-ax.GridAlpha = 0.08;
-ax.GridColor = [0 0 0];
 pipeline.export_figure_png(fig, fp_png, 300);
 try; close(fig); catch; end
 end

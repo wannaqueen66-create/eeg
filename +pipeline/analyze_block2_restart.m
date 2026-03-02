@@ -299,14 +299,11 @@ end
 
 fig = figure('Color','w','Position',[80 80 1300 560]);
 ax = axes(fig); hold(ax,'on');
-ax.FontName = 'Times New Roman';
-ax.FontSize = 12;
-ax.LineWidth = 0.8;
 
 imagesc(ax, Z);
 axis(ax,'tight');
 set(ax,'YDir','normal');
-colormap(ax, parula(256));
+colormap(ax, interp1([0 0.5 1], [0.72 0.34 0.26; 0.96 0.96 0.96; 0.31 0.47 0.67], linspace(0,1,256)));
 cb = colorbar(ax);
 cb.Label.String = 'mean diff = B2-1 - mean(B2-2..6)';
 
@@ -341,10 +338,7 @@ for r=1:nR
     end
 end
 
-box(ax,'off');
-grid(ax,'on');
-ax.GridAlpha = 0.08;
-ax.GridColor = [0 0 0];
+grid(ax,'off');
 pipeline.export_figure_png(fig, fp_png, 300);
 try; close(fig); catch; end
 end

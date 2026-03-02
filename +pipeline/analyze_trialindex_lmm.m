@@ -406,13 +406,10 @@ end
 set(0,'DefaultFigureVisible','off');
 fig = figure('Color','w','Position',[90 90 1200 420]);
 ax = axes(fig); hold(ax,'on');
-ax.FontName = 'Times New Roman';
-ax.FontSize = 12;
-ax.LineWidth = 0.8;
 imagesc(ax, Z);
 set(ax,'YDir','normal');
 axis(ax,'tight');
-colormap(ax, parula(256));
+colormap(ax, interp1([0 0.5 1], [0.72 0.34 0.26; 0.96 0.96 0.96; 0.31 0.47 0.67], linspace(0,1,256)));
 cb = colorbar(ax); cb.Label.String = 'LMM coefficient estimate';
 
 mx = max(abs(Z(:)),[],'omitnan');
@@ -445,10 +442,6 @@ for c=1:nC
     end
 end
 
-box(ax,'off');
-grid(ax,'on');
-ax.GridAlpha = 0.08;
-ax.GridColor = [0 0 0];
 pipeline.export_figure_png(fig, fp_png, 300);
 try; close(fig); catch; end
 end
