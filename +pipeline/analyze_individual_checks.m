@@ -272,11 +272,17 @@ for m = mets'
     muL = mean(X.EEG_mean(string(X.Group)=="Low"), 'omitnan');
     d0 = muH - muL;
 
-    [~, idx] = sort(abs(double(X.z_mad)), 'descend');
-    idx = idx(~isnan(idx));
-    k = min(N, numel(idx));
+    z = abs(double(X.z_mad));
+    valid = isfinite(z);
     keep = true(height(X),1);
-    keep(idx(1:k)) = false;
+    k = 0;
+    if any(valid)
+        idxValid = find(valid);
+        [~, ord] = sort(z(valid), 'descend');
+        idxDrop = idxValid(ord(1:min(N, numel(ord))));
+        k = numel(idxDrop);
+        keep(idxDrop) = false;
+    end
     Y = X(keep,:);
 
     muH2 = mean(Y.EEG_mean(string(Y.Group)=="High"), 'omitnan');
