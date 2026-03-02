@@ -68,12 +68,26 @@ T = AllScene;
 sceneMask = true(height(T),1);
 usedSceneKey = "scene_name";
 if ismember('scene_name', T.Properties.VariableNames)
-    sceneMask = (strtrim(string(T.scene_name))==string(scene_name));
+    % case-insensitive robust match
+    sceneMask = strcmpi(strtrim(string(T.scene_name)), strtrim(string(scene_name)));
+    usedSceneKey = "scene_name (case-insensitive)";
 else
-    % fallback: if no scene_name, assume scene_id==1 corresponds to WWR45_C1 (as in current logs)
+    % Without scene_name, force explicit scene_id from config instead of hard-coded guess.
     if ismember('scene_id', T.Properties.VariableNames)
-        sceneMask = (double(T.scene_id)==1);
-        usedSceneKey = "scene_id==1";
+        scene_id_target = NaN;
+        try
+            if isfield(cfg,'task2_scene_id') && ~isempty(cfg.task2_scene_id)
+                scene_id_target = double(cfg.task2_scene_id);
+            end
+        catch
+        end
+        if ~isfinite(scene_id_target)
+            warning(['analyze_scene_block_diff: scene_name column missing, and cfg.task2_scene_id not provided. ', ...
+                'Refusing implicit fallback to scene_id==1 to avoid mislabeling target scene.']);
+            return;
+        end
+        sceneMask = (double(T.scene_id)==scene_id_target);
+        usedSceneKey = sprintf('scene_id==%d (cfg.task2_scene_id)', round(scene_id_target));
     else
         warning('analyze_scene_block_diff: missing scene_name and scene_id; cannot isolate target scene.');
         return;
