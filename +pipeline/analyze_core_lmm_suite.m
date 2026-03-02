@@ -183,7 +183,7 @@ for mi = 1:numel(metrics)
 
         % Collect factor summary row (paper overview)
         try
-            [pWWR, pCx, pGrp, pWxC, pWxG, pCxG, p3] = extract_factor_pvals(lme2, lme3, did3);
+            [pWWR, pCx, pGrp, pWxC, pWxG, pCxG, p3] = extract_factor_pvals(lme1, lme2, lme3, did3);
             rr = table(string(A.name), dv, pWWR, pCx, pGrp, pWxC, pWxG, pCxG, p3, ...
                 'VariableNames', {'analysis','metric','p_WWR','p_Complexity','p_Group','p_WWRxComplexity','p_WWRxGroup','p_ComplexityxGroup','p_threeway'});
             FactorSummary = [FactorSummary; rr]; %#ok<AGROW>
@@ -467,24 +467,39 @@ end
 fclose(fid);
 end
 
-function [pWWR, pCx, pGrp, pWxC, pWxG, pCxG, p3] = extract_factor_pvals(lme2, lme3, did3)
+function [pWWR, pCx, pGrp, pWxC, pWxG, pCxG, p3] = extract_factor_pvals(lme1, lme2, lme3, did3)
 pWWR = NaN; pCx = NaN; pGrp = NaN; pWxC = NaN; pWxG = NaN; pCxG = NaN; p3 = NaN;
+
+% Main effects must come from Model1 (design contract)
+try
+    A1 = to_table_compat(anova(lme1,'DFMethod','Satterthwaite'));
+    if all(ismember({'Term','pValue'}, A1.Properties.VariableNames))
+        tt1 = string(A1.Term);
+        pWWR = get_term_p(tt1, A1.pValue, "WWR");
+        pCx  = get_term_p(tt1, A1.pValue, "Complexity");
+        pGrp = get_term_p(tt1, A1.pValue, "Group");
+    else
+        fprintf(2,'[WARN] task4 extract_factor_pvals: Model1 ANOVA missing Term/pValue columns.\n');
+    end
+catch ME
+    fprintf(2,'[WARN] task4 extract_factor_pvals A1 failed: %s\n', ME.message);
+end
+
+% Two-way interactions come from Model2
 try
     A2 = to_table_compat(anova(lme2,'DFMethod','Satterthwaite'));
     if all(ismember({'Term','pValue'}, A2.Properties.VariableNames))
-        tt = string(A2.Term);
-        pWWR = get_term_p(tt, A2.pValue, "WWR");
-        pCx  = get_term_p(tt, A2.pValue, "Complexity");
-        pGrp = get_term_p(tt, A2.pValue, "Group");
-        pWxC = get_interaction_p(tt, A2.pValue, ["WWR","Complexity"]);
-        pWxG = get_interaction_p(tt, A2.pValue, ["WWR","Group"]);
-        pCxG = get_interaction_p(tt, A2.pValue, ["Complexity","Group"]);
+        tt2 = string(A2.Term);
+        pWxC = get_interaction_p(tt2, A2.pValue, ["WWR","Complexity"]);
+        pWxG = get_interaction_p(tt2, A2.pValue, ["WWR","Group"]);
+        pCxG = get_interaction_p(tt2, A2.pValue, ["Complexity","Group"]);
     else
-        fprintf(2,'[WARN] task4 extract_factor_pvals: ANOVA missing Term/pValue columns.\n');
+        fprintf(2,'[WARN] task4 extract_factor_pvals: Model2 ANOVA missing Term/pValue columns.\n');
     end
 catch ME
     fprintf(2,'[WARN] task4 extract_factor_pvals A2 failed: %s\n', ME.message);
 end
+
 if did3 && ~isempty(lme3)
     try
         A3 = to_table_compat(anova(lme3,'DFMethod','Satterthwaite'));
