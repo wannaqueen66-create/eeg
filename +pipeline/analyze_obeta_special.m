@@ -77,11 +77,22 @@ for ai=1:numel(analyses)
     T.Subject = categorical(string(T.subject_id));
     T.Group = categorical(string(T.Group), {'Low','High'});
 
+    hasControls = ismember('WWR', T.Properties.VariableNames) && ismember('Complexity', T.Properties.VariableNames);
     if ismember('WWR', T.Properties.VariableNames)
         T.WWR = categorical(string(T.WWR), {'15','45','75'});
     end
     if ismember('Complexity', T.Properties.VariableNames)
         T.Complexity = categorical(string(T.Complexity), {'ComplexityLow','ComplexityHigh'});
+    end
+
+    % For fair Model A vs Model B comparison, use the same complete-case sample
+    % when control predictors (WWR, Complexity) are available.
+    if hasControls
+        useCtrl = ~isundefined(T.WWR) & ~isundefined(T.Complexity);
+        T = T(useCtrl, :);
+        if height(T) < 20
+            continue;
+        end
     end
 
     fp_tbl = fullfile(fp_root, 'tables', tag, A.name);
