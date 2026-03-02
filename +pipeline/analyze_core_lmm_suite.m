@@ -89,6 +89,7 @@ mk = @(p) (exist(p,'dir')||mkdir(p));
 
 FactorSummary = table();
 TrendSummary = table();
+TrendRoundSummary = table();
 
 for mi = 1:numel(metrics)
     dv = string(metrics{mi});
@@ -106,7 +107,11 @@ for mi = 1:numel(metrics)
         dvc = char(dv);
 
         % Prepare analysis table
-        T = T0(:, {'subject_id','WWR','Complexity',gcolc,dvc});
+        vars = {'subject_id','WWR','Complexity',gcolc,dvc};
+        if ismember('block_id', T0.Properties.VariableNames)
+            vars{end+1} = 'block_id';
+        end
+        T = T0(:, vars);
         T.Properties.VariableNames{4} = 'GroupRaw';
         % GroupRaw comes from canonical group columns (ExperienceGroup/SportFreqGroup)
         T.EEG = double(T.(dvc));
@@ -210,6 +215,9 @@ for mi = 1:numel(metrics)
         Tt.WWRc = WWRc;
         Tt.WWRc2 = WWRc2;
         Tt.EEG = T.EEG;
+        if ismember('block_id', T.Properties.VariableNames)
+            Tt.block_id = double(T.block_id);
+        end
 
         try
             lmeL = fitlme(Tt, 'EEG ~ WWRc + Complexity + Group + (1|Subject)');
@@ -242,6 +250,20 @@ for mi = 1:numel(metrics)
         catch
         end
 
+        % Round-specific (Block1 vs Block2) quadratic checks for inverted-U consistency
+        try
+            if ismember('block_id', Tt.Properties.VariableNames)
+                TR = collect_round_trend_stats(Tt, A.name, dv);
+                if ~isempty(TR) && height(TR)>0
+                    TrendRoundSummary = [TrendRoundSummary; TR]; %#ok<AGROW>
+                    fp_round = fullfile(fp_tbl_t, sprintf('trend_round_summary_%s_%s.csv', dv, tag));
+                    writetable(TR, fp_round);
+                end
+            end
+        catch ME
+            fprintf(2,'[WARN] task4 round trend failed (%s/%s/%s): %s\n', tag, A.name, dv, ME.message);
+        end
+
     end
 end
 
@@ -267,6 +289,10 @@ try
         fp_csv_t = fullfile(fp_tbl_over_t, sprintf('task4_trend_summary_%s.csv', tag));
         writetable(TrendSummary, fp_csv_t);
         plot_task4_trend_overview(TrendSummary, tag, fp_fig_over_t);
+        if ~isempty(TrendRoundSummary) && height(TrendRoundSummary)>0
+            fp_csv_tr = fullfile(fp_tbl_over_t, sprintf('task4_trend_round_summary_%s.csv', tag));
+            writetable(TrendRoundSummary, fp_csv_tr);
+        end
     end
 catch ME
     warning('analyze_core_lmm_suite: trend overview failed: %s', ME.message);
@@ -524,6 +550,34 @@ function p = get_interaction_p(tt, pv, names)
 p = NaN;
 idx = find(contains(tt,names(1)) & contains(tt,names(2)) & contains(tt,":"),1,'first');
 if ~isempty(idx), p = double(pv(idx)); end
+end
+
+function TR = collect_round_trend_stats(Tt, analysisName, dv)
+TR = table();
+if ~ismember('block_id', Tt.Properties.VariableNames)
+    return;
+end
+
+for b = [1 2]
+    idx = isfinite(Tt.block_id) & (double(Tt.block_id)==b) & ...
+          isfinite(Tt.WWRc) & isfinite(Tt.WWRc2) & isfinite(Tt.EEG);
+    Tb = Tt(idx,:);
+    if height(Tb) < 18
+        continue;
+    end
+
+    try
+        lmeLb = fitlme(Tb, 'EEG ~ WWRc + Complexity + Group + (1|Subject)');
+        lmeQb = fitlme(Tb, 'EEG ~ WWRc + WWRc2 + Complexity + Group + (1|Subject)');
+        [bL, pL, bQ2, pQ2] = extract_trend_stats(lmeLb, lmeQb);
+        isInvU = isfinite(bQ2) && isfinite(pQ2) && (bQ2 < 0) && (pQ2 < 0.05);
+        rr = table(string(analysisName), string(dv), b, height(Tb), numel(unique(string(Tb.Subject))), ...
+            bL, pL, bQ2, pQ2, isInvU, ...
+            'VariableNames', {'analysis','metric','round','n_rows','n_subjects','beta_linear','p_linear','beta_quadratic','p_quadratic','is_inverted_u'});
+        TR = [TR; rr]; %#ok<AGROW>
+    catch
+    end
+end
 end
 
 function [bL, pL, bQ2, pQ2] = extract_trend_stats(lmeL, lmeQ)
