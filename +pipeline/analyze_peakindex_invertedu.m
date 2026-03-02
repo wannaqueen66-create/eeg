@@ -113,8 +113,11 @@ for ai = 1:numel(analyses)
             K.EEG_75 = nan(height(K),1);
         end
 
-        K.PeakIndex = K.EEG_45 - mean([K.EEG_15 K.EEG_75], 2, 'omitnan');
-        K = K(~isnan(K.PeakIndex), :);
+        % Strict PeakIndex definition requires all three WWR levels (15/45/75)
+        % to avoid asymmetric flank bias when one side is missing.
+        keep3 = ~isnan(K.EEG_15) & ~isnan(K.EEG_45) & ~isnan(K.EEG_75);
+        K = K(keep3, :);
+        K.PeakIndex = K.EEG_45 - mean([K.EEG_15 K.EEG_75], 2);
         if height(K) < 12
             continue;
         end
