@@ -57,6 +57,8 @@ T0.subject_id = string(T0.subject_id);
 T0.WWR = normalize_wwr(T0.WWR);
 T0.Complexity = normalize_complexity(T0.Complexity);
 
+hasBlock = ismember('block_id', T0.Properties.VariableNames);
+
 for ai = 1:numel(analyses)
     A = analyses{ai};
     gcol = string(A.gcol);
@@ -66,6 +68,7 @@ for ai = 1:numel(analyses)
     gcolc = char(gcol);
 
     SumRows = table();
+    SumRoundRows = table();
 
     for mi = 1:numel(metrics)
         dv = metrics(mi);
@@ -74,8 +77,12 @@ for ai = 1:numel(analyses)
         end
         dvc = char(dv);
 
-        T = T0(:, {'subject_id','WWR','Complexity',gcolc,dvc});
-        T.Properties.VariableNames = {'subject_id','WWR','Complexity','GroupRaw','EEGraw'};
+        vars = {'subject_id','WWR','Complexity',gcolc,dvc};
+        if hasBlock
+            vars{end+1} = 'block_id';
+        end
+        T = T0(:, vars);
+        T.Properties.VariableNames(1:5) = {'subject_id','WWR','Complexity','GroupRaw','EEGraw'};
         T.EEG = double(T.EEGraw);
         T.Group = normalize_high_low(T.GroupRaw);
         T = T(~isnan(T.EEG), :);
@@ -179,6 +186,23 @@ for ai = 1:numel(analyses)
             SumRows = [SumRows; rr]; %#ok<AGROW>
         catch
         end
+
+        % round-wise PeakIndex check (Block1 / Block2)
+        try
+            if hasBlock && ismember('block_id', T.Properties.VariableNames)
+                KR = collect_peakindex_by_round(T);
+                if ~isempty(KR) && height(KR)>0
+                    fp_round = fullfile(fp_tbl, sprintf('peakindex_subjectlevel_round_%s_%s.csv', dv, tag));
+                    writetable(KR, fp_round);
+                    RR = summarize_peakindex_round(KR, string(A.name), dv);
+                    if ~isempty(RR) && height(RR)>0
+                        SumRoundRows = [SumRoundRows; RR]; %#ok<AGROW>
+                    end
+                end
+            end
+        catch ME
+            warning('analyze_peakindex_invertedu: round-wise peakindex failed (%s/%s/%s): %s', tag, A.name, dv, ME.message);
+        end
     end
 
     % overview outputs for this grouping analysis
@@ -190,12 +214,128 @@ for ai = 1:numel(analyses)
             writetable(SumRows, fp_csv_over);
             fp_png_over = fullfile(fp_fig_over, pipeline.sanitize_filename(sprintf('peakindex_overview_%s_%s.png', tag, A.name)));
             plot_peakindex_overview(SumRows, metrics, tag, A.name, fp_png_over);
+
+            if ~isempty(SumRoundRows) && height(SumRoundRows)>0
+                fp_csv_round = fullfile(fp_tbl_over, sprintf('peakindex_round_summary_%s.csv', tag));
+                writetable(SumRoundRows, fp_csv_round);
+                fp_png_round = fullfile(fp_fig_over, pipeline.sanitize_filename(sprintf('peakindex_round_overview_%s_%s.png', tag, A.name)));
+                plot_peakindex_round_overview(SumRoundRows, metrics, tag, A.name, fp_png_round);
+            end
         end
     catch ME
         warning('analyze_peakindex_invertedu: overview failed (%s): %s', A.name, ME.message);
     end
 end
 
+end
+
+function KR = collect_peakindex_by_round(T)
+KR = table();
+if ~ismember('block_id', T.Properties.VariableNames)
+    return;
+end
+
+for b = [1 2]
+    Tb = T(double(T.block_id)==b, :);
+    if height(Tb) < 12
+        continue;
+    end
+
+    [G, sid, grp, cx, wwr] = findgroups(Tb.Subject, Tb.Group, Tb.Complexity, Tb.WWR);
+    mu = splitapply(@(x) mean(x,'omitnan'), Tb.EEG, G);
+    Awwr = table(sid, grp, cx, string(wwr), mu, 'VariableNames', {'Subject','Group','Complexity','WWR','EEG'});
+
+    K = unique(Awwr(:, {'Subject','Group','Complexity'}), 'rows');
+    for lv = ["15","45","75"]
+        Z = Awwr(Awwr.WWR==lv, {'Subject','Group','Complexity','EEG'});
+        Z.Properties.VariableNames{'EEG'} = ['EEG_' char(lv)];
+        K = outerjoin(K, Z, 'Keys', {'Subject','Group','Complexity'}, 'MergeKeys', true, 'Type','left');
+    end
+
+    if ~ismember('EEG_15', K.Properties.VariableNames), K.EEG_15 = nan(height(K),1); end
+    if ~ismember('EEG_45', K.Properties.VariableNames), K.EEG_45 = nan(height(K),1); end
+    if ~ismember('EEG_75', K.Properties.VariableNames), K.EEG_75 = nan(height(K),1); end
+
+    keep3 = ~isnan(K.EEG_15) & ~isnan(K.EEG_45) & ~isnan(K.EEG_75);
+    K = K(keep3,:);
+    if isempty(K) || height(K)<6
+        continue;
+    end
+    K.PeakIndex = K.EEG_45 - mean([K.EEG_15 K.EEG_75], 2);
+    K.round = repmat(b, height(K), 1);
+    KR = [KR; K]; %#ok<AGROW>
+end
+end
+
+function SR = summarize_peakindex_round(KR, analysisName, dv)
+SR = table();
+for b = [1 2]
+    Kb = KR(double(KR.round)==b,:);
+    if isempty(Kb) || height(Kb)<6
+        continue;
+    end
+    nsub = numel(unique(string(Kb.Subject)));
+    mu_all = mean(Kb.PeakIndex,'omitnan');
+    se_all = std(Kb.PeakIndex,'omitnan')/sqrt(sum(~isnan(Kb.PeakIndex)));
+    p0 = NaN;
+    try
+        [~, p0] = ttest(Kb.PeakIndex, 0);
+    catch
+    end
+    isInvU = isfinite(mu_all) && isfinite(p0) && (mu_all > 0) && (p0 < 0.05);
+    rr = table(string(analysisName), string(dv), b, nsub, mu_all, se_all, p0, isInvU, ...
+        'VariableNames', {'analysis','metric','round','n_subjects','mean_peakindex','sem_peakindex','p_vs_zero','is_inverted_u'});
+    SR = [SR; rr]; %#ok<AGROW>
+end
+end
+
+function plot_peakindex_round_overview(SumRoundRows, metrics, tag, analysisName, fp_png)
+M = string(metrics(:));
+nC = numel(M);
+Z = nan(2,nC); P = nan(2,nC); MU = nan(2,nC); N = nan(2,nC);
+for c=1:nC
+    r1 = SumRoundRows(string(SumRoundRows.metric)==M(c) & double(SumRoundRows.round)==1,:);
+    r2 = SumRoundRows(string(SumRoundRows.metric)==M(c) & double(SumRoundRows.round)==2,:);
+    if ~isempty(r1)
+        Z(1,c) = double(r1.is_inverted_u(1));
+        P(1,c) = double(r1.p_vs_zero(1));
+        MU(1,c) = double(r1.mean_peakindex(1));
+        N(1,c) = double(r1.n_subjects(1));
+    end
+    if ~isempty(r2)
+        Z(2,c) = double(r2.is_inverted_u(1));
+        P(2,c) = double(r2.p_vs_zero(1));
+        MU(2,c) = double(r2.mean_peakindex(1));
+        N(2,c) = double(r2.n_subjects(1));
+    end
+end
+
+set(0,'DefaultFigureVisible','off');
+fig = figure('Color','w','Position',[90 90 1180 400]);
+ax = axes(fig); hold(ax,'on');
+imagesc(ax, Z); set(ax,'YDir','normal'); axis(ax,'tight');
+colormap(ax, [0.84 0.88 0.94; 0.28 0.60 0.38]);
+cb = colorbar(ax); cb.Ticks = [0 1]; cb.TickLabels = {'not Inverted-U','Inverted-U'}; cb.Label.String = 'PeakIndex verdict';
+caxis(ax,[0 1]);
+set(ax,'XTick',1:nC,'XTickLabel',cellstr(M));
+set(ax,'YTick',[1 2],'YTickLabel',{'Round1 / Block1','Round2 / Block2'});
+xtickangle(ax,20);
+title(ax, sprintf('Task5 PeakIndex by round | %s [%s]', analysisName, tag), 'Interpreter','none');
+
+for r=1:2
+    for c=1:nC
+        if isnan(Z(r,c)), continue; end
+        p=P(r,c); mu=MU(r,c); n=N(r,c); star='';
+        if ~isnan(p)
+            if p<0.001, star='***'; elseif p<0.01, star='**'; elseif p<0.05, star='*'; end
+        end
+        text(ax,c,r,sprintf('PI=%.3g\np=%.3g%s\nN=%d',mu,p,star,round(n)), ...
+            'HorizontalAlignment','center','VerticalAlignment','middle','FontSize',8,'Color',[0.1 0.1 0.1]);
+    end
+end
+
+pipeline.export_figure_png(fig, fp_png, 300);
+try; close(fig); catch; end
 end
 
 function plot_peakindex_figure(K, dv, tag, analysisName, fp_png)

@@ -292,6 +292,7 @@ try
         if ~isempty(TrendRoundSummary) && height(TrendRoundSummary)>0
             fp_csv_tr = fullfile(fp_tbl_over_t, sprintf('task4_trend_round_summary_%s.csv', tag));
             writetable(TrendRoundSummary, fp_csv_tr);
+            plot_task4_trend_round_overview(TrendRoundSummary, tag, fp_fig_over_t);
         end
     end
 catch ME
@@ -677,6 +678,61 @@ for ai=1:numel(analyses)
     end
 
     fp = fullfile(fp_fig_over, pipeline.sanitize_filename(sprintf('task4_factor_overview_%s_%s.png', tag, an)));
+    pipeline.export_figure_png(fig, fp, 300);
+    try; close(fig); catch; end
+end
+end
+
+function plot_task4_trend_round_overview(TRS, tag, fp_fig_over_t)
+analyses = unique(string(TRS.analysis),'stable');
+if isempty(analyses), return; end
+for ai=1:numel(analyses)
+    an = analyses(ai);
+    T = TRS(string(TRS.analysis)==an,:);
+    mets = unique(string(T.metric),'stable');
+    Z = nan(2, numel(mets));
+    P = nan(2, numel(mets));
+    B = nan(2, numel(mets));
+    for c=1:numel(mets)
+        tr1 = T(string(T.metric)==mets(c) & double(T.round)==1,:);
+        tr2 = T(string(T.metric)==mets(c) & double(T.round)==2,:);
+        if ~isempty(tr1)
+            B(1,c) = double(tr1.beta_quadratic(1));
+            P(1,c) = double(tr1.p_quadratic(1));
+            Z(1,c) = double(tr1.is_inverted_u(1));
+        end
+        if ~isempty(tr2)
+            B(2,c) = double(tr2.beta_quadratic(1));
+            P(2,c) = double(tr2.p_quadratic(1));
+            Z(2,c) = double(tr2.is_inverted_u(1));
+        end
+    end
+
+    set(0,'DefaultFigureVisible','off');
+    fig = figure('Color','w','Position',[90 90 1180 400]);
+    ax = axes(fig); hold(ax,'on');
+    imagesc(ax, Z); set(ax,'YDir','normal'); axis(ax,'tight');
+    colormap(ax, [0.84 0.88 0.94; 0.28 0.60 0.38]);
+    cb = colorbar(ax); cb.Ticks = [0 1]; cb.TickLabels = {'not Inverted-U','Inverted-U'}; cb.Label.String = 'quadratic verdict';
+    caxis(ax,[0 1]);
+    set(ax,'XTick',1:numel(mets),'XTickLabel',cellstr(mets));
+    set(ax,'YTick',[1 2],'YTickLabel',{'Round1 / Block1','Round2 / Block2'});
+    xtickangle(ax,20);
+    title(ax, sprintf('Task4 inverted-U by round | %s [%s]', an, tag), 'Interpreter','none');
+
+    for r=1:2
+        for c=1:numel(mets)
+            if isnan(Z(r,c)), continue; end
+            p=P(r,c); b=B(r,c); star='';
+            if ~isnan(p)
+                if p<0.001, star='***'; elseif p<0.01, star='**'; elseif p<0.05, star='*'; end
+            end
+            text(ax,c,r,sprintf('b2=%.3g\np=%.3g%s',b,p,star), ...
+                'HorizontalAlignment','center','VerticalAlignment','middle','FontSize',8,'Color',[0.1 0.1 0.1]);
+        end
+    end
+
+    fp = fullfile(fp_fig_over_t, pipeline.sanitize_filename(sprintf('task4_invertedu_round_overview_%s_%s.png', tag, an)));
     pipeline.export_figure_png(fig, fp, 300);
     try; close(fig); catch; end
 end
