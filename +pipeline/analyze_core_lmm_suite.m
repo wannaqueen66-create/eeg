@@ -1,5 +1,6 @@
 function out = analyze_core_lmm_suite(AllScene, fp_sum, cfg, tag)
 %ANALYZE_CORE_LMM_SUITE Task4: Core LMM suite (main effects, 2-way, selective 3-way) + WWR trend checks.
+% Also optionally runs factor-suite split by round/block (Block1 vs Block2) when block_id exists.
 %
 % Outputs under:
 %   <summary>/analysis-2/task4_core_lmm_suite/
@@ -88,8 +89,19 @@ T0.Complexity = normalize_complexity(T0.Complexity);
 mk = @(p) (exist(p,'dir')||mkdir(p));
 
 FactorSummary = table();
+FactorRoundSummary = table();
 TrendSummary = table();
 TrendRoundSummary = table();
+
+% Optional: also run factor-suite split by round/block when block_id exists.
+% Default: true (requested), can disable via cfg.task4_factor_split_by_round = false.
+doFactorRoundSplit = true;
+try
+    if isfield(cfg,'task4_factor_split_by_round')
+        doFactorRoundSplit = logical(cfg.task4_factor_split_by_round);
+    end
+catch
+end
 
 for mi = 1:numel(metrics)
     dv = string(metrics{mi});
@@ -127,7 +139,7 @@ for mi = 1:numel(metrics)
         T.Complexity = categorical(string(T.Complexity), {'ComplexityLow','ComplexityHigh'});
         T.Group = categorical(string(T.Group), {'Low','High'});
 
-        % ===== factor suite =====
+        % ===== factor suite (overall) =====
         fp_tbl = fullfile(fp_factor, 'tables', tag, A.name);
         fp_rep = fullfile(fp_factor, 'reports', tag, A.name);
         fp_fig = fullfile(fp_factor, 'figures', tag, A.name);
@@ -189,10 +201,87 @@ for mi = 1:numel(metrics)
         % Collect factor summary row (paper overview)
         try
             [pWWR, pCx, pGrp, pWxC, pWxG, pCxG, p3] = extract_factor_pvals(lme1, lme2, lme3, did3);
-            rr = table(string(A.name), dv, pWWR, pCx, pGrp, pWxC, pWxG, pCxG, p3, ...
-                'VariableNames', {'analysis','metric','p_WWR','p_Complexity','p_Group','p_WWRxComplexity','p_WWRxGroup','p_ComplexityxGroup','p_threeway'});
+            rr = table(string(A.name), dv, "overall", NaN, pWWR, pCx, pGrp, pWxC, pWxG, pCxG, p3, ...
+                'VariableNames', {'analysis','metric','scope','round','p_WWR','p_Complexity','p_Group','p_WWRxComplexity','p_WWRxGroup','p_ComplexityxGroup','p_threeway'});
             FactorSummary = [FactorSummary; rr]; %#ok<AGROW>
         catch
+        end
+
+        % ===== factor suite (split by round/block) =====
+        try
+            if doFactorRoundSplit && ismember('block_id', T.Properties.VariableNames)
+                rounds = unique(double(T.block_id));
+                rounds = rounds(isfinite(rounds));
+                rounds = rounds(:)';
+                rounds = rounds(rounds==1 | rounds==2);
+                for rb = rounds
+                    Tb = T(double(T.block_id)==rb, :);
+                    if height(Tb) < 20
+                        continue;
+                    end
+
+                    fp_tbl_r = fullfile(fp_factor, 'tables', tag, A.name, sprintf('round%d', rb));
+                    fp_rep_r = fullfile(fp_factor, 'reports', tag, A.name, sprintf('round%d', rb));
+                    fp_fig_r = fullfile(fp_factor, 'figures', tag, A.name, sprintf('round%d', rb));
+                    mk(fp_tbl_r); mk(fp_rep_r); mk(fp_fig_r);
+
+                    fp_ready_r = fullfile(fp_tbl_r, sprintf('analysis_ready_%s_%s_round%d.csv', dv, tag, rb));
+                    try
+                        writetable(Tb(:,{'Subject','WWR','Complexity','Group','EEG'}), fp_ready_r);
+                    catch
+                    end
+
+                    try
+                        lme1b = fitlme(Tb, 'EEG ~ WWR + Complexity + Group + (1|Subject)');
+                        lme2b = fitlme(Tb, 'EEG ~ WWR*Complexity + WWR*Group + Complexity*Group + (1|Subject)');
+                    catch ME
+                        warning('analyze_core_lmm_suite: round factor fitlme failed (%s/%s/%s/r%d): %s', tag, A.name, dv, rb, ME.message);
+                        continue;
+                    end
+
+                    write_lme_tables(lme1b, fp_tbl_r, sprintf('model1_main_effects_%s_%s_round%d', dv, tag, rb));
+                    write_lme_tables(lme2b, fp_tbl_r, sprintf('model2_two_way_%s_%s_round%d', dv, tag, rb));
+
+                    did3b = false;
+                    lme3b = [];
+                    if any(dv == metrics3)
+                        try
+                            lme3b = fitlme(Tb, 'EEG ~ WWR*Complexity*Group + (1|Subject)');
+                            write_lme_tables(lme3b, fp_tbl_r, sprintf('model3_three_way_%s_%s_round%d', dv, tag, rb));
+                            did3b = true;
+                        catch ME
+                            warning('analyze_core_lmm_suite: round model3 failed (%s/%s/%s/r%d): %s', tag, A.name, dv, rb, ME.message);
+                        end
+                    end
+
+                    Summb = summarize_direction(Tb);
+                    try
+                        writetable(Summb, fullfile(fp_tbl_r, sprintf('direction_means_%s_%s_round%d.csv', dv, tag, rb)));
+                    catch
+                    end
+
+                    try
+                        plot_factor_figures(Tb, dv, tag, sprintf('%s_round%d', A.name, rb), fp_fig_r);
+                    catch
+                    end
+
+                    try
+                        fp_mdr = fullfile(fp_rep_r, sprintf('task4_factor_report_%s_%s_round%d.md', dv, tag, rb));
+                        write_factor_report(fp_mdr, dv, tag, struct('name',sprintf('%s_round%d',A.name,rb),'gcol',A.gcol), lme1b, lme2b, lme3b, did3b, Summb);
+                    catch
+                    end
+
+                    try
+                        [pWWR, pCx, pGrp, pWxC, pWxG, pCxG, p3] = extract_factor_pvals(lme1b, lme2b, lme3b, did3b);
+                        rr = table(string(A.name), dv, "round", rb, pWWR, pCx, pGrp, pWxC, pWxG, pCxG, p3, ...
+                            'VariableNames', {'analysis','metric','scope','round','p_WWR','p_Complexity','p_Group','p_WWRxComplexity','p_WWRxGroup','p_ComplexityxGroup','p_threeway'});
+                        FactorRoundSummary = [FactorRoundSummary; rr]; %#ok<AGROW>
+                    catch
+                    end
+                end
+            end
+        catch ME
+            fprintf(2,'[WARN] task4 factor round split failed (%s/%s/%s): %s\n', tag, A.name, dv, ME.message);
         end
 
         % ===== trend suite =====
@@ -276,6 +365,23 @@ try
         fp_csv = fullfile(fp_tbl_over, sprintf('task4_factor_summary_%s.csv', tag));
         writetable(FactorSummary, fp_csv);
         plot_task4_factor_overview(FactorSummary, tag, fp_fig_over);
+
+        % Round split overview (optional)
+        if ~isempty(FactorRoundSummary) && height(FactorRoundSummary)>0
+            fp_csv_r = fullfile(fp_tbl_over, sprintf('task4_factor_round_summary_%s.csv', tag));
+            writetable(FactorRoundSummary, fp_csv_r);
+            % lightweight reuse: plot overviews separately per round
+            try
+                for rb = [1 2]
+                    Trr = FactorRoundSummary(double(FactorRoundSummary.round)==rb,:);
+                    if isempty(Trr) || height(Trr)==0, continue; end
+                    fp_fig_over_r = fullfile(fp_fig_over, sprintf('round%d', rb));
+                    mk(fp_fig_over_r);
+                    plot_task4_factor_overview(Trr, sprintf('%s_round%d', tag, rb), fp_fig_over_r);
+                end
+            catch
+            end
+        end
     end
 catch ME
     warning('analyze_core_lmm_suite: factor overview failed: %s', ME.message);
