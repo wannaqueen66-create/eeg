@@ -196,6 +196,10 @@ for ai=1:numel(analyses)
         try
             FEraw = lme.Coefficients;
             FE = to_table_compat(FEraw);
+            try
+                FE = pipeline.add_holm_to_anova_table(FE);
+            catch
+            end
             fp_fe = fullfile(fp_tbl2, pipeline.sanitize_filename(sprintf('lmm_fixed_effects_%s_%s.csv', m, tag)));
             writetable(FE, fp_fe);
         catch ME
@@ -208,6 +212,10 @@ for ai=1:numel(analyses)
         try
             ANraw = anova(lme);
             AN = to_table_compat(ANraw);
+            try
+                AN = pipeline.add_holm_to_anova_table(AN);
+            catch
+            end
             fp_an = fullfile(fp_tbl2, pipeline.sanitize_filename(sprintf('lmm_anova_%s_%s.csv', m, tag)));
             writetable(AN, fp_an);
         catch ME
@@ -251,6 +259,18 @@ for ai=1:numel(analyses)
     % one-page, paper-friendly overview for this grouping analysis
     try
         if ~isempty(SumRows) && height(SumRows)>0
+            % Holm across metrics: TrialIndex term and Group×TrialIndex term separately
+            try
+                SumRows.trialindex_p_holm = pipeline.holm_stepdown(double(SumRows.trialindex_p));
+            catch
+                SumRows.trialindex_p_holm = nan(height(SumRows),1);
+            end
+            try
+                SumRows.gti_p_holm = pipeline.holm_stepdown(double(SumRows.gti_p));
+            catch
+                SumRows.gti_p_holm = nan(height(SumRows),1);
+            end
+
             fp_sumcsv = fullfile(fp_tbl2, pipeline.sanitize_filename(sprintf('trialindex_lmm_summary_%s.csv', tag)));
             writetable(SumRows, fp_sumcsv);
             fp_over = fullfile(fp_fig2, pipeline.sanitize_filename(sprintf('trialindex_lmm_overview_%s_%s.png', tag, A.name)));
@@ -385,8 +405,9 @@ M = string(metrics(:));
 nC = numel(M);
 
 Z = nan(2, nC);   % estimates
-P = nan(2, nC);   % p-values
-NS = nan(1, nC);  % n subjects
+P = nan(2, nC);    % raw p-values
+PAdj = nan(2, nC); % Holm-adjusted p-values across metrics (per term)
+NS = nan(1, nC);   % n subjects
 NR = nan(1, nC);  % n rows
 for c=1:nC
     m = M(c);
@@ -399,6 +420,13 @@ for c=1:nC
     Z(2,c) = double(SumRows.trialindex_est(i));
     P(1,c) = double(SumRows.gti_p(i));
     P(2,c) = double(SumRows.trialindex_p(i));
+    % Holm-adjusted p-values across metrics (within this analysis/tag)
+    if ismember('gti_p_holm', SumRows.Properties.VariableNames)
+        PAdj(1,c) = double(SumRows.gti_p_holm(i));
+    end
+    if ismember('trialindex_p_holm', SumRows.Properties.VariableNames)
+        PAdj(2,c) = double(SumRows.trialindex_p_holm(i));
+    end
     NS(c) = double(SumRows.n_subjects(i));
     NR(c) = double(SumRows.n_rows(i));
 end
@@ -420,12 +448,16 @@ set(ax,'XTick',1:nC,'XTickLabel',cellstr(M));
 set(ax,'YTick',[1 2],'YTickLabel',{'Group×TrialIndex (bottom)','TrialIndex (top)'});
 xtickangle(ax,20);
 
-title(ax, sprintf('Task3 TrialIndex LMM overview | %s [%s]', analysisName, tag), 'Interpreter','none');
+title(ax, sprintf('Task3 TrialIndex LMM overview (Holm-adjusted) | %s [%s]', analysisName, tag), 'Interpreter','none');
 
 for c=1:nC
     for r=1:2
         if isnan(Z(r,c)), continue; end
-        pp = P(r,c);
+        % display Holm-adjusted p if available (fallback to raw p)
+        pp = PAdj(r,c);
+        if ~isfinite(pp)
+            pp = P(r,c);
+        end
         star = '';
         if ~isnan(pp)
             if pp < 0.001, star='***';
@@ -434,9 +466,9 @@ for c=1:nC
             end
         end
         if r==1
-            txt = sprintf('GTI β=%.3g%s\np=%.3g', Z(r,c), star, pp);
+            txt = sprintf('GTI β=%.3g%s\np_holm=%.3g', Z(r,c), star, pp);
         else
-            txt = sprintf('TI β=%.3g%s\np=%.3g\nNsub=%d', Z(r,c), star, pp, round(NS(c)));
+            txt = sprintf('TI β=%.3g%s\np_holm=%.3g\nNsub=%d', Z(r,c), star, pp, round(NS(c)));
         end
         text(ax,c,r,txt,'HorizontalAlignment','center','VerticalAlignment','middle','FontSize',9);
     end

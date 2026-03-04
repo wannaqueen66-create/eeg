@@ -162,6 +162,17 @@ fp_sub_all = fullfile(fp_tbl.all, sprintf('scene_blockdiff_subjectlevel_%s.csv',
 writetable(S, fp_sub_all);
 Stats_all = pipeline.compute_blockdiff_stats(S, metrics, "all", "");
 fp_stats_all = fullfile(fp_tbl.all, sprintf('scene_blockdiff_stats_%s.csv', tag));
+% Holm across metrics within this branch/test type
+try
+    Stats_all.p_ttest_holm = pipeline.holm_stepdown(double(Stats_all.p_ttest));
+catch
+    Stats_all.p_ttest_holm = nan(height(Stats_all),1);
+end
+try
+    Stats_all.p_signrank_holm = pipeline.holm_stepdown(double(Stats_all.p_signrank));
+catch
+    Stats_all.p_signrank_holm = nan(height(Stats_all),1);
+end
 writetable(Stats_all, fp_stats_all);
 try
     plot_all_figures(S, metrics, fp_fig.all, tag, scene_name);
@@ -185,7 +196,18 @@ if ismember('Experience', S.Properties.VariableNames) && any(strlength(strtrim(s
     writetable(S, fp_sub_ex);
     Stats_ex = pipeline.compute_blockdiff_stats(S, metrics, "group", "Experience");
     fp_stats_ex = fullfile(fp_tbl.experience, sprintf('scene_blockdiff_stats_%s.csv', tag));
-    writetable(Stats_ex, fp_stats_ex);
+    % Holm across metrics within each group (Experience) and test type
+try
+    Stats_ex.p_ttest_holm = nan(height(Stats_ex),1);
+    Stats_ex.p_signrank_holm = nan(height(Stats_ex),1);
+    for g = unique(string(Stats_ex.Group), 'stable')'
+        idx = string(Stats_ex.Group)==g;
+        Stats_ex.p_ttest_holm(idx) = pipeline.holm_stepdown(double(Stats_ex.p_ttest(idx)));
+        Stats_ex.p_signrank_holm(idx) = pipeline.holm_stepdown(double(Stats_ex.p_signrank(idx)));
+    end
+catch
+end
+writetable(Stats_ex, fp_stats_ex);
     try
         plot_group_figures(S, metrics, fp_fig.experience, tag, scene_name, "Experience");
     catch ME
@@ -211,7 +233,18 @@ if ismember('SportFreq', S.Properties.VariableNames) && any(strlength(strtrim(st
     writetable(S, fp_sub_sf);
     Stats_sf = pipeline.compute_blockdiff_stats(S, metrics, "group", "SportFreq");
     fp_stats_sf = fullfile(fp_tbl.sportfreq, sprintf('scene_blockdiff_stats_%s.csv', tag));
-    writetable(Stats_sf, fp_stats_sf);
+    % Holm across metrics within each group (SportFreq) and test type
+try
+    Stats_sf.p_ttest_holm = nan(height(Stats_sf),1);
+    Stats_sf.p_signrank_holm = nan(height(Stats_sf),1);
+    for g = unique(string(Stats_sf.Group), 'stable')'
+        idx = string(Stats_sf.Group)==g;
+        Stats_sf.p_ttest_holm(idx) = pipeline.holm_stepdown(double(Stats_sf.p_ttest(idx)));
+        Stats_sf.p_signrank_holm(idx) = pipeline.holm_stepdown(double(Stats_sf.p_signrank(idx)));
+    end
+catch
+end
+writetable(Stats_sf, fp_stats_sf);
     try
         plot_group_figures(S, metrics, fp_fig.sportfreq, tag, scene_name, "SportFreq");
     catch ME
@@ -354,8 +387,26 @@ for r=1:nR
             elseif P(r,c) < 0.05, star='*';
             end
         end
-        txt = sprintf('N=%d\nΔ=%.3g%s\np=%.3g\nsr=%.3g\ndz=%.2f', ...
-            round(NN(r,c)), Z(r,c), star, P(r,c), PSR(r,c), DZ(r,c));
+        % display Holm-adjusted p (ttest) if available
+        ph = P(r,c);
+        try
+            if ismember('p_ttest_holm', Stats.Properties.VariableNames)
+                % locate the matching row again
+                idx2 = string(Stats.metric)==m;
+                if ismember('GroupType', Stats.Properties.VariableNames)
+                    idx2 = idx2 & string(Stats.GroupType)==gt;
+                end
+                if ismember('Group', Stats.Properties.VariableNames)
+                    idx2 = idx2 & string(Stats.Group)==g;
+                end
+                if any(idx2)
+                    ph = double(Stats.p_ttest_holm(find(idx2,1,'first')));
+                end
+            end
+        catch
+        end
+        txt = sprintf('N=%d\nΔ=%.3g%s\np_holm=%.3g\nsr=%.3g\ndz=%.2f', ...
+            round(NN(r,c)), Z(r,c), star, ph, PSR(r,c), DZ(r,c));
         text(ax,c,r,txt,'HorizontalAlignment','center','VerticalAlignment','middle','FontSize',8);
     end
 end

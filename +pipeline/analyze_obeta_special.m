@@ -156,12 +156,20 @@ end
 function write_lme_tables(lme, fp_tbl, stem)
 try
     C = to_table_compat(lme.Coefficients);
+    try
+        C = pipeline.add_holm_to_anova_table(C);
+    catch
+    end
     writetable(C, fullfile(fp_tbl, sprintf('%s_fixed_effects.csv', stem)));
 catch ME
     warning('analyze_obeta_special: failed to write fixed effects (%s): %s', stem, ME.message);
 end
 try
     A = to_table_compat(anova(lme,'DFMethod','Satterthwaite'));
+    try
+        A = pipeline.add_holm_to_anova_table(A);
+    catch
+    end
     writetable(A, fullfile(fp_tbl, sprintf('%s_anova.csv', stem)));
 catch ME
     warning('analyze_obeta_special: failed to write ANOVA (%s): %s', stem, ME.message);

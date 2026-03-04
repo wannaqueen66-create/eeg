@@ -179,6 +179,21 @@ end
 Stats = cell2table(statsRows, 'VariableNames', {
     'GroupType','Group','metric','N','mean_diff','sem_diff','t','df','p_ttest','cohen_dz','p_signrank'});
 
+% Holm across metrics within each group (GroupType×Group) and test type
+try
+    Stats.p_ttest_holm = nan(height(Stats),1);
+    Stats.p_signrank_holm = nan(height(Stats),1);
+    keys = unique(string(Stats.GroupType)+"|"+string(Stats.Group), 'stable');
+    for ki=1:numel(keys)
+        parts = split(keys(ki),'|');
+        gt = parts(1); g = parts(2);
+        idx = string(Stats.GroupType)==gt & string(Stats.Group)==g;
+        Stats.p_ttest_holm(idx) = pipeline.holm_stepdown(double(Stats.p_ttest(idx)));
+        Stats.p_signrank_holm(idx) = pipeline.holm_stepdown(double(Stats.p_signrank(idx)));
+    end
+catch
+end
+
 fp_stats = fullfile(fp_tbl, sprintf('block2_restart_stats_%s.csv', tag));
 writetable(Stats, fp_stats);
 
@@ -331,8 +346,19 @@ for r=1:nR
             elseif P(r,c) < 0.05, star = '*';
             end
         end
-        txt = sprintf('N=%d\nΔ=%.3g%s\np=%.3g\nsr=%.3g\ndz=%.2f', ...
-            round(NN(r,c)), Z(r,c), star, P(r,c), PSR(r,c), DZ(r,c));
+        % display Holm-adjusted p (ttest) if available
+        ph = P(r,c);
+        try
+            if ismember('p_ttest_holm', Stats.Properties.VariableNames)
+                idx2 = string(Stats.GroupType)==gt & string(Stats.Group)==g & string(Stats.metric)==m;
+                if any(idx2)
+                    ph = double(Stats.p_ttest_holm(find(idx2,1,'first')));
+                end
+            end
+        catch
+        end
+        txt = sprintf('N=%d\nΔ=%.3g%s\np_holm=%.3g\nsr=%.3g\ndz=%.2f', ...
+            round(NN(r,c)), Z(r,c), star, ph, PSR(r,c), DZ(r,c));
         text(ax, c, r, txt, 'HorizontalAlignment','center', 'VerticalAlignment','middle', ...
             'Color','k', 'FontSize',8, 'FontWeight','normal');
     end

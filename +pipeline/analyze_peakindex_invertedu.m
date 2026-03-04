@@ -158,6 +158,10 @@ for ai = 1:numel(analyses)
         end
         try
             Aov = to_table_compat(anova(lme,'DFMethod','Satterthwaite'));
+            try
+                Aov = pipeline.add_holm_to_anova_table(Aov);
+            catch
+            end
             writetable(Aov, fullfile(fp_tbl, sprintf('peakindex_lmm_anova_%s_%s.csv', dv, tag)));
         catch ME
             warning('analyze_peakindex_invertedu: failed to write ANOVA (%s/%s/%s): %s', tag, A.name, dv, ME.message);
@@ -210,6 +214,13 @@ for ai = 1:numel(analyses)
         if ~isempty(SumRows) && height(SumRows)>0
             fp_tbl_over = fullfile(fp_root, 'tables', tag, A.name);
             fp_fig_over = fullfile(fp_root, 'figures', tag, A.name);
+            % Holm across metrics for p_vs_zero only (per analysis/tag)
+            try
+                SumRows.p_vs_zero_holm = pipeline.holm_stepdown(double(SumRows.p_vs_zero));
+            catch
+                SumRows.p_vs_zero_holm = nan(height(SumRows),1);
+            end
+
             fp_csv_over = fullfile(fp_tbl_over, sprintf('peakindex_summary_%s.csv', tag));
             writetable(SumRows, fp_csv_over);
             fp_png_over = fullfile(fp_fig_over, pipeline.sanitize_filename(sprintf('peakindex_overview_%s_%s.png', tag, A.name)));
@@ -435,7 +446,12 @@ for c=1:nC
     Z(1,c) = double(SumRows.beta_cxg(i));         P(1,c) = double(SumRows.p_cxg(i));
     Z(2,c) = double(SumRows.beta_complexity(i));  P(2,c) = double(SumRows.p_complexity(i));
     Z(3,c) = double(SumRows.beta_group(i));       P(3,c) = double(SumRows.p_group(i));
-    Z(4,c) = double(SumRows.mean_peakindex(i));   P(4,c) = double(SumRows.p_vs_zero(i));
+    Z(4,c) = double(SumRows.mean_peakindex(i));
+    if ismember('p_vs_zero_holm', SumRows.Properties.VariableNames)
+        P(4,c) = double(SumRows.p_vs_zero_holm(i));
+    else
+        P(4,c) = double(SumRows.p_vs_zero(i));
+    end
     N(c)   = double(SumRows.n_subjects(i));
 end
 
@@ -450,7 +466,7 @@ caxis(ax,[-mx mx]);
 set(ax,'XTick',1:nC,'XTickLabel',cellstr(M));
 set(ax,'YTick',1:4,'YTickLabel',{'Complexity×Group [bottom]','Complexity','Group','PeakIndex mean [top]'});
 xtickangle(ax,20);
-title(ax, sprintf('Task5 PeakIndex overview | %s [%s]', analysisName, tag), 'Interpreter','none');
+title(ax, sprintf('Task5 PeakIndex overview (p_vs_zero Holm-adjusted) | %s [%s]', analysisName, tag), 'Interpreter','none');
 
 for r=1:4
     for c=1:nC

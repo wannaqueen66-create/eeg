@@ -421,6 +421,22 @@ function write_lme_tables(lme, fp_tbl, stem)
 % fixed effects
 try
     C = to_table_compat(lme.Coefficients);
+    % Holm adjustment within this fixed-effects table (exclude intercept if present)
+    try
+        C2 = C;
+        if all(ismember({'Name','pValue'}, C2.Properties.VariableNames))
+            nm = string(C2.Name);
+            isInt = (nm=="(Intercept)") | (lower(nm)=="intercept");
+            p = double(C2.pValue);
+            padj = nan(size(p));
+            padj(~isInt) = pipeline.holm_stepdown(p(~isInt));
+            C2.p_holm = padj;
+        else
+            C2 = pipeline.add_holm_to_anova_table(C2);
+        end
+        C = C2;
+    catch
+    end
     writetable(C, fullfile(fp_tbl, sprintf('%s_fixed_effects.csv', stem)));
 catch ME
     fprintf(2,'[WARN] task4 write_lme_tables fixed failed (%s): %s\n', stem, ME.message);
@@ -428,6 +444,10 @@ end
 % anova table
 try
     A = to_table_compat(anova(lme,'DFMethod','Satterthwaite'));
+    try
+        A = pipeline.add_holm_to_anova_table(A);
+    catch
+    end
     writetable(A, fullfile(fp_tbl, sprintf('%s_anova.csv', stem)));
 catch ME
     fprintf(2,'[WARN] task4 write_lme_tables anova failed (%s): %s\n', stem, ME.message);
