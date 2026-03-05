@@ -1,0 +1,37 @@
+analysis,metric,source,term,estimate,p,p_holm,model
+experience,O_theta,task3,Group×TrialIndex,0.000649205536679884,0.197854218128613,1,EEG~...+TrialIndex+Group:TrialIndex
+experience,O_theta,task4_model2,Complexity:Group,,0.0302155713335736,0.181293428001441,EEG~WWR*Complexity+WWR*Group+Complexity*Group+(1|Subject)
+experience,O_theta,task4_model2,WWR:Group,,0.826617076112577,1,EEG~WWR*Complexity+WWR*Group+Complexity*Group+(1|Subject)
+experience,O_theta,task4_model3,WWR:Complexity:Group,,0.173019216326048,0.86509608163024,EEG~WWR*Complexity*Group+(1|Subject)
+experience,O_theta,task5,Group×Complexity (PeakIndex),-0.012598224945714,0.0433774079789413,,PeakIndex~Complexity*Group+(1|Subject)
+experience,F_theta,task3,Group×TrialIndex,0.000303931008559235,0.394258661128133,1,EEG~...+TrialIndex+Group:TrialIndex
+experience,F_theta,task4_model2,Complexity:Group,,0.364103612952296,1,EEG~WWR*Complexity+WWR*Group+Complexity*Group+(1|Subject)
+experience,F_theta,task4_model2,WWR:Group,,0.84637511683336,1,EEG~WWR*Complexity+WWR*Group+Complexity*Group+(1|Subject)
+experience,F_theta,task4_model3,WWR:Complexity:Group,,0.0593601846412818,0.237440738565127,EEG~WWR*Complexity*Group+(1|Subject)
+experience,F_theta,task5,Group×Complexity (PeakIndex),-0.0106664375694871,0.0443569004710732,,PeakIndex~Complexity*Group+(1|Subject)
+experience,O_alpha,task3,Group×TrialIndex,-0.000602726842554719,0.678911270158894,1,EEG~...+TrialIndex+Group:TrialIndex
+experience,O_alpha,task4_model2,Complexity:Group,,0.211186610860181,1,EEG~WWR*Complexity+WWR*Group+Complexity*Group+(1|Subject)
+experience,O_alpha,task4_model2,WWR:Group,,0.905972514724543,1,EEG~WWR*Complexity+WWR*Group+Complexity*Group+(1|Subject)
+experience,O_alpha,task4_model3,WWR:Complexity:Group,,0.123257882835224,0.862805179846567,EEG~WWR*Complexity*Group+(1|Subject)
+experience,O_beta,task3,Group×TrialIndex,-0.00211924511374218,0.176113849322782,1,EEG~...+TrialIndex+Group:TrialIndex
+experience,O_beta,task4_model2,Complexity:Group,,0.36947433652338,1,EEG~WWR*Complexity+WWR*Group+Complexity*Group+(1|Subject)
+experience,O_beta,task4_model2,WWR:Group,,0.836364952235464,1,EEG~WWR*Complexity+WWR*Group+Complexity*Group+(1|Subject)
+experience,O_beta,task4_model3,WWR:Complexity:Group,,0.795266900903161,1,EEG~WWR*Complexity*Group+(1|Subject)
+sportfreq,O_theta,task3,Group×TrialIndex,0.00079832116153904,0.098032992693227,1,EEG~...+TrialIndex+Group:TrialIndex
+sportfreq,O_theta,task4_model2,Complexity:Group,,0.587973683543892,1,EEG~WWR*Complexity+WWR*Group+Complexity*Group+(1|Subject)
+sportfreq,O_theta,task4_model2,WWR:Group,,0.186086301744724,0.930431508723618,EEG~WWR*Complexity+WWR*Group+Complexity*Group+(1|Subject)
+sportfreq,O_theta,task4_model3,WWR:Complexity:Group,,0.553191080186184,1,EEG~WWR*Complexity*Group+(1|Subject)
+sportfreq,O_theta,task5,Group×Complexity (PeakIndex),-0.00851157182377138,0.161552007905929,,PeakIndex~Complexity*Group+(1|Subject)
+sportfreq,F_theta,task3,Group×TrialIndex,0.000543940620021889,0.110058461202187,1,EEG~...+TrialIndex+Group:TrialIndex
+sportfreq,F_theta,task4_model2,Complexity:Group,,0.620312358056499,1,EEG~WWR*Complexity+WWR*Group+Complexity*Group+(1|Subject)
+sportfreq,F_theta,task4_model2,WWR:Group,,0.283213760167452,1,EEG~WWR*Complexity+WWR*Group+Complexity*Group+(1|Subject)
+sportfreq,F_theta,task4_model3,WWR:Complexity:Group,,0.426657192152512,1,EEG~WWR*Complexity*Group+(1|Subject)
+sportfreq,F_theta,task5,Group×Complexity (PeakIndex),-0.00715075797013061,0.154457524111179,,PeakIndex~Complexity*Group+(1|Subject)
+sportfreq,O_alpha,task3,Group×TrialIndex,-0.00167931501879566,0.215004671155085,1,EEG~...+TrialIndex+Group:TrialIndex
+sportfreq,O_alpha,task4_model2,Complexity:Group,,0.00411191866997697,0.0246715120198618,EEG~WWR*Complexity+WWR*Group+Complexity*Group+(1|Subject)
+sportfreq,O_alpha,task4_model2,WWR:Group,,0.626050542090053,1,EEG~WWR*Complexity+WWR*Group+Complexity*Group+(1|Subject)
+sportfreq,O_alpha,task4_model3,WWR:Complexity:Group,,0.0663813560760709,0.332176257805202,EEG~WWR*Complexity*Group+(1|Subject)
+sportfreq,O_beta,task3,Group×TrialIndex,-0.00305297251658766,0.0397039559257894,0.476447471109473,EEG~...+TrialIndex+Group:TrialIndex
+sportfreq,O_beta,task4_model2,Complexity:Group,,0.735531638122768,1,EEG~WWR*Complexity+WWR*Group+Complexity*Group+(1|Subject)
+sportfreq,O_beta,task4_model2,WWR:Group,,0.628969653825978,1,EEG~WWR*Complexity+WWR*Group+Complexity*Group+(1|Subject)
+sportfreq,O_beta,task4_model3,WWR:Complexity:Group,,0.816400073630093,1,EEG~WWR*Complexity*Group+(1|Subject)

@@ -1,0 +1,9 @@
+analysis,metric,evidence_score,regulation_difference_level,robustness,direction_flip,key_signals
+experience,O_theta,1.00,Weak,C,1,task4_model2:Complexity:Group(p=0.0302); task5:Group×Complexity (PeakIndex)(p=0.0434)
+experience,F_theta,1.00,Weak,C,0,task5:Group×Complexity (PeakIndex)(p=0.0444)
+experience,O_alpha,0.50,Weak,A,0,none
+experience,O_beta,-0.50,Weak,C,0,none
+sportfreq,O_theta,-0.50,Weak,C,1,none
+sportfreq,F_theta,-1.00,Weak,C,1,none
+sportfreq,O_alpha,2.00,Moderate,C,0,task4_model2:Complexity:Group(p=0.00411)
+sportfreq,O_beta,0.50,Weak,C,0,task3:Group×TrialIndex(p=0.0397)
