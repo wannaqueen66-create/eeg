@@ -60,6 +60,11 @@ assert(contains(mainScript, 'T.P_low_gamma = out_rel40(:,12);'), 'P_low_gamma sh
 assert(contains(mainScript, 'T.O_low_gamma = out_rel40(:,18);'), 'O_low_gamma should use out_rel40 denominator');
 fprintf('[OK] low_gamma denominator mapping checks\n');
 
+% Test 6: eye QC reporting helper exists
+assert(exist(fullfile(fileparts(mfilename('fullpath')), '..', '+pipeline', 'write_eye_qc_report_md.m'),'file')==2, ...
+    'write_eye_qc_report_md.m should exist');
+fprintf('[OK] eye QC report helper present\n');
+
 fprintf('All smoke tests passed.\n');
 end
 

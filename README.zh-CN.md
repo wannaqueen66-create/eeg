@@ -150,6 +150,7 @@ run_eeg_bandpower_pipeline('path/to/data.set', 'config.json');
   - `+pipeline/merge_eye_scene_features.m`：把眼动 scene-level 表 merge 到 EEG scene-level 总表
   - `docs/eye_integration.md`：详细接入方案
   - `docs/eye_qc_recommendations.md`：眼动如何辅助 EEG QC / 伪迹解释的建议
+  - `docs/eye_modeling_template.md`：EEG × 眼动最小建模模板
 
 示例：
 ```bash
@@ -173,6 +174,11 @@ python scripts/build_eye_scene_level.py \
 - `eye_qc_needs_review`
 - `eye_qc_severe_flag`
 - `eye_qc_flag_count`
+
+当启用 eye merge 后，批量汇总还会额外生成 eye QC 总览文件，例如：
+- `eye_qc_report.md`
+- `eye_qc_subject_summary.csv`
+- `eye_qc_scene_summary.csv`
 
 ## 测试
 ```matlab

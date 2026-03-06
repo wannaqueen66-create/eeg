@@ -162,6 +162,17 @@ if ~isempty(AllScene)
             writetable(AllSceneEye, out.all_subjects_scene_level_with_eye);
             fprintf('[OK] Eye merge done: matched_rows=%d, missing_eye_rows=%d, file=%s\n', ...
                 eyeMeta.matched_rows, eyeMeta.missing_eye_rows, cfg.eye_summary_path);
+            try
+                eyeQcOut = pipeline.write_eye_qc_report_md(fp_sum, AllSceneEye, cfg);
+                if isstruct(eyeQcOut)
+                    fns = fieldnames(eyeQcOut);
+                    for ii = 1:numel(fns)
+                        out.(fns{ii}) = eyeQcOut.(fns{ii});
+                    end
+                end
+            catch MEeye
+                fprintf(2, '[WARN] write_eye_qc_report_md failed: %s\n', MEeye.message);
+            end
         elseif doEye
             fprintf('[NOTE] eye_merge_enabled=true but eye_summary_path is missing or not found: %s\n', string(getfield_def(cfg,'eye_summary_path','')));
         end

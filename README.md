@@ -242,6 +242,8 @@ Also:
   - `docs/eye_integration.md`
 - Eye QC guidance:
   - `docs/eye_qc_recommendations.md`
+- Minimal modeling template:
+  - `docs/eye_modeling_template.md`
 
 Example workflow:
 ```bash
@@ -265,6 +267,11 @@ The eye summary CSV also now includes conservative rule-based QC helper columns 
 - `eye_qc_needs_review`
 - `eye_qc_severe_flag`
 - `eye_qc_flag_count`
+
+Batch summary will additionally write eye-QC overview artifacts when eye merge is enabled, including:
+- `eye_qc_report.md`
+- `eye_qc_subject_summary.csv`
+- `eye_qc_scene_summary.csv`
 
 **中文**
 - 第一版建议：保持 EEG `.set` 分段主流程不变，把眼动特征在批量汇总阶段并入。
