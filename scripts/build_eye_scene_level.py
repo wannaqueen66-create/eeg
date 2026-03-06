@@ -197,6 +197,56 @@ def parse_scene_dir(path: Path) -> Dict[str, object]:
     return out
 
 
+def add_rule_based_flags(df_out: pd.DataFrame) -> pd.DataFrame:
+    def flag_bool(cond: pd.Series) -> pd.Series:
+        return cond.fillna(False).astype(int)
+
+    if 'eye_tracking_ratio' in df_out.columns:
+        df_out['eye_qc_low_tracking_flag'] = flag_bool(df_out['eye_tracking_ratio'] < 60)
+    else:
+        df_out['eye_qc_low_tracking_flag'] = 0
+
+    if 'eye_valid_left_ratio' in df_out.columns and 'eye_valid_right_ratio' in df_out.columns:
+        df_out['eye_qc_low_validity_flag'] = flag_bool(
+            (df_out['eye_valid_left_ratio'] < 0.60) | (df_out['eye_valid_right_ratio'] < 0.60)
+        )
+    else:
+        df_out['eye_qc_low_validity_flag'] = 0
+
+    if 'eye_mean_openness_pct' in df_out.columns:
+        df_out['eye_qc_low_openness_flag'] = flag_bool(df_out['eye_mean_openness_pct'] < 20)
+    else:
+        df_out['eye_qc_low_openness_flag'] = 0
+
+    if 'eye_view_blink_rate_per_min' in df_out.columns:
+        df_out['eye_qc_high_blink_rate_flag'] = flag_bool(df_out['eye_view_blink_rate_per_min'] > 30)
+    else:
+        df_out['eye_qc_high_blink_rate_flag'] = 0
+
+    if 'eye_view_blink_burden_pct' in df_out.columns:
+        df_out['eye_qc_high_blink_burden_flag'] = flag_bool(df_out['eye_view_blink_burden_pct'] > 15)
+    else:
+        df_out['eye_qc_high_blink_burden_flag'] = 0
+
+    if 'eye_view_sacc_rate_per_min' in df_out.columns:
+        df_out['eye_qc_high_sacc_rate_flag'] = flag_bool(df_out['eye_view_sacc_rate_per_min'] > 120)
+    else:
+        df_out['eye_qc_high_sacc_rate_flag'] = 0
+
+    flag_cols = [
+        'eye_qc_low_tracking_flag',
+        'eye_qc_low_validity_flag',
+        'eye_qc_low_openness_flag',
+        'eye_qc_high_blink_rate_flag',
+        'eye_qc_high_blink_burden_flag',
+        'eye_qc_high_sacc_rate_flag',
+    ]
+    df_out['eye_qc_flag_count'] = df_out[flag_cols].sum(axis=1)
+    df_out['eye_qc_needs_review'] = flag_bool(df_out['eye_qc_flag_count'] > 0)
+    df_out['eye_qc_severe_flag'] = flag_bool(df_out['eye_qc_flag_count'] >= 2)
+    return df_out
+
+
 def summarize_file(path: Path) -> Dict[str, object]:
     df = pd.read_csv(path)
     subj = parse_subject_id(path)
@@ -303,6 +353,7 @@ def main() -> None:
             })
 
     df_out = pd.DataFrame(rows)
+    df_out = add_rule_based_flags(df_out)
     preferred_cols = [
         "subject_id", "scene_id", "block_id", "cycle_in_block", "WWR", "Complexity",
         "eye_source_file", "eye_n_rows", "eye_view_start_ms", "eye_view_end_ms", "eye_view_duration_ms",
@@ -314,6 +365,9 @@ def main() -> None:
         "eye_mean_openness_left_pct", "eye_mean_openness_right_pct", "eye_mean_openness_pct",
         "eye_min_openness_left_pct", "eye_min_openness_right_pct",
         "eye_mean_eyelid_dist_left_mm", "eye_mean_eyelid_dist_right_mm", "eye_mean_eyelid_dist_mm",
+        "eye_qc_low_tracking_flag", "eye_qc_low_validity_flag", "eye_qc_low_openness_flag",
+        "eye_qc_high_blink_rate_flag", "eye_qc_high_blink_burden_flag", "eye_qc_high_sacc_rate_flag",
+        "eye_qc_flag_count", "eye_qc_needs_review", "eye_qc_severe_flag",
         "eye_mean_pupil_left_mm", "eye_mean_pupil_right_mm", "eye_mean_pupil_mm",
         "eye_view_fix_count", "eye_view_fix_rate_per_min", "eye_view_mean_fix_dur_ms", "eye_view_mean_gaze_velocity_px_ms",
         "eye_user", "eye_record_name", "eye_sex", "eye_lens_right", "eye_lens_left",

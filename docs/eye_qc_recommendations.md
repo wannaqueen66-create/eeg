@@ -76,6 +76,17 @@ Use case:
 ## Suggested exploratory flags (do NOT treat as hard clinical cutoffs)
 These are only starting points for internal QC review and should be tuned on your own data distribution.
 
+The current eye summary script now also emits a conservative set of rule-based flag columns directly in `all_subjects_eye_scene_level.csv`, including:
+- `eye_qc_low_tracking_flag`
+- `eye_qc_low_validity_flag`
+- `eye_qc_low_openness_flag`
+- `eye_qc_high_blink_rate_flag`
+- `eye_qc_high_blink_burden_flag`
+- `eye_qc_high_sacc_rate_flag`
+- `eye_qc_flag_count`
+- `eye_qc_needs_review`
+- `eye_qc_severe_flag`
+
 ### Eye quality flags
 - `low_tracking_flag`: `eye_tracking_ratio < 60`
 - `low_validity_flag`: left or right validity ratio < `0.6`

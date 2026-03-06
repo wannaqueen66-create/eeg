@@ -169,6 +169,11 @@ python scripts/build_eye_scene_level.py \
 重新运行批量汇总后，会生成：
 - `all_subjects_scene_level_with_eye.csv`
 
+同时眼动汇总表现在也会直接带一组保守的规则型 QC 标记列，例如：
+- `eye_qc_needs_review`
+- `eye_qc_severe_flag`
+- `eye_qc_flag_count`
+
 ## 测试
 ```matlab
 addpath(genpath(pwd));

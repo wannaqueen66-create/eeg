@@ -261,6 +261,11 @@ Then enable in `config.json`:
 Run batch summary again to produce:
 - `all_subjects_scene_level_with_eye.csv`
 
+The eye summary CSV also now includes conservative rule-based QC helper columns such as:
+- `eye_qc_needs_review`
+- `eye_qc_severe_flag`
+- `eye_qc_flag_count`
+
 **中文**
 - 第一版建议：保持 EEG `.set` 分段主流程不变，把眼动特征在批量汇总阶段并入。
 - 已提供：
