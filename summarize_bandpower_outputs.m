@@ -233,11 +233,37 @@ catch ME
     fprintf(2, '[WARN] qc_filter_and_report failed: %s\n', ME.message);
 end
 
+% Optional: EEG x eye exploratory links (raw)
+try
+    if exist('AllSceneEye','var') && ~isempty(AllSceneEye)
+        out.eye_eeg_links_raw = pipeline.analyze_eye_eeg_links(AllSceneEye, fp_sum, cfg, 'raw');
+    end
+catch ME
+    fprintf(2, '[WARN] analyze_eye_eeg_links(raw) failed: %s\n', ME.message);
+end
+
 % Group-level figures (raw)
 try
     pipeline.plot_group_summaries(AllScene, fp_sum, cfg, 'raw');
 catch ME
     fprintf(2, '[WARN] plot_group_summaries failed: %s\n', ME.message);
+end
+
+% Optional: EEG x eye exploratory links (QC-filtered)
+try
+    if exist('AllSceneEye','var') && ~isempty(AllSceneEye) && ~isequal(AllScene_qc, AllScene)
+        qcMask = true(height(AllSceneEye),1);
+        if ismember('subject_id', AllScene_qc.Properties.VariableNames) && ismember('scene_id', AllScene_qc.Properties.VariableNames)
+            Kqc = unique(AllScene_qc(:, intersect({'subject_id','scene_id'}, AllScene_qc.Properties.VariableNames, 'stable')),'rows');
+            Kall = AllSceneEye(:, intersect({'subject_id','scene_id'}, AllSceneEye.Properties.VariableNames, 'stable'));
+            [lia,~] = ismember(Kall, Kqc, 'rows');
+            qcMask = lia;
+        end
+        AllSceneEye_qc = AllSceneEye(qcMask,:);
+        out.eye_eeg_links_qc = pipeline.analyze_eye_eeg_links(AllSceneEye_qc, fp_sum, cfg, 'qc');
+    end
+catch ME
+    fprintf(2, '[WARN] analyze_eye_eeg_links(qc) failed: %s\n', ME.message);
 end
 
 % Group-level figures (QC-filtered)

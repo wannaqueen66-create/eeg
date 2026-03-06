@@ -244,6 +244,8 @@ Also:
   - `docs/eye_qc_recommendations.md`
 - Minimal modeling template:
   - `docs/eye_modeling_template.md`
+- Quickstart for the new exploratory link analysis:
+  - `docs/eye_analysis_quickstart.md`
 
 Example workflow:
 ```bash
@@ -272,6 +274,11 @@ Batch summary will additionally write eye-QC overview artifacts when eye merge i
 - `eye_qc_report.md`
 - `eye_qc_subject_summary.csv`
 - `eye_qc_scene_summary.csv`
+
+It will also run a minimal exploratory EEG × eye analysis and write artifacts such as:
+- `analysis-eye/raw/reports/eye_eeg_report.md`
+- `analysis-eye/raw/tables/eye_eeg_correlation_screen.csv`
+- `analysis-eye/raw/tables/eye_eeg_lmm_index.csv` (when `fitlme` is available)
 
 **中文**
 - 第一版建议：保持 EEG `.set` 分段主流程不变，把眼动特征在批量汇总阶段并入。

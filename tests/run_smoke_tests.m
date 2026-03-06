@@ -65,6 +65,11 @@ assert(exist(fullfile(fileparts(mfilename('fullpath')), '..', '+pipeline', 'writ
     'write_eye_qc_report_md.m should exist');
 fprintf('[OK] eye QC report helper present\n');
 
+% Test 7: eye-EEG exploratory helper exists
+assert(exist(fullfile(fileparts(mfilename('fullpath')), '..', '+pipeline', 'analyze_eye_eeg_links.m'),'file')==2, ...
+    'analyze_eye_eeg_links.m should exist');
+fprintf('[OK] eye-EEG exploratory helper present\n');
+
 fprintf('All smoke tests passed.\n');
 end
 
