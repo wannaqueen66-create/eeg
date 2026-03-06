@@ -3,6 +3,16 @@
 ## Goal
 Integrate eye-tracking features into the existing EEG batch-summary workflow **without destabilizing** the current EEG `.set` processing pipeline.
 
+## Current confirmed experiment assumptions
+- Eye-tracking CSV files are **already manually cut and confirmed as scene `view` segments**.
+- Eye-tracking side does **not** need marker-based segmentation in v1.
+- EEG side still uses marker/state-machine segmentation from `.set` files.
+- EEG subject identifiers are **Chinese participant names** in `.set` filenames.
+- Eye CSV file names also contain Chinese participant names.
+- Scene identity is stored primarily in the **parent folder name**, such as:
+  - `1-1-1_组1-C1W45`
+  - interpreted as `order_id=1`, `round_id=1`, `scene_index_in_round=1`
+
 ## Recommended architecture
 
 ### Keep EEG segmentation unchanged
@@ -11,7 +21,9 @@ Integrate eye-tracking features into the existing EEG batch-summary workflow **w
 
 ### Add an eye scene-level branch
 - Build a separate eye-tracking summary table from raw eye CSV files.
-- One CSV is assumed to represent **one subject × one scene**.
+- One CSV is assumed to represent **one subject × one scene × one view segment**.
+- Scene identity is parsed from the parent folder.
+- Subject identity is parsed from the CSV filename.
 - Output an analysis-friendly table keyed by:
   - `subject_id`
   - `scene_id`
@@ -28,12 +40,6 @@ Integrate eye-tracking features into the existing EEG batch-summary workflow **w
   - merges eye scene-level table into EEG scene-level table
 
 ## Expected eye input columns (v1 priority)
-
-### Synchronization / metadata
-- `Recording Time Stamp[ms]`
-- `Triggle Send` / `Triggle Receive`
-- `Event Label`
-- `Annotation`
 
 ### Quality
 - `Tracking Ratio[%]`
@@ -54,31 +60,46 @@ Integrate eye-tracking features into the existing EEG batch-summary workflow **w
 - `Blink Index`
 - `Blink Duration[ms]`
 
+### Optional metadata retained
+- `User`
+- `Record Name`
+- `性别`
+- `右眼镜片度数`
+- `左眼镜片度数`
+
 ## Output schema (eye scene-level, v1)
 Typical columns:
 - `subject_id`
+- `subject_name`
 - `scene_id`
+- `order_id`
+- `round_id`
+- `scene_index_in_round`
+- `scene_folder`
+- `scene_label`
+- `WWR`
+- `Complexity`
 - `eye_source_file`
 - `eye_n_rows`
-- `eye_event_start_ms`
-- `eye_event_end_ms`
-- `eye_duration_ms`
+- `eye_view_start_ms`
+- `eye_view_end_ms`
+- `eye_view_duration_ms`
 - `eye_tracking_ratio`
 - `eye_valid_left_ratio`
 - `eye_valid_right_ratio`
 - `eye_mean_pupil_left_mm`
 - `eye_mean_pupil_right_mm`
 - `eye_mean_pupil_mm`
-- `eye_mean_gaze_velocity_px_ms`
-- `eye_fix_count`
-- `eye_mean_fix_dur_ms`
-- `eye_sacc_count`
-- `eye_mean_sacc_dur_ms`
-- `eye_mean_sacc_amp_px`
-- `eye_mean_sacc_vel_px_ms`
-- `eye_peak_sacc_vel_px_ms`
-- `eye_blink_count`
-- `eye_mean_blink_dur_ms`
+- `eye_view_mean_gaze_velocity_px_ms`
+- `eye_view_fix_count`
+- `eye_view_mean_fix_dur_ms`
+- `eye_view_sacc_count`
+- `eye_view_mean_sacc_dur_ms`
+- `eye_view_mean_sacc_amp_px`
+- `eye_view_mean_sacc_vel_px_ms`
+- `eye_view_peak_sacc_vel_px_ms`
+- `eye_view_blink_count`
+- `eye_view_mean_blink_dur_ms`
 
 ## Merge logic
 Default merge keys:
@@ -105,7 +126,7 @@ Add to `config.json`:
 ### 1) Build eye scene-level table
 ```bash
 python scripts/build_eye_scene_level.py \
-  --input /path/to/eye_csvs \
+  --input /path/to/eye_root \
   --output /path/to/eye_outputs/summary/all_subjects_eye_scene_level.csv
 ```
 
@@ -132,7 +153,7 @@ summarize_bandpower_outputs('path/to/eeg_folder', 'config.json')
 - pair-level eye recovery table (`all_subjects_pairs_check_with_eye.csv`)
 
 ## Recommended next steps
-1. Standardize eye CSV naming so `subject_id` and `scene_id` can be parsed reliably.
-2. Confirm how scene IDs map across EEG / eye-tracking / experiment design table.
-3. Add optional marker-window extraction for eye `view` vs `gray` segments.
-4. Add pair-level merged table in v2.
+1. Validate 3-5 real eye folders + filenames end-to-end.
+2. Confirm that folder-based `scene_id = (round_id-1)*6 + scene_index_in_round` matches EEG design mapping in all runs.
+3. Add optional QC thresholds for eye-tracking quality (e.g. minimum tracking ratio).
+4. Add pair-level merged table in v2 if needed.

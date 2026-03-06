@@ -231,6 +231,7 @@ Also:
 
 **English**
 - Recommended v1 strategy: keep EEG `.set` segmentation unchanged and merge eye-tracking features at the batch-summary stage.
+- Current experiment assumption: one eye CSV = one subject × one scene × one view segment; scene is parsed from the parent folder (e.g. `1-1-1_组1-C1W45`), and subject is parsed from the Chinese CSV filename.
 - A helper script is provided:
   - `scripts/build_eye_scene_level.py`
 - A MATLAB merge helper is provided:
