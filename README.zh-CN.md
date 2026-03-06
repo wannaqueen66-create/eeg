@@ -12,6 +12,7 @@
 - [完整教程](#完整教程)
 - [配置文件说明](#配置文件说明)
 - [输出结果](#输出结果)
+- [EEG × 眼动对接](#eeg--眼动对接)
 - [测试](#测试)
 - [统计解释建议](#统计解释建议)
 - [常见问题](#常见问题)
@@ -86,6 +87,9 @@ run_eeg_bandpower_pipeline('path/to/data.set', 'config.json');
 `config.json` 关键项：
 - `strict_structure`（默认 true）：若开启，则只要全局分段计数与理想结构不一致，就会**直接报错并跳过该被试**（批量模式下继续处理其他人）。
 - `design_path`（默认空）：可选，传入一个 CSV（或包含 CSV 的文件夹），描述每个被试的 trial 顺序/场景信息/以及每个场景的主观评分。支持“宽表 trial01_*”和“长表（含 SubjectID/Block/Position/SceneID 等）”两种格式。
+- `eye_merge_enabled`（默认 false）：是否在批量汇总阶段并入 scene-level 眼动特征。
+- `eye_summary_path`（默认空）：眼动 scene-level 汇总 CSV 路径。
+- `eye_merge_keys`（默认 `["subject_id", "scene_id"]`）：EEG 与眼动 merge 的主键。
 - `pairing_mode`：`strict` 或 `lenient`
 - `zip_output`：是否打包输出 zip
 - `global_summary`：是否导出批量汇总
@@ -122,6 +126,8 @@ run_eeg_bandpower_pipeline('path/to/data.set', 'config.json');
   - `methods_snapshot.md`（自动生成的方法/参数快照，写论文可直接引用）
 - 文件夹批量模式下当 `global_summary=true` 时，会额外生成：
   - `summary/global_bandpower_summary.csv`
+- 当 `eye_merge_enabled=true` 且 `eye_summary_path` 有效时，会额外生成：
+  - `all_subjects_scene_level_with_eye.csv`
 
 主要文件：
 - `*_bandpower_roi.csv`
@@ -134,6 +140,31 @@ run_eeg_bandpower_pipeline('path/to/data.set', 'config.json');
 - `config_used.json`
 - `summary/global_bandpower_summary.csv`（当 `global_summary=true`）
 - `*_outputs.zip`（当 `zip_output=true`）
+
+## EEG × 眼动对接
+- 第一版建议：保持 EEG `.set` 分段主流程不变，在批量汇总阶段并入眼动 scene-level 特征。
+- 已新增：
+  - `scripts/build_eye_scene_level.py`：从原始眼动 CSV 构建 scene-level 汇总表
+  - `+pipeline/merge_eye_scene_features.m`：把眼动 scene-level 表 merge 到 EEG scene-level 总表
+  - `docs/eye_integration.md`：详细接入方案
+
+示例：
+```bash
+python scripts/build_eye_scene_level.py \
+  --input /path/to/eye_csvs \
+  --output /path/to/eye_outputs/summary/all_subjects_eye_scene_level.csv
+```
+
+然后在 `config.json` 中打开：
+```json
+{
+  "eye_merge_enabled": true,
+  "eye_summary_path": "/path/to/eye_outputs/summary/all_subjects_eye_scene_level.csv"
+}
+```
+
+重新运行批量汇总后，会生成：
+- `all_subjects_scene_level_with_eye.csv`
 
 ## 测试
 ```matlab

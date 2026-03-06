@@ -151,6 +151,23 @@ fp_tbl_raw = pipeline.get_table_dir(fp_sum, cfg, 'merged_raw');
 if ~isempty(AllScene)
     out.all_subjects_scene_level = fullfile(fp_tbl_raw, 'all_subjects_scene_level.csv');
     writetable(AllScene, out.all_subjects_scene_level);
+
+    % Optional: merge eye-tracking scene-level features
+    try
+        doEye = isfield(cfg,'eye_merge_enabled') && logical(cfg.eye_merge_enabled);
+        hasEyePath = isfield(cfg,'eye_summary_path') && ~isempty(cfg.eye_summary_path) && exist(cfg.eye_summary_path,'file');
+        if doEye && hasEyePath
+            [AllSceneEye, eyeMeta] = pipeline.merge_eye_scene_features(AllScene, cfg.eye_summary_path, cfg);
+            out.all_subjects_scene_level_with_eye = fullfile(fp_tbl_raw, 'all_subjects_scene_level_with_eye.csv');
+            writetable(AllSceneEye, out.all_subjects_scene_level_with_eye);
+            fprintf('[OK] Eye merge done: matched_rows=%d, missing_eye_rows=%d, file=%s\n', ...
+                eyeMeta.matched_rows, eyeMeta.missing_eye_rows, cfg.eye_summary_path);
+        elseif doEye
+            fprintf('[NOTE] eye_merge_enabled=true but eye_summary_path is missing or not found: %s\n', string(getfield_def(cfg,'eye_summary_path','')));
+        end
+    catch ME
+        fprintf(2, '[WARN] merge_eye_scene_features failed: %s\n', ME.message);
+    end
 end
 
 if ~isempty(AllPairs)

@@ -15,9 +15,10 @@ MATLAB/EEGLAB pipeline for **VR scene-viewing EEG bandpower analysis**.
 - [7. Full Tutorial / 完整使用教程](#7-full-tutorial--完整使用教程)
 - [8. Configuration / 配置文件](#8-configuration--配置文件)
 - [9. Outputs / 输出结果](#9-outputs--输出结果)
-- [10. Tests / 测试](#10-tests--测试)
-- [11. Statistical Notes / 统计解释建议](#11-statistical-notes--统计解释建议)
-- [12. FAQ / 常见问题](#12-faq--常见问题)
+- [10. EEG × Eye-tracking Integration / EEG × 眼动对接](#10-eeg--eye-tracking-integration--eeg--眼动对接)
+- [11. Tests / 测试](#11-tests--测试)
+- [12. Statistical Notes / 统计解释建议](#12-statistical-notes--统计解释建议)
+- [13. FAQ / 常见问题](#13-faq--常见问题)
 
 ---
 
@@ -140,6 +141,9 @@ Use `config.json` to override defaults.
 Additional options:
 - `strict_structure` (default `true`): if enabled, the pipeline will **error & skip** any dataset whose global segment counts do not match the expected structure.
 - `design_path` (default empty): optional path to a CSV (or folder containing a CSV) describing the per-subject trial order and/or per-scene ratings. Supports both wide and long formats.
+- `eye_merge_enabled` (default `false`): whether to merge scene-level eye-tracking features during batch summary.
+- `eye_summary_path` (default empty): path to the eye scene-level CSV built outside the EEG pipeline.
+- `eye_merge_keys` (default `["subject_id","scene_id"]`): join keys used when merging eye features.
 
 ```json
 {
@@ -205,6 +209,7 @@ Notes:
   - `paper_fig/` (journal-ready multi-panel figures + PDF exports)
   - `methods_snapshot.md` (auto-generated methods/config snapshot for writing)
 - `summary/global_bandpower_summary.csv` is created in folder-batch mode when `global_summary=true`.
+- `all_subjects_scene_level_with_eye.csv` is additionally written when `eye_merge_enabled=true` and `eye_summary_path` is valid.
 
 CSV includes:
 - `*_bandpower_roi.csv`
@@ -222,7 +227,47 @@ Also:
 
 ---
 
-## 10. Tests / 测试
+## 10. EEG × Eye-tracking Integration / EEG × 眼动对接
+
+**English**
+- Recommended v1 strategy: keep EEG `.set` segmentation unchanged and merge eye-tracking features at the batch-summary stage.
+- A helper script is provided:
+  - `scripts/build_eye_scene_level.py`
+- A MATLAB merge helper is provided:
+  - `+pipeline/merge_eye_scene_features.m`
+- Detailed plan:
+  - `docs/eye_integration.md`
+
+Example workflow:
+```bash
+python scripts/build_eye_scene_level.py \
+  --input /path/to/eye_csvs \
+  --output /path/to/eye_outputs/summary/all_subjects_eye_scene_level.csv
+```
+
+Then enable in `config.json`:
+```json
+{
+  "eye_merge_enabled": true,
+  "eye_summary_path": "/path/to/eye_outputs/summary/all_subjects_eye_scene_level.csv"
+}
+```
+
+Run batch summary again to produce:
+- `all_subjects_scene_level_with_eye.csv`
+
+**中文**
+- 第一版建议：保持 EEG `.set` 分段主流程不变，把眼动特征在批量汇总阶段并入。
+- 已提供：
+  - 眼动 scene-level 构建脚本：`scripts/build_eye_scene_level.py`
+  - MATLAB 合并函数：`+pipeline/merge_eye_scene_features.m`
+  - 详细方案文档：`docs/eye_integration.md`
+- 合并成功后会额外生成：
+  - `all_subjects_scene_level_with_eye.csv`
+
+---
+
+## 11. Tests / 测试
 
 ```matlab
 addpath(genpath(pwd));
@@ -232,7 +277,7 @@ run('tests/run_smoke_tests.m');
 ---
 
 
-## 11. Statistical Notes / 统计解释建议
+## 12. Statistical Notes / 统计解释建议
 
 **English**
 - `low_gamma (30–45 Hz)` is informative for immersion/arousal hypotheses, but also sensitive to muscle artifacts (jaw/forehead/neck EMG).
@@ -246,7 +291,7 @@ run('tests/run_smoke_tests.m');
 
 ---
 
-## 12. FAQ / 常见问题
+## 13. FAQ / 常见问题
 
 **Q1: Missing O1/OZ/O2 channels?**  
 Check channel names or edit ROI labels in config.

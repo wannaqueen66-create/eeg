@@ -28,5 +28,8 @@ if ~isfield(cfg,'save_log'); cfg.save_log = true; end
 if ~isfield(cfg,'figure_visible'); cfg.figure_visible = false; end
 if ~isfield(cfg,'batch_summaries'); cfg.batch_summaries = true; end
 if ~isfield(cfg,'design_path'); cfg.design_path = ''; end
+if ~isfield(cfg,'eye_merge_enabled'); cfg.eye_merge_enabled = false; end
+if ~isfield(cfg,'eye_summary_path'); cfg.eye_summary_path = ''; end
+if ~isfield(cfg,'eye_merge_keys'); cfg.eye_merge_keys = {"subject_id","scene_id"}; end
 
 end

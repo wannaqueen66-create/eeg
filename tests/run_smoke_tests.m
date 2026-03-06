@@ -7,6 +7,9 @@ fprintf('== EEG pipeline smoke tests ==\n');
 cfg = pipeline.load_config('__nonexistent__.json');
 assert(isfield(cfg,'gray_dur_min') && cfg.gray_dur_min==3);
 assert(isfield(cfg,'pairing_mode') && strcmp(cfg.pairing_mode,'strict'));
+assert(isfield(cfg,'eye_merge_enabled') && cfg.eye_merge_enabled==false);
+assert(isfield(cfg,'eye_summary_path') && strcmp(cfg.eye_summary_path,''));
+assert(isfield(cfg,'eye_merge_keys'));
 fprintf('[OK] load_config defaults\n');
 
 % Test 2: parse input rejects invalid extension
