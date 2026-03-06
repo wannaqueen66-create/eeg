@@ -11,6 +11,10 @@ Project-specific assumptions (current experiment):
   to match EEG `.set` filenames.
 - Marker cutting is NOT needed on the eye-tracking side in v1.
 
+Current priority for EEG support:
+- artifact/QC assistance first: blink, tracking/validity, saccade, eyelid/openness
+- cognitive-state support second: pupil, fixation, gaze velocity
+
 Example:
   python scripts/build_eye_scene_level.py \
     --input /path/to/eye_root \
@@ -54,6 +58,10 @@ COLUMN_ALIASES = {
     "sacc_vel_peak": ["Saccade Velocity Peak[px/ms]"],
     "blink_idx": ["Blink Index"],
     "blink_dur_ms": ["Blink Duration[ms]"],
+    "openness_left": ["Openness Left[%]"],
+    "openness_right": ["Openness Right[%]"],
+    "eyelid_dist_left_mm": ["Eyelid Distance Left[mm]"],
+    "eyelid_dist_right_mm": ["Eyelid Distance Right[mm]"],
     "sex": ["性别"],
     "lens_right": ["右眼镜片度数"],
     "lens_left": ["左眼镜片度数"],
@@ -85,6 +93,13 @@ def max_if(df: pd.DataFrame, key: str) -> float:
     return float(as_numeric(df[col]).max())
 
 
+def min_if(df: pd.DataFrame, key: str) -> float:
+    col = find_col(df, COLUMN_ALIASES.get(key, []))
+    if not col:
+        return math.nan
+    return float(as_numeric(df[col]).min())
+
+
 def unique_count_numeric(s: pd.Series) -> float:
     x = pd.to_numeric(s, errors="coerce").dropna()
     return float(x.nunique()) if len(x) else math.nan
@@ -114,11 +129,15 @@ def validity_ratio(df: pd.DataFrame, key: str) -> float:
     x = as_numeric(df[col]).dropna()
     if x.empty:
         return math.nan
-    # heuristic: 0/1 often means valid/invalid; otherwise preserve raw mean
     vals = set(x.unique().tolist())
     if vals.issubset({0, 1}):
         return float((x == 0).mean())
     return float(x.mean())
+
+
+def safe_mean(vals: List[float]) -> float:
+    s = pd.Series(vals, dtype="float64")
+    return float(s.mean(skipna=True)) if s.notna().any() else math.nan
 
 
 def parse_subject_id(path: Path) -> str:
@@ -132,11 +151,10 @@ def parse_subject_id(path: Path) -> str:
 def parse_scene_dir(path: Path) -> Dict[str, object]:
     folder = path.parent.name.strip()
     out: Dict[str, object] = {
-        "scene_folder": folder,
-        "order_id": math.nan,
-        "round_id": math.nan,
-        "scene_index_in_round": math.nan,
-        "scene_label": "",
+        "raw_scene_folder": folder,
+        "block_id": math.nan,
+        "cycle_in_block": math.nan,
+        "scene_id": math.nan,
         "WWR": math.nan,
         "Complexity": math.nan,
     }
@@ -145,14 +163,13 @@ def parse_scene_dir(path: Path) -> Dict[str, object]:
     if not m:
         return out
 
-    out["order_id"] = int(m.group("order_id"))
-    out["round_id"] = int(m.group("round_id"))
-    out["scene_index_in_round"] = int(m.group("scene_index_in_round"))
+    block_id = int(m.group("round_id"))
+    cycle_in_block = int(m.group("scene_index_in_round"))
     label = (m.group("scene_label") or "").strip()
-    out["scene_label"] = label
 
-    # global scene_id consistent with existing EEG design convention: (round-1)*6 + pos
-    out["scene_id"] = int((out["round_id"] - 1) * 6 + out["scene_index_in_round"])
+    out["block_id"] = block_id
+    out["cycle_in_block"] = cycle_in_block
+    out["scene_id"] = int((block_id - 1) * 6 + cycle_in_block)
 
     m2 = SCENE_LABEL_REGEX.search(label)
     if m2:
@@ -172,35 +189,56 @@ def summarize_file(path: Path) -> Dict[str, object]:
 
     pupil_left = mean_if(df, "pupil_left_mm")
     pupil_right = mean_if(df, "pupil_right_mm")
-    pupil_mean = pd.Series([pupil_left, pupil_right], dtype="float64").mean(skipna=True)
+    pupil_mean = safe_mean([pupil_left, pupil_right])
+
+    openness_left = mean_if(df, "openness_left")
+    openness_right = mean_if(df, "openness_right")
+    openness_mean = safe_mean([openness_left, openness_right])
+
+    eyelid_left = mean_if(df, "eyelid_dist_left_mm")
+    eyelid_right = mean_if(df, "eyelid_dist_right_mm")
+    eyelid_mean = safe_mean([eyelid_left, eyelid_right])
 
     out = {
         "subject_id": subj,
-        "subject_name": subj,
-        "eye_user": first_text_if(df, "user"),
-        "eye_record_name": first_text_if(df, "record_name"),
         **scene_meta,
         "eye_source_file": str(path),
         "eye_n_rows": int(len(df)),
         "eye_view_start_ms": start_ms,
         "eye_view_end_ms": end_ms,
         "eye_view_duration_ms": (end_ms - start_ms) if pd.notna(start_ms) and pd.notna(end_ms) else math.nan,
+
+        # High-priority EEG artifact/QC support
         "eye_tracking_ratio": mean_if(df, "tracking_ratio"),
         "eye_valid_left_ratio": validity_ratio(df, "validity_left"),
         "eye_valid_right_ratio": validity_ratio(df, "validity_right"),
-        "eye_mean_pupil_left_mm": pupil_left,
-        "eye_mean_pupil_right_mm": pupil_right,
-        "eye_mean_pupil_mm": float(pupil_mean) if pd.notna(pupil_mean) else math.nan,
-        "eye_view_mean_gaze_velocity_px_ms": mean_if(df, "gaze_velocity"),
-        "eye_view_fix_count": unique_if(df, "fix_idx"),
-        "eye_view_mean_fix_dur_ms": mean_if(df, "fix_dur_ms"),
+        "eye_view_blink_count": unique_if(df, "blink_idx"),
+        "eye_view_mean_blink_dur_ms": mean_if(df, "blink_dur_ms"),
         "eye_view_sacc_count": unique_if(df, "sacc_idx"),
         "eye_view_mean_sacc_dur_ms": mean_if(df, "sacc_dur_ms"),
         "eye_view_mean_sacc_amp_px": mean_if(df, "sacc_amp_px"),
         "eye_view_mean_sacc_vel_px_ms": mean_if(df, "sacc_vel_avg"),
         "eye_view_peak_sacc_vel_px_ms": max_if(df, "sacc_vel_peak"),
-        "eye_view_blink_count": unique_if(df, "blink_idx"),
-        "eye_view_mean_blink_dur_ms": mean_if(df, "blink_dur_ms"),
+        "eye_mean_openness_left_pct": openness_left,
+        "eye_mean_openness_right_pct": openness_right,
+        "eye_mean_openness_pct": openness_mean,
+        "eye_min_openness_left_pct": min_if(df, "openness_left"),
+        "eye_min_openness_right_pct": min_if(df, "openness_right"),
+        "eye_mean_eyelid_dist_left_mm": eyelid_left,
+        "eye_mean_eyelid_dist_right_mm": eyelid_right,
+        "eye_mean_eyelid_dist_mm": eyelid_mean,
+
+        # Secondary cognitive-state support
+        "eye_mean_pupil_left_mm": pupil_left,
+        "eye_mean_pupil_right_mm": pupil_right,
+        "eye_mean_pupil_mm": pupil_mean,
+        "eye_view_fix_count": unique_if(df, "fix_idx"),
+        "eye_view_mean_fix_dur_ms": mean_if(df, "fix_dur_ms"),
+        "eye_view_mean_gaze_velocity_px_ms": mean_if(df, "gaze_velocity"),
+
+        # Metadata kept for traceability only
+        "eye_user": first_text_if(df, "user"),
+        "eye_record_name": first_text_if(df, "record_name"),
         "eye_sex": first_text_if(df, "sex"),
         "eye_lens_right": first_text_if(df, "lens_right"),
         "eye_lens_left": first_text_if(df, "lens_left"),
@@ -226,26 +264,29 @@ def main() -> None:
         except Exception as e:
             rows.append({
                 "subject_id": "",
-                "subject_name": "",
                 "scene_id": math.nan,
-                "scene_folder": f.parent.name,
+                "block_id": math.nan,
+                "cycle_in_block": math.nan,
+                "raw_scene_folder": f.parent.name,
                 "eye_source_file": str(f),
                 "eye_parse_error": str(e),
             })
 
     df_out = pd.DataFrame(rows)
     preferred_cols = [
-        "subject_id", "subject_name", "scene_id", "order_id", "round_id", "scene_index_in_round",
-        "scene_folder", "scene_label", "WWR", "Complexity",
+        "subject_id", "scene_id", "block_id", "cycle_in_block", "WWR", "Complexity",
         "eye_source_file", "eye_n_rows", "eye_view_start_ms", "eye_view_end_ms", "eye_view_duration_ms",
         "eye_tracking_ratio", "eye_valid_left_ratio", "eye_valid_right_ratio",
-        "eye_mean_pupil_left_mm", "eye_mean_pupil_right_mm", "eye_mean_pupil_mm",
-        "eye_view_mean_gaze_velocity_px_ms", "eye_view_fix_count", "eye_view_mean_fix_dur_ms",
+        "eye_view_blink_count", "eye_view_mean_blink_dur_ms",
         "eye_view_sacc_count", "eye_view_mean_sacc_dur_ms", "eye_view_mean_sacc_amp_px",
         "eye_view_mean_sacc_vel_px_ms", "eye_view_peak_sacc_vel_px_ms",
-        "eye_view_blink_count", "eye_view_mean_blink_dur_ms",
+        "eye_mean_openness_left_pct", "eye_mean_openness_right_pct", "eye_mean_openness_pct",
+        "eye_min_openness_left_pct", "eye_min_openness_right_pct",
+        "eye_mean_eyelid_dist_left_mm", "eye_mean_eyelid_dist_right_mm", "eye_mean_eyelid_dist_mm",
+        "eye_mean_pupil_left_mm", "eye_mean_pupil_right_mm", "eye_mean_pupil_mm",
+        "eye_view_fix_count", "eye_view_mean_fix_dur_ms", "eye_view_mean_gaze_velocity_px_ms",
         "eye_user", "eye_record_name", "eye_sex", "eye_lens_right", "eye_lens_left",
-        "eye_parse_error",
+        "raw_scene_folder", "eye_parse_error",
     ]
     cols = [c for c in preferred_cols if c in df_out.columns] + [c for c in df_out.columns if c not in preferred_cols]
     df_out = df_out.loc[:, cols]

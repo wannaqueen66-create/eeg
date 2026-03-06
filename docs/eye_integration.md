@@ -11,7 +11,7 @@ Integrate eye-tracking features into the existing EEG batch-summary workflow **w
 - Eye CSV file names also contain Chinese participant names.
 - Scene identity is stored primarily in the **parent folder name**, such as:
   - `1-1-1_组1-C1W45`
-  - interpreted as `order_id=1`, `round_id=1`, `scene_index_in_round=1`
+- Design labels (`scene_name`, `WWR`, `Cond`, `Complexity`) should still follow the same long design table used by EEG.
 
 ## Recommended architecture
 
@@ -22,61 +22,46 @@ Integrate eye-tracking features into the existing EEG batch-summary workflow **w
 ### Add an eye scene-level branch
 - Build a separate eye-tracking summary table from raw eye CSV files.
 - One CSV is assumed to represent **one subject × one scene × one view segment**.
-- Scene identity is parsed from the parent folder.
 - Subject identity is parsed from the CSV filename.
-- Output an analysis-friendly table keyed by:
-  - `subject_id`
-  - `scene_id`
+- Base scene index is parsed from the parent folder.
+- Design labels should later come from the same design long table used by EEG.
 
 ### Merge at batch summary stage
 - Use `summarize_bandpower_outputs.m` to merge eye features into merged EEG scene-level tables.
 - New merged output:
   - `all_subjects_scene_level_with_eye.csv`
 
-## New files added in v1
-- `scripts/build_eye_scene_level.py`
-  - builds eye scene-level table from raw eye CSV files
-- `+pipeline/merge_eye_scene_features.m`
-  - merges eye scene-level table into EEG scene-level table
+## Priority metrics for assisting EEG
 
-## Expected eye input columns (v1 priority)
+### Tier 1: artifact / QC assistance (highest priority)
+These are the most useful eye-derived helpers for EEG cleaning interpretation and QC:
+- `eye_tracking_ratio`
+- `eye_valid_left_ratio`
+- `eye_valid_right_ratio`
+- `eye_view_blink_count`
+- `eye_view_mean_blink_dur_ms`
+- `eye_view_sacc_count`
+- `eye_view_mean_sacc_amp_px`
+- `eye_view_mean_sacc_vel_px_ms`
+- `eye_view_peak_sacc_vel_px_ms`
+- `eye_mean_openness_pct`
+- `eye_min_openness_left_pct`
+- `eye_min_openness_right_pct`
+- `eye_mean_eyelid_dist_mm`
 
-### Quality
-- `Tracking Ratio[%]`
-- `Validity Left`
-- `Validity Right`
-
-### Core features
-- `Pupil Diameter Left[mm]`
-- `Pupil Diameter Right[mm]`
-- `Gaze Velocity[px/ms]`
-- `Fixation Index`
-- `Fixation Duration[ms]`
-- `Saccade Index`
-- `Saccade Duration[ms]`
-- `Saccade Amplitude[px]`
-- `Saccade Velocity Average[px/ms]`
-- `Saccade Velocity Peak[px/ms]`
-- `Blink Index`
-- `Blink Duration[ms]`
-
-### Optional metadata retained
-- `User`
-- `Record Name`
-- `性别`
-- `右眼镜片度数`
-- `左眼镜片度数`
+### Tier 2: cognitive/state interpretation (secondary)
+Useful for joint analysis and interpretation, but less direct for artifact judgment:
+- `eye_mean_pupil_mm`
+- `eye_view_fix_count`
+- `eye_view_mean_fix_dur_ms`
+- `eye_view_mean_gaze_velocity_px_ms`
 
 ## Output schema (eye scene-level, v1)
 Typical columns:
 - `subject_id`
-- `subject_name`
 - `scene_id`
-- `order_id`
-- `round_id`
-- `scene_index_in_round`
-- `scene_folder`
-- `scene_label`
+- `block_id`
+- `cycle_in_block`
 - `WWR`
 - `Complexity`
 - `eye_source_file`
@@ -87,19 +72,18 @@ Typical columns:
 - `eye_tracking_ratio`
 - `eye_valid_left_ratio`
 - `eye_valid_right_ratio`
-- `eye_mean_pupil_left_mm`
-- `eye_mean_pupil_right_mm`
-- `eye_mean_pupil_mm`
-- `eye_view_mean_gaze_velocity_px_ms`
-- `eye_view_fix_count`
-- `eye_view_mean_fix_dur_ms`
+- `eye_view_blink_count`
+- `eye_view_mean_blink_dur_ms`
 - `eye_view_sacc_count`
 - `eye_view_mean_sacc_dur_ms`
 - `eye_view_mean_sacc_amp_px`
 - `eye_view_mean_sacc_vel_px_ms`
 - `eye_view_peak_sacc_vel_px_ms`
-- `eye_view_blink_count`
-- `eye_view_mean_blink_dur_ms`
+- `eye_mean_openness_pct`
+- `eye_mean_eyelid_dist_mm`
+- `eye_mean_pupil_mm`
+- `eye_view_fix_count`
+- `eye_view_mean_fix_dur_ms`
 
 ## Merge logic
 Default merge keys:
@@ -109,7 +93,7 @@ Default merge keys:
 Behavior:
 - left join on EEG table
 - preserve all EEG rows
-- auto-prefix eye columns with `eye_` when needed to avoid name collisions
+- do not invent a second naming system for scenes; let design labels still come from the same design table path used by EEG
 
 ## Config options
 Add to `config.json`:
@@ -147,6 +131,12 @@ summarize_bandpower_outputs('path/to/eeg_folder', 'config.json')
 - `all_subjects_scene_level.csv`
 - `all_subjects_scene_level_with_eye.csv`
 
+## Suggested uses in EEG analysis
+- Use blink/saccade/openness/tracking metrics as **QC flags**.
+- Use blink/saccade metrics as **artifact-interpretation covariates** when frontal EEG patterns look suspicious.
+- Use pupil/fixation metrics as **secondary state/attention indicators** in multimodal analysis.
+- Do **not** treat eye-tracking as direct EMG measurement; it is best used as indirect evidence for blink/eye-movement-related contamination.
+
 ## What v1 does NOT do yet
 - event-level / trial-level eye segmentation from markers
 - EEG-eye millisecond-level synchronization
@@ -154,6 +144,6 @@ summarize_bandpower_outputs('path/to/eeg_folder', 'config.json')
 
 ## Recommended next steps
 1. Validate 3-5 real eye folders + filenames end-to-end.
-2. Confirm that folder-based `scene_id = (round_id-1)*6 + scene_index_in_round` matches EEG design mapping in all runs.
-3. Add optional QC thresholds for eye-tracking quality (e.g. minimum tracking ratio).
+2. Confirm that folder-based `scene_id = (block_id-1)*6 + cycle_in_block` matches EEG design mapping in all runs.
+3. Add optional eye QC thresholds (e.g. minimum tracking ratio, maximum blink burden).
 4. Add pair-level merged table in v2 if needed.

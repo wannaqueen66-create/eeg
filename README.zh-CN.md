@@ -143,7 +143,8 @@ run_eeg_bandpower_pipeline('path/to/data.set', 'config.json');
 
 ## EEG × 眼动对接
 - 第一版建议：保持 EEG `.set` 分段主流程不变，在批量汇总阶段并入眼动 scene-level 特征。
-- 当前实验约定：一个眼动 CSV = 一个被试 × 一个场景 × 一个 view 段；场景从父文件夹解析（如 `1-1-1_组1-C1W45`），被试从中文文件名解析。
+- 当前实验约定：一个眼动 CSV = 一个被试 × 一个场景 × 一个 view 段；被试从中文文件名解析，父文件夹只提供基础 scene 索引；`scene_name / WWR / Cond / Complexity` 仍建议跟 EEG 共用同一张长表。
+- 眼动优先用于辅助 EEG 的指标：blink、tracking/validity、saccade、eyelid/openness；pupil、fixation 更适合做状态/注意解释。
 - 已新增：
   - `scripts/build_eye_scene_level.py`：从原始眼动 CSV 构建 scene-level 汇总表
   - `+pipeline/merge_eye_scene_features.m`：把眼动 scene-level 表 merge 到 EEG scene-level 总表
