@@ -237,6 +237,11 @@ end
 try
     if exist('AllSceneEye','var') && ~isempty(AllSceneEye)
         out.eye_eeg_links_raw = pipeline.analyze_eye_eeg_links(AllSceneEye, fp_sum, cfg, 'raw');
+        try
+            out.eye_eeg_figs_raw = pipeline.plot_eye_eeg_links(AllSceneEye, fp_sum, cfg, 'raw');
+        catch MEfig
+            fprintf(2, '[WARN] plot_eye_eeg_links(raw) failed: %s\n', MEfig.message);
+        end
     end
 catch ME
     fprintf(2, '[WARN] analyze_eye_eeg_links(raw) failed: %s\n', ME.message);
@@ -261,6 +266,11 @@ try
         end
         AllSceneEye_qc = AllSceneEye(qcMask,:);
         out.eye_eeg_links_qc = pipeline.analyze_eye_eeg_links(AllSceneEye_qc, fp_sum, cfg, 'qc');
+        try
+            out.eye_eeg_figs_qc = pipeline.plot_eye_eeg_links(AllSceneEye_qc, fp_sum, cfg, 'qc');
+        catch MEfig2
+            fprintf(2, '[WARN] plot_eye_eeg_links(qc) failed: %s\n', MEfig2.message);
+        end
     end
 catch ME
     fprintf(2, '[WARN] analyze_eye_eeg_links(qc) failed: %s\n', ME.message);

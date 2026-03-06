@@ -279,6 +279,8 @@ It will also run a minimal exploratory EEG × eye analysis and write artifacts s
 - `analysis-eye/raw/reports/eye_eeg_report.md`
 - `analysis-eye/raw/tables/eye_eeg_correlation_screen.csv`
 - `analysis-eye/raw/tables/eye_eeg_lmm_index.csv` (when `fitlme` is available)
+- `analysis-eye/raw/figures/scatter_*.png`
+- `analysis-eye/raw/figures/box_*_by_eye_qc_review.png`
 
 **中文**
 - 第一版建议：保持 EEG `.set` 分段主流程不变，把眼动特征在批量汇总阶段并入。
