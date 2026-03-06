@@ -39,8 +39,12 @@ These are the most useful eye-derived helpers for EEG cleaning interpretation an
 - `eye_valid_left_ratio`
 - `eye_valid_right_ratio`
 - `eye_view_blink_count`
+- `eye_view_blink_rate_per_min`
 - `eye_view_mean_blink_dur_ms`
+- `eye_view_total_blink_dur_ms`
+- `eye_view_blink_burden_pct`
 - `eye_view_sacc_count`
+- `eye_view_sacc_rate_per_min`
 - `eye_view_mean_sacc_amp_px`
 - `eye_view_mean_sacc_vel_px_ms`
 - `eye_view_peak_sacc_vel_px_ms`
@@ -73,8 +77,12 @@ Typical columns:
 - `eye_valid_left_ratio`
 - `eye_valid_right_ratio`
 - `eye_view_blink_count`
+- `eye_view_blink_rate_per_min`
 - `eye_view_mean_blink_dur_ms`
+- `eye_view_total_blink_dur_ms`
+- `eye_view_blink_burden_pct`
 - `eye_view_sacc_count`
+- `eye_view_sacc_rate_per_min`
 - `eye_view_mean_sacc_dur_ms`
 - `eye_view_mean_sacc_amp_px`
 - `eye_view_mean_sacc_vel_px_ms`
@@ -83,6 +91,7 @@ Typical columns:
 - `eye_mean_eyelid_dist_mm`
 - `eye_mean_pupil_mm`
 - `eye_view_fix_count`
+- `eye_view_fix_rate_per_min`
 - `eye_view_mean_fix_dur_ms`
 
 ## Merge logic

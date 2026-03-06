@@ -100,6 +100,13 @@ def min_if(df: pd.DataFrame, key: str) -> float:
     return float(as_numeric(df[col]).min())
 
 
+def sum_if(df: pd.DataFrame, key: str) -> float:
+    col = find_col(df, COLUMN_ALIASES.get(key, []))
+    if not col:
+        return math.nan
+    return float(as_numeric(df[col]).sum())
+
+
 def unique_count_numeric(s: pd.Series) -> float:
     x = pd.to_numeric(s, errors="coerce").dropna()
     return float(x.nunique()) if len(x) else math.nan
@@ -138,6 +145,18 @@ def validity_ratio(df: pd.DataFrame, key: str) -> float:
 def safe_mean(vals: List[float]) -> float:
     s = pd.Series(vals, dtype="float64")
     return float(s.mean(skipna=True)) if s.notna().any() else math.nan
+
+
+def rate_per_min(count: float, duration_ms: float) -> float:
+    if pd.isna(count) or pd.isna(duration_ms) or duration_ms <= 0:
+        return math.nan
+    return float(count) / (float(duration_ms) / 60000.0)
+
+
+def pct_of_duration(total_ms: float, duration_ms: float) -> float:
+    if pd.isna(total_ms) or pd.isna(duration_ms) or duration_ms <= 0:
+        return math.nan
+    return 100.0 * float(total_ms) / float(duration_ms)
 
 
 def parse_subject_id(path: Path) -> str:
@@ -186,6 +205,7 @@ def summarize_file(path: Path) -> Dict[str, object]:
     ts_col = find_col(df, COLUMN_ALIASES["timestamp_ms"])
     start_ms = float(as_numeric(df[ts_col]).min()) if ts_col else math.nan
     end_ms = float(as_numeric(df[ts_col]).max()) if ts_col else math.nan
+    duration_ms = (end_ms - start_ms) if pd.notna(start_ms) and pd.notna(end_ms) else math.nan
 
     pupil_left = mean_if(df, "pupil_left_mm")
     pupil_right = mean_if(df, "pupil_right_mm")
@@ -199,6 +219,11 @@ def summarize_file(path: Path) -> Dict[str, object]:
     eyelid_right = mean_if(df, "eyelid_dist_right_mm")
     eyelid_mean = safe_mean([eyelid_left, eyelid_right])
 
+    blink_count = unique_if(df, "blink_idx")
+    blink_total_ms = sum_if(df, "blink_dur_ms")
+    sacc_count = unique_if(df, "sacc_idx")
+    fix_count = unique_if(df, "fix_idx")
+
     out = {
         "subject_id": subj,
         **scene_meta,
@@ -206,15 +231,19 @@ def summarize_file(path: Path) -> Dict[str, object]:
         "eye_n_rows": int(len(df)),
         "eye_view_start_ms": start_ms,
         "eye_view_end_ms": end_ms,
-        "eye_view_duration_ms": (end_ms - start_ms) if pd.notna(start_ms) and pd.notna(end_ms) else math.nan,
+        "eye_view_duration_ms": duration_ms,
 
         # High-priority EEG artifact/QC support
         "eye_tracking_ratio": mean_if(df, "tracking_ratio"),
         "eye_valid_left_ratio": validity_ratio(df, "validity_left"),
         "eye_valid_right_ratio": validity_ratio(df, "validity_right"),
-        "eye_view_blink_count": unique_if(df, "blink_idx"),
+        "eye_view_blink_count": blink_count,
+        "eye_view_blink_rate_per_min": rate_per_min(blink_count, duration_ms),
         "eye_view_mean_blink_dur_ms": mean_if(df, "blink_dur_ms"),
-        "eye_view_sacc_count": unique_if(df, "sacc_idx"),
+        "eye_view_total_blink_dur_ms": blink_total_ms,
+        "eye_view_blink_burden_pct": pct_of_duration(blink_total_ms, duration_ms),
+        "eye_view_sacc_count": sacc_count,
+        "eye_view_sacc_rate_per_min": rate_per_min(sacc_count, duration_ms),
         "eye_view_mean_sacc_dur_ms": mean_if(df, "sacc_dur_ms"),
         "eye_view_mean_sacc_amp_px": mean_if(df, "sacc_amp_px"),
         "eye_view_mean_sacc_vel_px_ms": mean_if(df, "sacc_vel_avg"),
@@ -232,7 +261,8 @@ def summarize_file(path: Path) -> Dict[str, object]:
         "eye_mean_pupil_left_mm": pupil_left,
         "eye_mean_pupil_right_mm": pupil_right,
         "eye_mean_pupil_mm": pupil_mean,
-        "eye_view_fix_count": unique_if(df, "fix_idx"),
+        "eye_view_fix_count": fix_count,
+        "eye_view_fix_rate_per_min": rate_per_min(fix_count, duration_ms),
         "eye_view_mean_fix_dur_ms": mean_if(df, "fix_dur_ms"),
         "eye_view_mean_gaze_velocity_px_ms": mean_if(df, "gaze_velocity"),
 
@@ -277,14 +307,15 @@ def main() -> None:
         "subject_id", "scene_id", "block_id", "cycle_in_block", "WWR", "Complexity",
         "eye_source_file", "eye_n_rows", "eye_view_start_ms", "eye_view_end_ms", "eye_view_duration_ms",
         "eye_tracking_ratio", "eye_valid_left_ratio", "eye_valid_right_ratio",
-        "eye_view_blink_count", "eye_view_mean_blink_dur_ms",
-        "eye_view_sacc_count", "eye_view_mean_sacc_dur_ms", "eye_view_mean_sacc_amp_px",
+        "eye_view_blink_count", "eye_view_blink_rate_per_min", "eye_view_mean_blink_dur_ms",
+        "eye_view_total_blink_dur_ms", "eye_view_blink_burden_pct",
+        "eye_view_sacc_count", "eye_view_sacc_rate_per_min", "eye_view_mean_sacc_dur_ms", "eye_view_mean_sacc_amp_px",
         "eye_view_mean_sacc_vel_px_ms", "eye_view_peak_sacc_vel_px_ms",
         "eye_mean_openness_left_pct", "eye_mean_openness_right_pct", "eye_mean_openness_pct",
         "eye_min_openness_left_pct", "eye_min_openness_right_pct",
         "eye_mean_eyelid_dist_left_mm", "eye_mean_eyelid_dist_right_mm", "eye_mean_eyelid_dist_mm",
         "eye_mean_pupil_left_mm", "eye_mean_pupil_right_mm", "eye_mean_pupil_mm",
-        "eye_view_fix_count", "eye_view_mean_fix_dur_ms", "eye_view_mean_gaze_velocity_px_ms",
+        "eye_view_fix_count", "eye_view_fix_rate_per_min", "eye_view_mean_fix_dur_ms", "eye_view_mean_gaze_velocity_px_ms",
         "eye_user", "eye_record_name", "eye_sex", "eye_lens_right", "eye_lens_left",
         "raw_scene_folder", "eye_parse_error",
     ]

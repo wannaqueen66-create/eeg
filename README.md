@@ -240,6 +240,8 @@ Also:
   - `+pipeline/merge_eye_scene_features.m`
 - Detailed plan:
   - `docs/eye_integration.md`
+- Eye QC guidance:
+  - `docs/eye_qc_recommendations.md`
 
 Example workflow:
 ```bash

@@ -149,6 +149,7 @@ run_eeg_bandpower_pipeline('path/to/data.set', 'config.json');
   - `scripts/build_eye_scene_level.py`：从原始眼动 CSV 构建 scene-level 汇总表
   - `+pipeline/merge_eye_scene_features.m`：把眼动 scene-level 表 merge 到 EEG scene-level 总表
   - `docs/eye_integration.md`：详细接入方案
+  - `docs/eye_qc_recommendations.md`：眼动如何辅助 EEG QC / 伪迹解释的建议
 
 示例：
 ```bash
