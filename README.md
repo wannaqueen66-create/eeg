@@ -282,6 +282,8 @@ It will also run a minimal exploratory EEG × eye analysis and write artifacts s
 - `analysis-eye/raw/figures/scatter_*.png`
 - `analysis-eye/raw/figures/box_*_by_eye_qc_review.png`
 
+The exploratory figures are styled to stay visually close to the repository's existing box/scatter reporting style (clean white background, blue/orange paired palette, light grid, semi-transparent boxes + points).
+
 **中文**
 - 第一版建议：保持 EEG `.set` 分段主流程不变，把眼动特征在批量汇总阶段并入。
 - 已提供：
