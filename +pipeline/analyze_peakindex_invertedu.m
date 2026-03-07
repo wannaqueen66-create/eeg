@@ -191,21 +191,21 @@ for ai = 1:numel(analyses)
         catch
         end
 
-        % round-wise PeakIndex check (Block1 / Block2)
+        % block-wise PeakIndex check (Block1 / Block2)
         try
             if hasBlock && ismember('block_id', T.Properties.VariableNames)
-                KR = collect_peakindex_by_round(T);
+                KR = collect_peakindex_by_block(T);
                 if ~isempty(KR) && height(KR)>0
                     fp_round = fullfile(fp_tbl, sprintf('peakindex_subjectlevel_round_%s_%s.csv', dv, tag));
                     writetable(KR, fp_round);
-                    RR = summarize_peakindex_round(KR, string(A.name), dv);
+                    RR = summarize_peakindex_block(KR, string(A.name), dv);
                     if ~isempty(RR) && height(RR)>0
                         SumRoundRows = [SumRoundRows; RR]; %#ok<AGROW>
                     end
                 end
             end
         catch ME
-            warning('analyze_peakindex_invertedu: round-wise peakindex failed (%s/%s/%s): %s', tag, A.name, dv, ME.message);
+            warning('analyze_peakindex_invertedu: block-wise peakindex failed (%s/%s/%s): %s', tag, A.name, dv, ME.message);
         end
     end
 
@@ -229,8 +229,8 @@ for ai = 1:numel(analyses)
             if ~isempty(SumRoundRows) && height(SumRoundRows)>0
                 fp_csv_round = fullfile(fp_tbl_over, sprintf('peakindex_round_summary_%s.csv', tag));
                 writetable(SumRoundRows, fp_csv_round);
-                fp_png_round = fullfile(fp_fig_over, pipeline.sanitize_filename(sprintf('peakindex_round_overview_%s_%s.png', tag, A.name)));
-                plot_peakindex_round_overview(SumRoundRows, metrics, tag, A.name, fp_png_round);
+                fp_png_round = fullfile(fp_fig_over, pipeline.sanitize_filename(sprintf('peakindex_block_overview_%s_%s.png', tag, A.name)));
+                plot_peakindex_block_overview(SumRoundRows, metrics, tag, A.name, fp_png_round);
             end
         end
     catch ME
@@ -240,7 +240,7 @@ end
 
 end
 
-function KR = collect_peakindex_by_round(T)
+function KR = collect_peakindex_by_block(T)
 KR = table();
 if ~ismember('block_id', T.Properties.VariableNames)
     return;
@@ -278,7 +278,7 @@ for b = [1 2]
 end
 end
 
-function SR = summarize_peakindex_round(KR, analysisName, dv)
+function SR = summarize_peakindex_block(KR, analysisName, dv)
 SR = table();
 for b = [1 2]
     Kb = KR(double(KR.round)==b,:);
@@ -300,7 +300,7 @@ for b = [1 2]
 end
 end
 
-function plot_peakindex_round_overview(SumRoundRows, metrics, tag, analysisName, fp_png)
+function plot_peakindex_block_overview(SumRoundRows, metrics, tag, analysisName, fp_png)
 M = string(metrics(:));
 nC = numel(M);
 Z = nan(2,nC); P = nan(2,nC); MU = nan(2,nC); N = nan(2,nC);
@@ -329,9 +329,9 @@ colormap(ax, [0.94 0.94 0.94; 0.22 0.63 0.53]);
 cb = colorbar(ax); cb.Ticks = [0 1]; cb.TickLabels = {'not Inverted-U','Inverted-U'}; cb.Label.String = 'PeakIndex verdict';
 caxis(ax,[0 1]);
 set(ax,'XTick',1:nC,'XTickLabel',cellstr(M));
-set(ax,'YTick',[1 2],'YTickLabel',{'Round1 / Block1','Round2 / Block2'});
+set(ax,'YTick',[1 2],'YTickLabel',{'Block1','Block2'});
 xtickangle(ax,20);
-title(ax, sprintf('Task5 PeakIndex by round | %s [%s]', analysisName, tag), 'Interpreter','none');
+title(ax, sprintf('Task5 PeakIndex by block | %s [%s]', analysisName, tag), 'Interpreter','none');
 
 for r=1:2
     for c=1:nC

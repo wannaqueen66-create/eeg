@@ -1,5 +1,5 @@
 function plot_group_scene_sequences(AllScene, fp_sum, cfg, tag)
-%PLOT_GROUP_SCENE_SEQUENCES Group-level scene sequence plots (round1..12) under summary/fig.
+%PLOT_GROUP_SCENE_SEQUENCES Group-level scene sequence plots (scene_id 1..12; two blocks) under summary/fig.
 %
 % Plots main metrics across scene_id with x-axis labels using scene_name/SceneID.
 % For each factor (Experience/SportFreq): plot group mean±SEM per scene.
@@ -237,7 +237,7 @@ else
     if ismember('Cond', T.Properties.VariableNames); c = string(T.Cond); end
     for i=1:height(T)
         if ~isnan(T.scene_id(i))
-            labels(i) = "round" + sprintf('%02d', T.scene_id(i)) + "_W" + w(i) + "_" + c(i);
+            labels(i) = "scene" + sprintf('%02d', T.scene_id(i)) + "_W" + w(i) + "_" + c(i);
         end
     end
 end

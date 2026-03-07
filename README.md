@@ -48,7 +48,7 @@ MATLAB/EEGLAB pipeline for **VR scene-viewing EEG bandpower analysis**.
 4→9  Eyes open baseline / 睁眼基线
 (7→8→9) × 6  Scene viewing → small questionnaire → gray
 8→5  Block-end questionnaire → rest
-(7→8→9) × 6  Second block
+(7→8→9) × 6  Block 2
 8→6  Final questionnaire (end)
 ```
 

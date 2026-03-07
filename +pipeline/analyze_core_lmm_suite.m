@@ -842,7 +842,7 @@ for ai=1:numel(analyses)
     cb = colorbar(ax); cb.Ticks = [0 1]; cb.TickLabels = {'not Inverted-U','Inverted-U'}; cb.Label.String = 'quadratic verdict';
     caxis(ax,[0 1]);
     set(ax,'XTick',1:numel(mets),'XTickLabel',cellstr(mets));
-    set(ax,'YTick',[1 2],'YTickLabel',{'Round1 / Block1','Round2 / Block2'});
+    set(ax,'YTick',[1 2],'YTickLabel',{'Block1','Block2'});
     xtickangle(ax,20);
     title(ax, sprintf('Task4 inverted-U by round | %s [%s]', an, tag), 'Interpreter','none');
 
