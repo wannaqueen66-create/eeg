@@ -197,13 +197,19 @@ fp_tbl_qc = fp_sum;
 fp_rep = fp_sum;
 fp_aud = fp_sum;
 try
-    if exist('pipeline.get_table_dir','file')==2
+    if exist(fullfile(fp_sum, 'qc'),'dir')
+        fp_tbl_qc = fullfile(fp_sum, 'qc');
+    elseif exist('pipeline.get_table_dir','file')==2
         fp_tbl_qc = pipeline.get_table_dir(fp_sum, cfg, 'merged_qc');
     end
-    if exist('pipeline.get_report_dir','file')==2
+    if exist(fullfile(fp_sum, 'reports'),'dir')
+        fp_rep = fullfile(fp_sum, 'reports');
+    elseif exist('pipeline.get_report_dir','file')==2
         fp_rep = pipeline.get_report_dir(fp_sum, cfg);
     end
-    if exist('pipeline.get_audit_dir','file')==2
+    if exist(fullfile(fp_sum, 'audit'),'dir')
+        fp_aud = fullfile(fp_sum, 'audit');
+    elseif exist('pipeline.get_audit_dir','file')==2
         fp_aud = pipeline.get_audit_dir(fp_sum, cfg);
     end
 catch

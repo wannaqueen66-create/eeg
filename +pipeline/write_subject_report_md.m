@@ -2,9 +2,15 @@ function md_path = write_subject_report_md(fp_sub, base, this_file, cfg, T)
 %WRITE_SUBJECT_REPORT_MD Write a compact markdown report per subject.
 %
 % Creates:
-%   <fp_sub>/<base>_report.md
+%   <fp_sub>/report/<base>_report.md   (new staged layout)
+%   or legacy-compatible root report when no report dir exists
 
-md_path = fullfile(fp_sub, sprintf('%s_report.md', base));
+fp_rep = fullfile(fp_sub, 'report');
+if exist(fp_rep,'dir')
+    md_path = fullfile(fp_rep, sprintf('%s_report.md', base));
+else
+    md_path = fullfile(fp_sub, sprintf('%s_report.md', base));
+end
 
 try
     fid = fopen(md_path, 'w');
@@ -43,6 +49,9 @@ try
     % Pairing summary (from exported pairs_check if exists)
     fprintf(fid, '## View–Gray pairing summary\n\n');
     pairsFile = fullfile(fp_sub, 'qc', sprintf('%s_pairs_check.csv', base));
+    if ~exist(pairsFile, 'file')
+        pairsFile = fullfile(fp_sub, sprintf('%s_pairs_check.csv', base));
+    end
     if exist(pairsFile, 'file')
         try
             P = readtable(pairsFile);
@@ -88,8 +97,16 @@ try
     fprintf(fid, '\n');
 
     fprintf(fid, '## Outputs\n\n');
-    fprintf(fid, '- CSV: `%s`\n', fullfile(fp_sub, 'csv'));
-    fprintf(fid, '- Figures: `%s`\n', fullfile(fp_sub, 'fig'));
+    if exist(fullfile(fp_sub, 'tables'),'dir')
+        fprintf(fid, '- Tables: `%s`\n', fullfile(fp_sub, 'tables'));
+    else
+        fprintf(fid, '- CSV: `%s`\n', fullfile(fp_sub, 'csv'));
+    end
+    if exist(fullfile(fp_sub, 'figures'),'dir')
+        fprintf(fid, '- Figures: `%s`\n', fullfile(fp_sub, 'figures'));
+    else
+        fprintf(fid, '- Figures: `%s`\n', fullfile(fp_sub, 'fig'));
+    end
     fprintf(fid, '- QC: `%s`\n', fullfile(fp_sub, 'qc'));
 
     fclose(fid);

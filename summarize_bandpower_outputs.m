@@ -20,9 +20,13 @@ end
 cfg = pipeline.load_config(config_path);
 fp_out = pipeline.get_output_root(input_folder, cfg);
 
-% Summary base directory is stable under output root
+% Batch root under staged layout (or legacy summary root when applicable)
 fp_sum_base = pipeline.get_summary_dir(input_folder, cfg);
 fp_sum = fp_sum_base;
+fp_batch_merged = pipeline.get_batch_merged_dir(input_folder, cfg);
+fp_batch_qc = pipeline.get_batch_qc_dir(input_folder, cfg);
+fp_batch_reports = pipeline.get_batch_report_dir(input_folder, cfg);
+fp_batch_audit = pipeline.get_batch_audit_dir(input_folder, cfg);
 
 % Optional: timestamp summary outputs only (keeps per-subject outputs stable)
 try
@@ -89,10 +93,7 @@ catch
 end
 
 % List subject folders
-D = dir(fp_out);
-D = D([D.isdir]);
-subs = setdiff({D.name}, {'.','..','summary'});
-subs = sort(subs);
+subs = cellstr(pipeline.list_subject_ids(input_folder, cfg));
 
 AllScene = table();
 AllPairs = table();
@@ -105,7 +106,10 @@ for k = 1:numel(subs)
     sid = string(subs{k});
 
     % scene_level
-    f_scene = fullfile(fp_out, char(sid), 'csv', sprintf('%s_scene_level.csv', sid));
+    f_scene = fullfile(pipeline.get_subject_table_dir(input_folder, char(sid), cfg), sprintf('%s_scene_level.csv', sid));
+    if ~exist(f_scene, 'file')
+        f_scene = fullfile(pipeline.get_subject_dir(input_folder, char(sid), cfg), 'csv', sprintf('%s_scene_level.csv', sid));
+    end
     if exist(f_scene, 'file')
         try
             T = readtable(f_scene);
@@ -117,7 +121,10 @@ for k = 1:numel(subs)
     end
 
     % pairs_check
-    f_pairs = fullfile(fp_out, char(sid), 'qc', sprintf('%s_pairs_check.csv', sid));
+    f_pairs = fullfile(pipeline.get_subject_qc_dir(input_folder, char(sid), cfg), sprintf('%s_pairs_check.csv', sid));
+    if ~exist(f_pairs, 'file')
+        f_pairs = fullfile(pipeline.get_subject_dir(input_folder, char(sid), cfg), 'qc', sprintf('%s_pairs_check.csv', sid));
+    end
     if exist(f_pairs, 'file')
         try
             P = readtable(f_pairs);
@@ -147,7 +154,7 @@ end
 out = struct();
 
 % Write merged tables
-fp_tbl_raw = pipeline.get_table_dir(fp_sum, cfg, 'merged_raw');
+fp_tbl_raw = fp_batch_merged;
 if ~isempty(AllScene)
     out.all_subjects_scene_level = fullfile(fp_tbl_raw, 'all_subjects_scene_level.csv');
     writetable(AllScene, out.all_subjects_scene_level);

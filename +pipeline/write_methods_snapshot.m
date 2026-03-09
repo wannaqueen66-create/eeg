@@ -2,7 +2,9 @@ function write_methods_snapshot(fp_sum, cfg)
 %WRITE_METHODS_SNAPSHOT Write a journal-friendly methods snapshot markdown.
 
 fp_rep = fp_sum;
-if exist('pipeline.get_report_dir','file')==2
+if exist(fullfile(fp_sum, 'reports'),'dir')
+    fp_rep = fullfile(fp_sum, 'reports');
+elseif exist('pipeline.get_report_dir','file')==2
     fp_rep = pipeline.get_report_dir(fp_sum, cfg);
 end
 md = fullfile(fp_rep, 'methods_snapshot.md');
