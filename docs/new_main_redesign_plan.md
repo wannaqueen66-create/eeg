@@ -357,6 +357,11 @@ Not necessarily deleted from the repository, but removed from the default visibl
 3. Route selected models into `inferential/overall`
 4. Route selected experience models into `inferential/experience`
 
+### Status note
+A first implementation pass may begin as a curated mirror layer built on top of the existing task outputs,
+rather than a full immediate rewrite of all internal task logic.
+This is acceptable as a transition step.
+
 ## Phase 4 — Reduce visible surface area
 1. De-emphasize SportFreq in default outputs
 2. Keep advanced task outputs optional or internal

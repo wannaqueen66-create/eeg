@@ -40,11 +40,15 @@ bandpower_outputs/
     current/
       subjects/
       batch/
+        descriptive/
+        inferential/
 ```
 
 Meaning:
 - `subjects/` = per-subject outputs / 单被试输出
 - `batch/` = cross-subject outputs / 跨被试输出
+- `descriptive/` = cleaner descriptive result surface / 更简洁的描述性结果层
+- `inferential/` = cleaner inferential result surface / 更简洁的显著性分析层
 
 ---
 
@@ -143,6 +147,8 @@ runs/current/batch/
   audit/
   analysis/
   paper/
+  descriptive/
+  inferential/
 ```
 
 ## 4.1 `merged/`
@@ -220,7 +226,54 @@ Recommended interpretation:
 
 ---
 
-# 5. Analysis outputs / 正式分析输出
+# 5. Curated redesigned-main outputs / 面向新 main 的简化输出
+
+Typical structure:
+
+```text
+runs/current/batch/descriptive/
+  overall/
+  experience/
+
+runs/current/batch/inferential/
+  overall/
+  experience/
+```
+
+## 5.1 `descriptive/overall/`
+Main full-sample descriptive tables and reports.
+全样本描述性结果入口。
+
+Expected content:
+- scene-level descriptive tables
+- pair/recovery descriptive tables
+- basic report files
+
+## 5.2 `descriptive/experience/`
+Experience-group descriptive outputs.
+Experience 分组描述性结果入口。
+
+Expected content:
+- experience-group scene tables
+- experience-group recovery tables
+- simplified group summary tables
+- selected experience-oriented figures (when available)
+
+## 5.3 `inferential/overall/`
+Curated full-sample inferential entry point.
+全样本显著性分析的整理入口。
+
+## 5.4 `inferential/experience/`
+Curated experience-group inferential entry point.
+Experience 分组显著性分析的整理入口。
+
+This layer mirrors selected outputs from the detailed task-based analysis tree,
+so users can read the redesigned main outputs without navigating every task folder first.
+
+这一层会镜像 task 分析中的重点输出，
+让使用者不必先进入每个 task 目录也能找到新的 main 主输出。
+
+# 6. Analysis outputs / 正式分析输出（详细 task 层）
 
 Typical structure:
 

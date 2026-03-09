@@ -523,6 +523,13 @@ catch ME
     fprintf(2, '[WARN] write_analysis2_master_report failed: %s\n', ME.message);
 end
 
+% Build a cleaner public-facing output surface for the redesigned main branch
+try
+    pipeline.build_curated_main_outputs(fp_sum, cfg, AllScene, AllPairs, AllScene_qc, AllPairs_qc);
+catch ME
+    fprintf(2, '[WARN] build_curated_main_outputs failed: %s\n', ME.message);
+end
+
 fprintf('Batch summaries written to: %s\n', fp_sum);
 
 % Close summary-stage diary if we started it
