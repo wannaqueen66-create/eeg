@@ -273,6 +273,16 @@ so users can read the redesigned main outputs without navigating every task fold
 这一层会镜像 task 分析中的重点输出，
 让使用者不必先进入每个 task 目录也能找到新的 main 主输出。
 
+Current default emphasis of the redesigned main branch:
+- prioritize `overall`
+- prioritize `experience`
+- keep `SportFreq` in the detailed task tree instead of promoting it to the default curated surface
+
+当前新 main 的默认强调顺序是：
+- 优先 `overall`
+- 优先 `experience`
+- `SportFreq` 暂时保留在详细 task 层，不提升为默认 curated 主输出
+
 # 6. Analysis outputs / 正式分析输出（详细 task 层）
 
 Typical structure:

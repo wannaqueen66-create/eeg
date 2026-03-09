@@ -8,6 +8,13 @@ function out = build_curated_main_outputs(fp_sum, cfg, AllScene, AllPairs, AllSc
 %
 % The goal is to give the repository a clearer public-facing structure while
 % preserving the current detailed task outputs underneath.
+%
+% Current redesign priority:
+% - overall
+% - experience
+%
+% SportFreq remains available in the detailed task outputs, but is not exposed
+% as a first-class curated surface in the redesigned main branch.
 
 if nargin < 6; AllPairs_qc = table(); end
 if nargin < 5; AllScene_qc = table(); end
@@ -26,6 +33,23 @@ fp_desc = fullfile(fp_sum, 'descriptive');
 fp_inf  = fullfile(fp_sum, 'inferential');
 mkdir_if_needed(fp_desc);
 mkdir_if_needed(fp_inf);
+
+% Root-level guide for the redesigned main output surface
+try
+    fid = fopen(fullfile(fp_sum, 'README_CURATED_MAIN.md'),'w');
+    if fid>0
+        fprintf(fid, '# Curated Main Output Surface\n\n');
+        fprintf(fid, 'Priority reading order for the redesigned main branch:\n');
+        fprintf(fid, '1. `descriptive/overall/`\n');
+        fprintf(fid, '2. `descriptive/experience/`\n');
+        fprintf(fid, '3. `inferential/overall/`\n');
+        fprintf(fid, '4. `inferential/experience/`\n\n');
+        fprintf(fid, 'The detailed task-based outputs remain available under `analysis/`, but the redesigned main branch intentionally prioritizes only two visible branches by default: `overall` and `experience`.\n\n');
+        fprintf(fid, 'Note: SportFreq analyses are still present in detailed outputs, but are currently treated as secondary rather than first-class curated outputs.\n');
+        fclose(fid);
+    end
+catch
+end
 
 % ---------- descriptive / overall ----------
 fp_do = fullfile(fp_desc, 'overall');
@@ -424,7 +448,13 @@ cands = {
     fullfile(fp_sum,'analysis','task4_core_lmm_suite','raw','tables','factor_WWR','experience'), ...
     fullfile(fp_sum,'analysis','task4_core_lmm_suite','qc','tables','factor_WWR','experience'), ...
     fullfile(fp_sum,'analysis','task3_trialindex_lmm','raw','tables','experience'), ...
-    fullfile(fp_sum,'analysis','task3_trialindex_lmm','qc','tables','experience') ...
+    fullfile(fp_sum,'analysis','task3_trialindex_lmm','qc','tables','experience'), ...
+    fullfile(fp_sum,'analysis','task5_peakindex_invertedu','raw','tables','experience'), ...
+    fullfile(fp_sum,'analysis','task5_peakindex_invertedu','qc','tables','experience'), ...
+    fullfile(fp_sum,'analysis','task6_coremetric_special','raw','tables','experience'), ...
+    fullfile(fp_sum,'analysis','task6_coremetric_special','qc','tables','experience'), ...
+    fullfile(fp_sum,'analysis','task7_individual_checks','raw','tables','experience'), ...
+    fullfile(fp_sum,'analysis','task7_individual_checks','qc','tables','experience') ...
 };
 for ci=1:numel(cands)
     d = cands{ci};
@@ -437,18 +467,46 @@ end
 if ~isempty(rows)
     T = cell2table(rows, 'VariableNames', {'file_name','source_path'});
     writetable(T, fullfile(fp_tbl,'experience_inferential_file_index.csv'));
+
+    try
+        task = repmat("", height(T), 1);
+        for i=1:height(T)
+            s = lower(string(T.source_path(i)));
+            if contains(s,'task3_trialindex_lmm')
+                task(i) = 'task3_trialindex_lmm';
+            elseif contains(s,'task4_core_lmm_suite')
+                task(i) = 'task4_core_lmm_suite';
+            elseif contains(s,'task5_peakindex_invertedu')
+                task(i) = 'task5_peakindex_invertedu';
+            elseif contains(s,'task6_coremetric_special')
+                task(i) = 'task6_coremetric_special';
+            elseif contains(s,'task7_individual_checks')
+                task(i) = 'task7_individual_checks';
+            else
+                task(i) = 'other';
+            end
+        end
+        T.task = task;
+        T2 = groupsummary(T, 'task', 'numel', 'file_name');
+        if ~isempty(T2)
+            writetable(T2, fullfile(fp_tbl, 'experience_inferential_task_counts.csv'));
+        end
+    catch
+    end
 end
 fid = fopen(fullfile(fp_rep,'README.md'),'w');
 if fid>0
     fprintf(fid, '# Inferential / Experience\n\n');
     fprintf(fid, 'This folder is the curated entry point for experience-group inferential outputs.\n');
-    fprintf(fid, 'Use `experience_inferential_file_index.csv` as the fastest file-level map into the detailed analysis outputs.\n\n');
+    fprintf(fid, 'Use `experience_inferential_file_index.csv` as the fastest file-level map into the detailed analysis outputs.\n');
+    fprintf(fid, 'Use `experience_inferential_task_counts.csv` as a quick summary of which task families currently contribute files here.\n\n');
     fprintf(fid, 'Primary source tasks currently include:\n');
     fprintf(fid, '- task3_trialindex_lmm\n');
     fprintf(fid, '- task4_core_lmm_suite\n');
     fprintf(fid, '- task5_peakindex_invertedu\n');
     fprintf(fid, '- task6_coremetric_special\n');
-    fprintf(fid, '- task7_individual_checks\n');
+    fprintf(fid, '- task7_individual_checks\n\n');
+    fprintf(fid, 'SportFreq outputs remain available in the detailed analysis tree, but are not elevated to a first-class curated branch in the redesigned main output surface.\n');
     fclose(fid);
 end
 end

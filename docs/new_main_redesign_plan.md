@@ -120,6 +120,14 @@ This means:
 - but remove it from the default main output surface
 - keep it optional, secondary, or archived in `raw`
 
+### Current implementation direction
+The redesigned main branch should prefer:
+- direct summary tables for `overall`
+- direct grouped summary tables for `experience`
+- mirrored inferential entry files for `experience`
+
+while keeping `SportFreq` accessible only through detailed task outputs unless explicitly re-promoted later.
+
 ## 5.3 Simplify the visible research narrative
 The new `main` should focus on:
 
