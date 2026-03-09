@@ -570,12 +570,55 @@ for i=1:numel(files)
         break;
     end
 end
+
+% file-level index for overall-oriented task outputs
+rows = {};
+cands = {
+    fullfile(fp_sum,'analysis','task4_core_lmm_suite','raw'), ...
+    fullfile(fp_sum,'analysis','task4_core_lmm_suite','qc'), ...
+    fullfile(fp_sum,'analysis','task5_peakindex_invertedu','raw'), ...
+    fullfile(fp_sum,'analysis','task5_peakindex_invertedu','qc') ...
+};
+for ci=1:numel(cands)
+    d = cands{ci};
+    if ~exist(d,'dir'); continue; end
+    F = dir(fullfile(d,'**','*.csv'));
+    for i=1:numel(F)
+        rows(end+1,:) = {string(F(i).name), string(fullfile(F(i).folder, F(i).name))}; %#ok<AGROW>
+    end
+end
+if ~isempty(rows)
+    T = cell2table(rows, 'VariableNames', {'file_name','source_path'});
+    writetable(T, fullfile(fp_tbl,'overall_inferential_file_index.csv'));
+    try
+        task = repmat("", height(T), 1);
+        for i=1:height(T)
+            s = lower(string(T.source_path(i)));
+            if contains(s,'task4_core_lmm_suite')
+                task(i) = 'task4_core_lmm_suite';
+            elseif contains(s,'task5_peakindex_invertedu')
+                task(i) = 'task5_peakindex_invertedu';
+            else
+                task(i) = 'other';
+            end
+        end
+        T.task = task;
+        T2 = groupsummary(T, 'task', 'numel', 'file_name');
+        if ~isempty(T2)
+            writetable(T2, fullfile(fp_tbl,'overall_inferential_task_counts.csv'));
+            plot_task_count_bar(T2, fullfile(fp_fig, 'overall_inferential_task_counts.png'));
+        end
+    catch
+    end
+end
+
 fid = fopen(fullfile(fp_rep,'README.md'),'w');
 if fid>0
     fprintf(fid, '# Inferential / Overall\n\n');
     fprintf(fid, 'This folder is the curated entry point for full-sample inferential outputs.\n\n');
     fprintf(fid, 'Current repository state still stores detailed inferential machinery in task-based folders under `batch/analysis/`.\n');
     fprintf(fid, 'If present, `MASTER_REPORT.md` is copied here as the fastest overall inferential summary.\n');
+    fprintf(fid, 'Additional file-level maps may be provided via `overall_inferential_file_index.csv` and `overall_inferential_task_counts.csv`.\n');
     fclose(fid);
 end
 end
@@ -1182,6 +1225,11 @@ if fid>0
  fprintf(fid,'Key summary files:\n');
  fprintf(fid,'- `overall_inferential_summary_%s.csv`\n', tag);
  fprintf(fid,'- `overall_inferential_heatmap_%s.png`\n', tag);
+ fprintf(fid,'- `overall_wwr_trend_summary_%s.csv`\n', tag);
+ fprintf(fid,'- `overall_wwr_trend_heatmap_%s.png`\n', tag);
+ fprintf(fid,'- `overall_inferential_file_index.csv`\n');
+ fprintf(fid,'- `overall_inferential_task_counts.csv`\n');
+ fprintf(fid,'- `overall_inferential_task_counts.png`\n');
  fclose(fid);
 end
 end
@@ -1193,9 +1241,35 @@ if fid>0
  fprintf(fid,'Key summary files:\n');
  fprintf(fid,'- `experience_inferential_summary_%s.csv`\n', tag);
  fprintf(fid,'- `experience_inferential_heatmap_%s.png`\n', tag);
+ fprintf(fid,'- `experience_wwr_trend_summary_%s.csv`\n', tag);
+ fprintf(fid,'- `experience_wwr_trend_heatmap_%s.png`\n', tag);
  fprintf(fid,'- `experience_inferential_file_index.csv`\n');
+ fprintf(fid,'- `experience_inferential_task_counts.csv`\n');
+ fprintf(fid,'- `experience_inferential_task_counts.png`\n');
  fclose(fid);
 end
+end
+
+function plot_task_count_bar(T, fp_png)
+if isempty(T) || height(T)==0
+    return;
+end
+set(0,'DefaultFigureVisible','off');
+fig = figure('Color','w','Position',[100 100 920 420]);
+ax = axes(fig); hold(ax,'on'); style_axes(ax);
+vals = double(T.GroupCount);
+labels = string(T.task);
+x = 1:numel(vals);
+bar(ax, x, vals, 0.58, 'FaceColor',[0.82 0.88 0.95], 'EdgeColor','none');
+set(ax,'XTick',x,'XTickLabel',cellstr(labels));
+xtickangle(ax,20);
+ylabel(ax,'Number of CSV files');
+title(ax,'Experience inferential task coverage', 'Interpreter','none', 'FontWeight','normal');
+for i=1:numel(x)
+    text(ax, x(i), vals(i)+max(0.2,0.05*max(vals)), sprintf('%d', round(vals(i))), 'HorizontalAlignment','center', 'FontSize',8, 'Color',[0.18 0.18 0.18], 'BackgroundColor',[1 1 1], 'Margin',1.5);
+end
+pipeline.export_figure_png(fig, fp_png, 300);
+try; close(fig); catch; end
 end
 
 function v = to_table_compat(X)
@@ -1278,6 +1352,7 @@ if ~isempty(rows)
         T2 = groupsummary(T, 'task', 'numel', 'file_name');
         if ~isempty(T2)
             writetable(T2, fullfile(fp_tbl, 'experience_inferential_task_counts.csv'));
+            plot_task_count_bar(T2, fullfile(fp_fig, 'experience_inferential_task_counts.png'));
         end
     catch
     end
