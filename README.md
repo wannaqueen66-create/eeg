@@ -1,5 +1,9 @@
 # EEG Bandpower Pipeline / EEG 频段功率分析流水线
 
+> Branch note / 分支说明：当前分支 `feature/eeg-eye-integration` 用于保留 **EEG × eye-tracking** 融合相关实现与探索。  
+> The pure EEG MATLAB/EEGLAB mainline is kept on branch `main`.  
+> 纯 EEG 的 MATLAB/EEGLAB 主线保留在 `main` 分支。
+
 MATLAB/EEGLAB pipeline for **VR scene-viewing EEG bandpower analysis**.  
 用于 **VR 场景观看实验 EEG 频段功率分析** 的 MATLAB/EEGLAB 流水线。
 
