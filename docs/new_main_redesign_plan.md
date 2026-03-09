@@ -423,5 +423,9 @@ Recommended next move:
   - **overall**
   - **experience**
 - preserve the core EEG MATLAB logic, but simplify the repository surface
+- enforce a consistent visible folder rule:
+  - `tables/` for CSV only
+  - `figures/` for PNG only
+  - `report/` for README/markdown only
 
 This approach avoids throwing away the current work while making the future `main` far more coherent.

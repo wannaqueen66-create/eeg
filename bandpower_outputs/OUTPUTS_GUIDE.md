@@ -248,6 +248,12 @@ Expected content:
 - scene-level descriptive tables
 - pair/recovery descriptive tables
 - basic report files
+- matching PNG figures in `figures/`
+
+Typical mapping:
+- `overall_scene_metric_means_*.csv` -> `overall_metric_bar_*.png`
+- `overall_scene_metric_means_by_WWR_Complexity_*.csv` -> `overall_factor_grid_*.png`
+- `overall_recovery_means_*.csv` -> `overall_recovery_bar_*.png`
 
 ## 5.2 `descriptive/experience/`
 Experience-group descriptive outputs.
@@ -259,13 +265,28 @@ Expected content:
 - simplified group summary tables
 - selected experience-oriented figures (when available)
 
+Typical mapping:
+- `experience_scene_metric_means_*.csv` -> `experience_metric_bar_*.png`
+- `experience_scene_metric_means_by_WWR_Complexity_*.csv` -> `experience_factor_grid_*.png`
+- `experience_recovery_means_*.csv` -> `experience_recovery_bar_*.png`
+
 ## 5.3 `inferential/overall/`
 Curated full-sample inferential entry point.
 全样本显著性分析的整理入口。
 
+Typical mapping:
+- `overall_inferential_summary_*.csv` -> `overall_inferential_heatmap_*.png`
+- `overall_wwr_trend_summary_*.csv` -> `overall_wwr_trend_heatmap_*.png`
+- `overall_inferential_task_counts.csv` -> `overall_inferential_task_counts.png`
+
 ## 5.4 `inferential/experience/`
 Curated experience-group inferential entry point.
 Experience 分组显著性分析的整理入口。
+
+Typical mapping:
+- `experience_inferential_summary_*.csv` -> `experience_inferential_heatmap_*.png`
+- `experience_wwr_trend_summary_*.csv` -> `experience_wwr_trend_heatmap_*.png`
+- `experience_inferential_task_counts.csv` -> `experience_inferential_task_counts.png`
 
 This layer mirrors selected outputs from the detailed task-based analysis tree,
 so users can read the redesigned main outputs without navigating every task folder first.
@@ -282,6 +303,23 @@ Current default emphasis of the redesigned main branch:
 - 优先 `overall`
 - 优先 `experience`
 - `SportFreq` 暂时保留在详细 task 层，不提升为默认 curated 主输出
+
+## Folder rule / 文件夹硬规则
+For the redesigned main branch, each visible analysis node should follow:
+
+```text
+<node>/
+  tables/   % CSV only
+  figures/  % PNG only
+  report/   % README / markdown only
+```
+
+也就是说：
+- `tables/` 里只放表格（CSV）
+- `figures/` 里只放图片（PNG）
+- `report/` 里只放说明文档（README/MD）
+
+不要把 CSV 和 PNG 混在同一个文件夹里。
 
 # 6. Analysis outputs / 正式分析输出（详细 task 层）
 
