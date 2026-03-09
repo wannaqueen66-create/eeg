@@ -52,6 +52,10 @@ try
     end
 catch
 end
+try
+    pipeline.write_curated_readme_index(fp_sum);
+catch
+end
 
 % ---------- descriptive / overall ----------
 fp_do = fullfile(fp_desc, 'overall');

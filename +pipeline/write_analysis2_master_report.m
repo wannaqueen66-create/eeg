@@ -37,7 +37,7 @@ metrics = {"O_theta","F_theta","O_alpha","O_beta"};
 
 lines = {};
 add('##HEADER##');
-add('# Analysis-2 MASTER REPORT');
+add('# Analysis MASTER REPORT');
 add('');
 add(sprintf('Generated: %s', datestr(now,31)));
 add('');
@@ -98,9 +98,9 @@ for it = 1:numel(tags)
         add('');
 
         % links
-        add('- Task5 PeakIndex files: `analysis-2/task5_peakindex_invertedU/...`');
-        add('- Task6 core-metric special files: `analysis/task6_coremetric_special/...` (legacy fallback: `analysis-2/task6_obeta_special/...`)');
-        add('- Task7 individual checks: `analysis-2/task7_individual_checks/...`');
+        add('- Task5 PeakIndex files: `analysis/task5_peakindex_invertedu/...` (legacy fallback may still appear under `analysis-2/...`)');
+        add('- Task6 core-metric special files: `analysis/task6_coremetric_special/...` (legacy fallback may still appear under `analysis-2/task6_obeta_special/...`)');
+        add('- Task7 individual checks: `analysis/task7_individual_checks/...` (legacy fallback may still appear under `analysis-2/...`)');
         add('');
     end
 end

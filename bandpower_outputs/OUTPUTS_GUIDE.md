@@ -454,9 +454,19 @@ analysis-2/
 Interpretation:
 - these are compatibility paths kept during staged migration
 - they are not the preferred long-term target structure
+- when both exist, prefer:
+  - `descriptive/`
+  - `inferential/`
+  - `analysis/`
+  - `paper/`
 
 在迁移期间保留这些旧路径是为了兼容旧代码，
 但它们不是长期推荐的主结构。
+如果新旧路径同时存在，优先看：
+- `descriptive/`
+- `inferential/`
+- `analysis/`
+- `paper/`
 
 ---
 

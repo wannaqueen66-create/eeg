@@ -408,6 +408,11 @@ The redesign is successful if:
 - focused on the primary story
 - simpler outputs
 - easier to maintain and explain
+- prefer curated top-level reading flow:
+  - `descriptive/overall`
+  - `descriptive/experience`
+  - `inferential/overall`
+  - `inferential/experience`
 
 ---
 
