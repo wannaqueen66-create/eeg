@@ -923,12 +923,18 @@ for mi=1:numel(metrics)
         pWWR = term_p(A, 'WWR');
         pCx = term_p(A, 'Complexity');
         pWxC = interaction_p(A, 'WWR', 'Complexity');
-        rows(end+1,:) = {m, height(T), numel(unique(string(T.Subject))), pWWR, pCx, pWxC}; %#ok<AGROW>
+        fWWR = term_f(A, 'WWR');
+        fCx = term_f(A, 'Complexity');
+        fWxC = interaction_f(A, 'WWR', 'Complexity');
+        eWWR = term_eta(A, 'WWR');
+        eCx = term_eta(A, 'Complexity');
+        eWxC = interaction_eta(A, 'WWR', 'Complexity');
+        rows(end+1,:) = {m, height(T), numel(unique(string(T.Subject))), pWWR, pCx, pWxC, fWWR, fCx, fWxC, eWWR, eCx, eWxC}; %#ok<AGROW>
     catch
     end
 end
 if isempty(rows), return; end
-Tout = cell2table(rows, 'VariableNames', {'metric','n_rows','n_subjects','p_WWR','p_Complexity','p_WWRxComplexity'});
+Tout = cell2table(rows, 'VariableNames', {'metric','n_rows','n_subjects','p_WWR','p_Complexity','p_WWRxComplexity','F_WWR','F_Complexity','F_WWRxComplexity','eta_WWR','eta_Complexity','eta_WWRxComplexity'});
 writetable(Tout, fullfile(fp_tbl, sprintf('overall_inferential_summary_%s.csv', tag)));
 plot_inferential_overall_heatmap(Tout, tag, fp_fig, cfg);
 write_inferential_overall_readme(fp_rep, tag);
@@ -969,12 +975,18 @@ for mi=1:numel(metrics)
         rows(end+1,:) = {m, height(T), numel(unique(string(T.Subject))), ...
             term_p(A,'WWR'), term_p(A,'Complexity'), term_p(A,'Group'), ...
             interaction_p(A,'WWR','Complexity'), interaction_p(A,'WWR','Group'), interaction_p(A,'Complexity','Group'), ...
-            threeway_p(A,'WWR','Complexity','Group')}; %#ok<AGROW>
+            threeway_p(A,'WWR','Complexity','Group'), ...
+            term_f(A,'WWR'), term_f(A,'Complexity'), term_f(A,'Group'), ...
+            interaction_f(A,'WWR','Complexity'), interaction_f(A,'WWR','Group'), interaction_f(A,'Complexity','Group'), ...
+            threeway_f(A,'WWR','Complexity','Group'), ...
+            term_eta(A,'WWR'), term_eta(A,'Complexity'), term_eta(A,'Group'), ...
+            interaction_eta(A,'WWR','Complexity'), interaction_eta(A,'WWR','Group'), interaction_eta(A,'Complexity','Group'), ...
+            threeway_eta(A,'WWR','Complexity','Group')}; %#ok<AGROW>
     catch
     end
 end
 if isempty(rows), return; end
-Tout = cell2table(rows, 'VariableNames', {'metric','n_rows','n_subjects','p_WWR','p_Complexity','p_Group','p_WWRxComplexity','p_WWRxGroup','p_ComplexityxGroup','p_threeway'});
+Tout = cell2table(rows, 'VariableNames', {'metric','n_rows','n_subjects','p_WWR','p_Complexity','p_Group','p_WWRxComplexity','p_WWRxGroup','p_ComplexityxGroup','p_threeway','F_WWR','F_Complexity','F_Group','F_WWRxComplexity','F_WWRxGroup','F_ComplexityxGroup','F_threeway','eta_WWR','eta_Complexity','eta_Group','eta_WWRxComplexity','eta_WWRxGroup','eta_ComplexityxGroup','eta_threeway'});
 writetable(Tout, fullfile(fp_tbl, sprintf('experience_inferential_summary_%s.csv', tag)));
 plot_inferential_experience_heatmap(Tout, tag, fp_fig, cfg);
 write_inferential_experience_readme(fp_rep, tag);
@@ -1130,6 +1142,117 @@ pipeline.export_figure_png(fig, fp_png, get_dpi(cfg));
 try; close(fig); catch; end
 end
 
+function f = term_f(A, name)
+f = NaN;
+try
+    if all(ismember({'Term'}, A.Properties.VariableNames))
+        tt = string(A.Term);
+        idx = find(tt==string(name),1,'first');
+        if ~isempty(idx), f = get_fstat(A, idx); end
+    end
+catch
+end
+end
+
+function f = interaction_f(A, a, b)
+f = NaN;
+try
+    if all(ismember({'Term'}, A.Properties.VariableNames))
+        tt = string(A.Term);
+        idx = find(contains(tt,a) & contains(tt,b) & contains(tt,':'),1,'first');
+        if ~isempty(idx), f = get_fstat(A, idx); end
+    end
+catch
+end
+end
+
+function f = threeway_f(A, a, b, c)
+f = NaN;
+try
+    if all(ismember({'Term'}, A.Properties.VariableNames))
+        tt = string(A.Term);
+        idx = find(contains(tt,a) & contains(tt,b) & contains(tt,c) & contains(tt,':'),1,'first');
+        if ~isempty(idx), f = get_fstat(A, idx); end
+    end
+catch
+end
+end
+
+function e = term_eta(A, name)
+e = NaN;
+try
+    if all(ismember({'Term'}, A.Properties.VariableNames))
+        tt = string(A.Term);
+        idx = find(tt==string(name),1,'first');
+        if ~isempty(idx), e = get_partial_eta(A, idx); end
+    end
+catch
+end
+end
+
+function e = interaction_eta(A, a, b)
+e = NaN;
+try
+    if all(ismember({'Term'}, A.Properties.VariableNames))
+        tt = string(A.Term);
+        idx = find(contains(tt,a) & contains(tt,b) & contains(tt,':'),1,'first');
+        if ~isempty(idx), e = get_partial_eta(A, idx); end
+    end
+catch
+end
+end
+
+function e = threeway_eta(A, a, b, c)
+e = NaN;
+try
+    if all(ismember({'Term'}, A.Properties.VariableNames))
+        tt = string(A.Term);
+        idx = find(contains(tt,a) & contains(tt,b) & contains(tt,c) & contains(tt,':'),1,'first');
+        if ~isempty(idx), e = get_partial_eta(A, idx); end
+    end
+catch
+end
+end
+
+function f = get_fstat(A, idx)
+f = NaN;
+vars = string(A.Properties.VariableNames);
+for nm = ["FStat","F","FValue","F_stat","Fstat"]
+    if any(vars==nm)
+        f = double(A.(char(nm))(idx));
+        return;
+    end
+end
+end
+
+function e = get_partial_eta(A, idx)
+e = NaN;
+try
+    f = get_fstat(A, idx);
+    if ~isfinite(f)
+        return;
+    end
+    vars = string(A.Properties.VariableNames);
+    df1 = NaN; df2 = NaN;
+    for nm = ["DF1","NumDF","df1"]
+        if any(vars==nm)
+            df1 = double(A.(char(nm))(idx));
+            break;
+        end
+    end
+    for nm = ["DF2","DenDF","df2"]
+        if any(vars==nm)
+            df2 = double(A.(char(nm))(idx));
+            break;
+        end
+    end
+    if isfinite(df1) && isfinite(df2)
+        e = (f*df1) / (f*df1 + df2);
+    end
+catch
+end
+end
+
 function p = term_p(A, name)
 p = NaN;
 try
@@ -1229,7 +1352,7 @@ fid = fopen(fullfile(fp_rep, sprintf('README_%s.md', tag)),'w');
 if fid>0
  fprintf(fid,'# Inferential / Overall [%s]\n\n', tag);
  fprintf(fid,'Key summary files:\n');
- fprintf(fid,'- `overall_inferential_summary_%s.csv`\n', tag);
+ fprintf(fid,'- `overall_inferential_summary_%s.csv` (includes p-values, F-statistics, and effect-size proxy columns when available)\n', tag);
  fprintf(fid,'- `overall_inferential_heatmap_%s.png`\n', tag);
  fprintf(fid,'- `overall_wwr_trend_summary_%s.csv`\n', tag);
  fprintf(fid,'- `overall_wwr_trend_heatmap_%s.png`\n', tag);
@@ -1245,7 +1368,7 @@ fid = fopen(fullfile(fp_rep, sprintf('README_%s.md', tag)),'w');
 if fid>0
  fprintf(fid,'# Inferential / Experience [%s]\n\n', tag);
  fprintf(fid,'Key summary files:\n');
- fprintf(fid,'- `experience_inferential_summary_%s.csv`\n', tag);
+ fprintf(fid,'- `experience_inferential_summary_%s.csv` (includes p-values, F-statistics, and effect-size proxy columns when available)\n', tag);
  fprintf(fid,'- `experience_inferential_heatmap_%s.png`\n', tag);
  fprintf(fid,'- `experience_wwr_trend_summary_%s.csv`\n', tag);
  fprintf(fid,'- `experience_wwr_trend_heatmap_%s.png`\n', tag);
