@@ -66,12 +66,20 @@ try
         if ~isempty(Tsum)
             writetable(Tsum, fullfile(fp_do_tbl, 'overall_scene_metric_means_raw.csv'));
         end
+        Tcond = summarize_overall_by_factors(AllScene, cfg);
+        if ~isempty(Tcond)
+            writetable(Tcond, fullfile(fp_do_tbl, 'overall_scene_metric_means_by_WWR_Complexity_raw.csv'));
+        end
     end
     if ~isempty(AllScene_qc)
         writetable(AllScene_qc, fullfile(fp_do_tbl, 'scene_level_overall_qc.csv'));
         Tsum = summarize_overall_scene(AllScene_qc, cfg);
         if ~isempty(Tsum)
             writetable(Tsum, fullfile(fp_do_tbl, 'overall_scene_metric_means_qc.csv'));
+        end
+        Tcond = summarize_overall_by_factors(AllScene_qc, cfg);
+        if ~isempty(Tcond)
+            writetable(Tcond, fullfile(fp_do_tbl, 'overall_scene_metric_means_by_WWR_Complexity_qc.csv'));
         end
     end
     if ~isempty(AllPairs)
@@ -91,6 +99,8 @@ try
         fprintf(fid, '- `scene_level_overall_qc.csv`: QC-filtered scene-level descriptive table\n');
         fprintf(fid, '- `overall_scene_metric_means_raw.csv`: core metric means across the full sample\n');
         fprintf(fid, '- `overall_scene_metric_means_qc.csv`: QC-filtered core metric means across the full sample\n');
+        fprintf(fid, '- `overall_scene_metric_means_by_WWR_Complexity_raw.csv`: descriptive means by WWR × Complexity\n');
+        fprintf(fid, '- `overall_scene_metric_means_by_WWR_Complexity_qc.csv`: QC-filtered descriptive means by WWR × Complexity\n');
         fprintf(fid, '- `pairs_overall_raw.csv`: full-sample recovery/pair descriptive table\n');
         fprintf(fid, '- `pairs_overall_qc.csv`: QC-filtered recovery/pair descriptive table\n');
         fprintf(fid, '\nThis folder is intended as the simplest entry point for reading descriptive EEG results at the full-sample level.\n');
@@ -122,6 +132,10 @@ try
             if ~isempty(Tsum)
                 writetable(Tsum, fullfile(fp_de_tbl, 'experience_scene_metric_means_raw.csv'));
             end
+            Tcond = summarize_scene_by_experience_factors(S, cfg);
+            if ~isempty(Tcond)
+                writetable(Tcond, fullfile(fp_de_tbl, 'experience_scene_metric_means_by_WWR_Complexity_raw.csv'));
+            end
         end
     end
     if ~isempty(AllScene_qc)
@@ -136,6 +150,10 @@ try
                 Tsum = summarize_scene_by_experience(S, cfg);
                 if ~isempty(Tsum)
                     writetable(Tsum, fullfile(fp_de_tbl, 'experience_scene_metric_means_qc.csv'));
+                end
+                Tcond = summarize_scene_by_experience_factors(S, cfg);
+                if ~isempty(Tcond)
+                    writetable(Tcond, fullfile(fp_de_tbl, 'experience_scene_metric_means_by_WWR_Complexity_qc.csv'));
                 end
             end
         end
@@ -187,6 +205,7 @@ try
         fprintf(fid, '# Descriptive / Experience\n\n');
         fprintf(fid, '- `scene_level_experience_*.csv`: scene-level descriptive tables with valid experience labels\n');
         fprintf(fid, '- `experience_scene_metric_means_*.csv`: metric summaries by Experience group (and Complexity when available)\n');
+        fprintf(fid, '- `experience_scene_metric_means_by_WWR_Complexity_*.csv`: metric summaries by Experience × WWR × Complexity\n');
         fprintf(fid, '- `pairs_experience_*.csv`: recovery tables with valid experience labels\n');
         fprintf(fid, '- `experience_recovery_means_*.csv`: recovery summaries by Experience group\n');
         fprintf(fid, '\nThis folder is intended as the default grouped descriptive layer for the redesigned main branch.\n');
@@ -328,6 +347,77 @@ try
     end
     if ~isempty(rows)
         Tsum = cell2table(rows, 'VariableNames', {'metric','experience_group','complexity','N','mean','sem'});
+    end
+catch
+    Tsum = table();
+end
+end
+
+function Tsum = summarize_overall_by_factors(S, cfg)
+Tsum = table();
+try
+    if ~ismember('WWR', S.Properties.VariableNames) || ~ismember('Complexity', S.Properties.VariableNames)
+        return;
+    end
+    metrics = {"O_alpha","O_theta","O_beta","F_theta"};
+    if isfield(cfg,'paper_metrics') && ~isempty(cfg.paper_metrics)
+        metrics = cellstr(string(cfg.paper_metrics));
+    end
+    rows = {};
+    for mi=1:numel(metrics)
+        m = string(metrics{mi});
+        if ~ismember(m, S.Properties.VariableNames)
+            continue;
+        end
+        y = double(S.(char(m)));
+        w = string(S.WWR);
+        c = string(S.Complexity);
+        [G, ww, cc] = findgroups(w, c);
+        mu = splitapply(@(x) mean(x,'omitnan'), y, G);
+        se = splitapply(@(x) std(x,'omitnan')/sqrt(sum(~isnan(x))), y, G);
+        n = splitapply(@(x) sum(~isnan(x)), y, G);
+        for i=1:numel(mu)
+            rows(end+1,:) = {m, ww(i), cc(i), n(i), mu(i), se(i)}; %#ok<AGROW>
+        end
+    end
+    if ~isempty(rows)
+        Tsum = cell2table(rows, 'VariableNames', {'metric','WWR','Complexity','N','mean','sem'});
+    end
+catch
+    Tsum = table();
+end
+end
+
+function Tsum = summarize_scene_by_experience_factors(S, cfg)
+Tsum = table();
+try
+    if ~ismember('WWR', S.Properties.VariableNames) || ~ismember('Complexity', S.Properties.VariableNames)
+        return;
+    end
+    metrics = {"O_alpha","O_theta","O_beta","F_theta"};
+    if isfield(cfg,'paper_metrics') && ~isempty(cfg.paper_metrics)
+        metrics = cellstr(string(cfg.paper_metrics));
+    end
+    rows = {};
+    for mi=1:numel(metrics)
+        m = string(metrics{mi});
+        if ~ismember(m, S.Properties.VariableNames)
+            continue;
+        end
+        y = double(S.(char(m)));
+        g = string(S.ExperienceGroupCurated);
+        w = string(S.WWR);
+        c = string(S.Complexity);
+        [G, gg, ww, cc] = findgroups(g, w, c);
+        mu = splitapply(@(x) mean(x,'omitnan'), y, G);
+        se = splitapply(@(x) std(x,'omitnan')/sqrt(sum(~isnan(x))), y, G);
+        n = splitapply(@(x) sum(~isnan(x)), y, G);
+        for i=1:numel(mu)
+            rows(end+1,:) = {m, gg(i), ww(i), cc(i), n(i), mu(i), se(i)}; %#ok<AGROW>
+        end
+    end
+    if ~isempty(rows)
+        Tsum = cell2table(rows, 'VariableNames', {'metric','experience_group','WWR','Complexity','N','mean','sem'});
     end
 catch
     Tsum = table();
