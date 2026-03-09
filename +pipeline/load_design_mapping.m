@@ -13,8 +13,11 @@ function MapLong = load_design_mapping(design_path)
 %   (optional) S1.., Bmean, SceneID, ...
 %
 % Output (long):
-%   subject_id, scene_id(1..12), scene_name, WWR, Cond, Complexity,
+%   subject_id, scene_id(1..12), trial_index(1..12), scene_name, WWR, Cond, Complexity,
 %   SportFreq, Experience, Order, ... plus any extra columns from design.
+% Note:
+%   scene_id / trial_index here represent presentation order slot (Block+Position),
+%   not necessarily a globally stable scene identity under counterbalanced orders.
 
 fp = pipeline.find_design_file(design_path);
 if isempty(fp)
@@ -106,8 +109,8 @@ if isLong && ~isWide
     if ismember('SportFreqGroup', vars); sport_grp = string(T.SportFreqGroup); end
     if ismember('ExperienceGroup', vars); exp_grp = string(T.ExperienceGroup); end
 
-    rows = table(subj, scene_id, scene_name, wwr, cond, cmp, sport, expv, sport_grp, exp_grp, orderv, repmat(string(fp),height(T),1), ...
-        'VariableNames', {'subject_id','scene_id','scene_name','WWR','Cond','Complexity','SportFreq','Experience','SportFreqGroup','ExperienceGroup','Order','design_file'});
+    rows = table(subj, scene_id, scene_id, scene_name, wwr, cond, cmp, sport, expv, sport_grp, exp_grp, orderv, repmat(string(fp),height(T),1), ...
+        'VariableNames', {'subject_id','scene_id','trial_index','scene_name','WWR','Cond','Complexity','SportFreq','Experience','SportFreqGroup','ExperienceGroup','Order','design_file'});
 
     % Attach extra columns (ratings etc.)
     extraVars = setdiff(vars, {'SubjectID','Block','Position','WWR','Condition','Complexity','SportFreq','Experience','ExperienceGroup','SportFreqGroup','Order','SceneID'});
@@ -151,9 +154,9 @@ else
     orderv = nan(height(T), 1);
 end
 
-rows = table('Size',[0 10], ...
-    'VariableTypes', {'string','double','string','double','string','double','string','string','double','string'}, ...
-    'VariableNames', {'subject_id','scene_id','scene_name','WWR','Cond','Complexity','SportFreq','Experience','Order','design_file'});
+rows = table('Size',[0 11], ...
+    'VariableTypes', {'string','double','double','string','double','string','double','string','string','double','string'}, ...
+    'VariableNames', {'subject_id','scene_id','trial_index','scene_name','WWR','Cond','Complexity','SportFreq','Experience','Order','design_file'});
 
 for r = 1:height(T)
     sid = canonical_subject_id_local(subj(r));
@@ -173,7 +176,7 @@ for r = 1:height(T)
         if ismember(col_Cond, vars); cond = string(T.(col_Cond)(r)); end
         if ismember(col_Cmp,  vars); cmp  = double(T.(col_Cmp)(r)); end
 
-        rows = [rows; {sid, s, string(scene_name), wwr, cond, cmp, string(sport(r)), string(expv(r)), double(orderv(r)), string(fp)}]; %#ok<AGROW>
+        rows = [rows; {sid, s, s, string(scene_name), wwr, cond, cmp, string(sport(r)), string(expv(r)), double(orderv(r)), string(fp)}]; %#ok<AGROW>
     end
 end
 

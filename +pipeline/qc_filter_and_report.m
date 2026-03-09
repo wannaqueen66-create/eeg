@@ -293,21 +293,23 @@ if ~isempty(AllPairs_qc)
     try; writetable(AllPairs_qc, out.all_subjects_pairs_check_qc); catch; end
 end
 
-% Scene valid counts + excluded subject names (by scene_id)
+% Scene valid counts + excluded subject names
+% Important semantic rule:
+% - scene_id is a presentation/trial index (Block+Position), not guaranteed to be
+%   a stable scene identity across counterbalanced orders.
+% - If the same scene_id maps to multiple scene_name values across subjects,
+%   aggregate by scene_name instead and mark the output accordingly.
 try
     if ~isempty(AllScene) && ismember('scene_id', AllScene.Properties.VariableNames) && ismember('subject_id', AllScene.Properties.VariableNames)
         sc = AllScene;
         sc.subject_id = string(sc.subject_id);
-        % Identify exclusion reason per row
         exRow = strings(height(sc),1);
 
-        % subject-level exclusion reason
         [tf, loc] = ismember(string(sc.subject_id), string(Qsub.subject_id));
         exSub = false(height(sc),1);
         exSub(tf) = logical(Qsub.exclude_scenelevel(loc(tf)));
         exRow(exSub) = "subject_excluded";
 
-        % segment-level hf exclusion
         if ~isempty(Qview)
             key1 = string(sc.subject_id) + "__" + string(sc.scene_id);
             key2 = string(Qview.subject_id) + "__" + string(Qview.scene_id);
@@ -320,36 +322,59 @@ try
 
         sc.ex_reason = exRow;
 
-        sceneU = unique(sc.scene_id);
-        sceneU = sort(sceneU(:));
-
-        rows = {};
-        for si = sceneU'
-            idx = sc.scene_id==si;
-            n_total = sum(idx);
-            n_valid = sum(idx & sc.ex_reason=="");
-            excl = sc.subject_id(idx & sc.ex_reason~="");
-            excl = unique(excl,'stable');
-            rows(end+1,:) = {double(si), n_total, n_valid, strjoin(excl, ';')}; %#ok<AGROW>
+        useSceneIdentity = false;
+        if ismember('scene_name', sc.Properties.VariableNames)
+            tmp = sc(:, {'scene_id','scene_name'});
+            tmp.scene_name = strtrim(string(tmp.scene_name));
+            tmp = tmp(strlength(tmp.scene_name)>0 & ~isnan(tmp.scene_id), :);
+            if ~isempty(tmp)
+                Gtmp = groupsummary(tmp, 'scene_id', 'numel', 'scene_name');
+                if ismember('GroupCount', Gtmp.Properties.VariableNames)
+                    useSceneIdentity = any(double(Gtmp.GroupCount) > 1);
+                end
+            end
         end
 
-        Tcnt = cell2table(rows, 'VariableNames', {'scene_id','n_total','n_valid','excluded_subjects'});
-
-        % Add scene label if present
-        if ismember('scene_name', sc.Properties.VariableNames)
-            % pick first non-empty
-            labs = strings(height(Tcnt),1);
-            for i=1:height(Tcnt)
-                si = Tcnt.scene_id(i);
-                idx = sc.scene_id==si;
-                sn = "";
-                try
-                    sn = string(sc.scene_name(find(idx,1,'first')));
-                catch
-                end
-                labs(i) = sn;
+        rows = {};
+        if useSceneIdentity && ismember('scene_name', sc.Properties.VariableNames)
+            ids = unique(strtrim(string(sc.scene_name)), 'stable');
+            ids = ids(strlength(ids)>0);
+            for ii = 1:numel(ids)
+                sidName = ids(ii);
+                idx = strtrim(string(sc.scene_name)) == sidName;
+                n_total = sum(idx);
+                n_valid = sum(idx & sc.ex_reason=="");
+                excl = sc.subject_id(idx & sc.ex_reason!="");
+                excl = unique(excl,'stable');
+                rows(end+1,:) = {sidName, n_total, n_valid, strjoin(excl, ';')}; %#ok<AGROW>
             end
-            Tcnt.scene_name = labs;
+            Tcnt = cell2table(rows, 'VariableNames', {'scene_identity','n_total','n_valid','excluded_subjects'});
+        else
+            sceneU = unique(sc.scene_id);
+            sceneU = sort(sceneU(:));
+            for si = sceneU'
+                idx = sc.scene_id==si;
+                n_total = sum(idx);
+                n_valid = sum(idx & sc.ex_reason=="");
+                excl = sc.subject_id(idx & sc.ex_reason!="");
+                excl = unique(excl,'stable');
+                rows(end+1,:) = {double(si), n_total, n_valid, strjoin(excl, ';')}; %#ok<AGROW>
+            end
+            Tcnt = cell2table(rows, 'VariableNames', {'scene_id','n_total','n_valid','excluded_subjects'});
+            if ismember('scene_name', sc.Properties.VariableNames)
+                labs = strings(height(Tcnt),1);
+                for i=1:height(Tcnt)
+                    si = Tcnt.scene_id(i);
+                    idx = sc.scene_id==si;
+                    sn = "";
+                    try
+                        sn = string(sc.scene_name(find(idx,1,'first')));
+                    catch
+                    end
+                    labs(i) = sn;
+                end
+                Tcnt.scene_name = labs;
+            end
         end
 
         out.qc_scene_valid_counts = fullfile(fp_tbl_qc, 'qc_scene_valid_counts.csv');
@@ -385,19 +410,32 @@ try
             if isfield(out,'qc_scene_valid_counts') && exist(out.qc_scene_valid_counts,'file')
                 Tcnt = readtable(out.qc_scene_valid_counts, 'TextType','string');
                 fprintf(fid, '## Scene valid counts (after QC)\n\n');
-                fprintf(fid, '| scene_id | scene_name | valid / total | excluded_subjects |\n');
-                fprintf(fid, '|---:|---|---:|---|\n');
-                for i=1:height(Tcnt)
-                    sid = Tcnt.scene_id(i);
-                    sname = "";
-                    if ismember('scene_name', Tcnt.Properties.VariableNames)
-                        sname = string(Tcnt.scene_name(i));
+                if ismember('scene_identity', Tcnt.Properties.VariableNames)
+                    fprintf(fid, '| scene_identity | valid / total | excluded_subjects |\n');
+                    fprintf(fid, '|---|---:|---|\n');
+                    for i=1:height(Tcnt)
+                        sidName = string(Tcnt.scene_identity(i));
+                        excl = "";
+                        if ismember('excluded_subjects', Tcnt.Properties.VariableNames)
+                            excl = string(Tcnt.excluded_subjects(i));
+                        end
+                        fprintf(fid, '| %s | %d / %d | %s |\n', sidName, Tcnt.n_valid(i), Tcnt.n_total(i), excl);
                     end
-                    excl = "";
-                    if ismember('excluded_subjects', Tcnt.Properties.VariableNames)
-                        excl = string(Tcnt.excluded_subjects(i));
+                else
+                    fprintf(fid, '| trial_index | scene_name | valid / total | excluded_subjects |\n');
+                    fprintf(fid, '|---:|---|---:|---|\n');
+                    for i=1:height(Tcnt)
+                        sid = Tcnt.scene_id(i);
+                        sname = "";
+                        if ismember('scene_name', Tcnt.Properties.VariableNames)
+                            sname = string(Tcnt.scene_name(i));
+                        end
+                        excl = "";
+                        if ismember('excluded_subjects', Tcnt.Properties.VariableNames)
+                            excl = string(Tcnt.excluded_subjects(i));
+                        end
+                        fprintf(fid, '| %d | %s | %d / %d | %s |\n', sid, sname, Tcnt.n_valid(i), Tcnt.n_total(i), excl);
                     end
-                    fprintf(fid, '| %d | %s | %d / %d | %s |\n', sid, sname, Tcnt.n_valid(i), Tcnt.n_total(i), excl);
                 end
                 fprintf(fid, '\n');
             end

@@ -186,21 +186,26 @@ try
                 Tcnt = readtable(qcOut.qc_scene_valid_counts, 'TextType','string');
                 fprintf('\n=== QC Scene Valid Counts (after exclusions) ===\n');
                 for i=1:height(Tcnt)
-                    sid = Tcnt.scene_id(i);
                     nt = Tcnt.n_total(i);
                     nv = Tcnt.n_valid(i);
                     excl = "";
                     if ismember('excluded_subjects', Tcnt.Properties.VariableNames)
                         excl = string(Tcnt.excluded_subjects(i));
                     end
-                    label = "";
-                    if ismember('scene_name', Tcnt.Properties.VariableNames)
-                        label = string(Tcnt.scene_name(i));
-                    end
-                    if strlength(label)>0
-                        fprintf('Scene %02d (%s): valid=%d/%d | excluded: %s\n', sid, label, nv, nt, excl);
+                    if ismember('scene_identity', Tcnt.Properties.VariableNames)
+                        label = string(Tcnt.scene_identity(i));
+                        fprintf('SceneIdentity %s: valid=%d/%d | excluded: %s\n', label, nv, nt, excl);
                     else
-                        fprintf('Scene %02d: valid=%d/%d | excluded: %s\n', sid, nv, nt, excl);
+                        sid = Tcnt.scene_id(i);
+                        label = "";
+                        if ismember('scene_name', Tcnt.Properties.VariableNames)
+                            label = string(Tcnt.scene_name(i));
+                        end
+                        if strlength(label)>0
+                            fprintf('Trial %02d (%s): valid=%d/%d | excluded: %s\n', sid, label, nv, nt, excl);
+                        else
+                            fprintf('Trial %02d: valid=%d/%d | excluded: %s\n', sid, nv, nt, excl);
+                        end
                     end
                 end
             catch ME2
