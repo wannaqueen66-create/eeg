@@ -1,30 +1,15 @@
 function [fp_sub, fp_csv, fp_fig, fp_qc] = prepare_output(fp, subject_id, cfg)
 %PREPARE_OUTPUT Create output directories and write config snapshot.
+%
+% Stage-1 refactor behavior:
+% - preserve historical behavior when timestamp_output_root=true
+% - otherwise route subject outputs through the new subject path helpers
+%   so later directory migrations can happen centrally.
 
-% Default: place outputs in a dedicated folder under the input .set directory.
-% This avoids cluttering the raw/preprocessed data folder.
-if isfield(cfg, 'output_dir') && ~isempty(cfg.output_dir)
-    fp_out = pipeline.resolve_output_dir(fp, cfg.output_dir);
-else
-    fp_out = fullfile(fp, 'bandpower_outputs');
-end
-if ~exist(fp_out, 'dir')
-    mkdir(fp_out);
-end
-
-% Ensure the subject folder name matches the .set base name, but is safe on Windows.
-subject_id = pipeline.sanitize_filename(subject_id);
-fp_sub = fullfile(fp_out, subject_id);
-if ~exist(fp_sub, 'dir')
-    mkdir(fp_sub);
-end
-
-fp_csv = fullfile(fp_sub, 'csv');
-fp_fig = fullfile(fp_sub, 'fig');
-fp_qc  = fullfile(fp_sub, 'qc');
-if ~exist(fp_csv, 'dir'); mkdir(fp_csv); end
-if ~exist(fp_fig, 'dir'); mkdir(fp_fig); end
-if ~exist(fp_qc,  'dir'); mkdir(fp_qc); end
+fp_sub = pipeline.get_subject_dir(fp, subject_id, cfg);
+fp_csv = pipeline.get_subject_table_dir(fp, subject_id, cfg);
+fp_fig = pipeline.get_subject_figure_dir(fp, subject_id, cfg);
+fp_qc  = pipeline.get_subject_qc_dir(fp, subject_id, cfg);
 
 pipeline.write_config_snapshot(cfg, fp_sub);
 
