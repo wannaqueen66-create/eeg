@@ -38,9 +38,17 @@ out.descriptive_overall = fp_do;
 try
     if ~isempty(AllScene)
         writetable(AllScene, fullfile(fp_do_tbl, 'scene_level_overall_raw.csv'));
+        Tsum = summarize_overall_scene(AllScene, cfg);
+        if ~isempty(Tsum)
+            writetable(Tsum, fullfile(fp_do_tbl, 'overall_scene_metric_means_raw.csv'));
+        end
     end
     if ~isempty(AllScene_qc)
         writetable(AllScene_qc, fullfile(fp_do_tbl, 'scene_level_overall_qc.csv'));
+        Tsum = summarize_overall_scene(AllScene_qc, cfg);
+        if ~isempty(Tsum)
+            writetable(Tsum, fullfile(fp_do_tbl, 'overall_scene_metric_means_qc.csv'));
+        end
     end
     if ~isempty(AllPairs)
         writetable(AllPairs, fullfile(fp_do_tbl, 'pairs_overall_raw.csv'));
@@ -57,6 +65,8 @@ try
         fprintf(fid, '# Descriptive / Overall\n\n');
         fprintf(fid, '- `scene_level_overall_raw.csv`: full-sample scene-level descriptive table\n');
         fprintf(fid, '- `scene_level_overall_qc.csv`: QC-filtered scene-level descriptive table\n');
+        fprintf(fid, '- `overall_scene_metric_means_raw.csv`: core metric means across the full sample\n');
+        fprintf(fid, '- `overall_scene_metric_means_qc.csv`: QC-filtered core metric means across the full sample\n');
         fprintf(fid, '- `pairs_overall_raw.csv`: full-sample recovery/pair descriptive table\n');
         fprintf(fid, '- `pairs_overall_qc.csv`: QC-filtered recovery/pair descriptive table\n');
         fprintf(fid, '\nThis folder is intended as the simplest entry point for reading descriptive EEG results at the full-sample level.\n');
@@ -170,14 +180,7 @@ mkdir_if_needed(fp_io_tbl); mkdir_if_needed(fp_io_fig); mkdir_if_needed(fp_io_re
 out.inferential_overall = fp_io;
 
 try
-    fid = fopen(fullfile(fp_io_rep, 'README.md'),'w');
-    if fid>0
-        fprintf(fid, '# Inferential / Overall\n\n');
-        fprintf(fid, 'This folder is the curated entry point for full-sample inferential outputs.\n\n');
-        fprintf(fid, 'Current repository state still stores much of the detailed inferential machinery in task-based folders.\n');
-        fprintf(fid, 'Use `../experience/` for the prioritized grouped inferential path, and `../../analysis/` for full task-level detail.\n');
-        fclose(fid);
-    end
+    build_inferential_overall_summary(fp_sum, fp_io_tbl, fp_io_fig, fp_io_rep);
 catch
 end
 
@@ -200,19 +203,7 @@ catch
 end
 
 try
-    fid = fopen(fullfile(fp_ie_rep, 'README.md'),'w');
-    if fid>0
-        fprintf(fid, '# Inferential / Experience\n\n');
-        fprintf(fid, 'This folder is the curated entry point for experience-group inferential outputs.\n');
-        fprintf(fid, 'It mirrors selected experience-focused outputs from the detailed task-based analysis layer.\n\n');
-        fprintf(fid, 'Primary source tasks currently include:\n');
-        fprintf(fid, '- task3_trialindex_lmm\n');
-        fprintf(fid, '- task4_core_lmm_suite\n');
-        fprintf(fid, '- task5_peakindex_invertedu\n');
-        fprintf(fid, '- task6_coremetric_special\n');
-        fprintf(fid, '- task7_individual_checks\n');
-        fclose(fid);
-    end
+    build_inferential_experience_summary(fp_sum, fp_ie_tbl, fp_ie_fig, fp_ie_rep);
 catch
 end
 
@@ -246,6 +237,34 @@ g(ismember(sl,["high","1","高","h"])) = "High";
 g(ismember(sl,["low","0","低","l"])) = "Low";
 mask = (s=="High" | s=="Low");
 g(mask) = s(mask);
+end
+
+function Tsum = summarize_overall_scene(S, cfg)
+Tsum = table();
+try
+    metrics = {"O_alpha","O_theta","O_beta","F_theta"};
+    if isfield(cfg,'paper_metrics') && ~isempty(cfg.paper_metrics)
+        metrics = cellstr(string(cfg.paper_metrics));
+    end
+    rows = {};
+    for mi=1:numel(metrics)
+        m = string(metrics{mi});
+        if ~ismember(m, S.Properties.VariableNames)
+            continue;
+        end
+        y = double(S.(char(m)));
+        n = sum(~isnan(y));
+        if n==0, continue; end
+        mu = mean(y,'omitnan');
+        se = std(y,'omitnan')/sqrt(n);
+        rows(end+1,:) = {m, n, mu, se}; %#ok<AGROW>
+    end
+    if ~isempty(rows)
+        Tsum = cell2table(rows, 'VariableNames', {'metric','N','mean','sem'});
+    end
+catch
+    Tsum = table();
+end
 end
 
 function Tsum = summarize_scene_by_experience(S, cfg)
@@ -374,5 +393,62 @@ for i=1:numel(D)
     else
         copyfile(src, dst, 'f');
     end
+end
+end
+
+function build_inferential_overall_summary(fp_sum, fp_tbl, fp_fig, fp_rep)
+files = {
+    fullfile(fp_sum,'analysis','MASTER_REPORT.md'), ...
+    fullfile(fp_sum,'analysis-2','MASTER_REPORT.md') ...
+};
+for i=1:numel(files)
+    if exist(files{i},'file')
+        copyfile(files{i}, fullfile(fp_rep,'MASTER_REPORT.md'), 'f');
+        break;
+    end
+end
+fid = fopen(fullfile(fp_rep,'README.md'),'w');
+if fid>0
+    fprintf(fid, '# Inferential / Overall\n\n');
+    fprintf(fid, 'This folder is the curated entry point for full-sample inferential outputs.\n\n');
+    fprintf(fid, 'Current repository state still stores detailed inferential machinery in task-based folders under `batch/analysis/`.\n');
+    fprintf(fid, 'If present, `MASTER_REPORT.md` is copied here as the fastest overall inferential summary.\n');
+    fclose(fid);
+end
+end
+
+function build_inferential_experience_summary(fp_sum, fp_tbl, fp_fig, fp_rep)
+rows = {};
+% Task4 model1/model2/model3 and Task3 key ANOVA summaries for experience branch
+cands = {
+    fullfile(fp_sum,'analysis','task4_core_lmm_suite','raw','tables','factor_WWR','experience'), ...
+    fullfile(fp_sum,'analysis','task4_core_lmm_suite','qc','tables','factor_WWR','experience'), ...
+    fullfile(fp_sum,'analysis','task3_trialindex_lmm','raw','tables','experience'), ...
+    fullfile(fp_sum,'analysis','task3_trialindex_lmm','qc','tables','experience') ...
+};
+for ci=1:numel(cands)
+    d = cands{ci};
+    if ~exist(d,'dir'); continue; end
+    F = dir(fullfile(d,'*.csv'));
+    for i=1:numel(F)
+        rows(end+1,:) = {string(F(i).name), string(fullfile(F(i).folder, F(i).name))}; %#ok<AGROW>
+    end
+end
+if ~isempty(rows)
+    T = cell2table(rows, 'VariableNames', {'file_name','source_path'});
+    writetable(T, fullfile(fp_tbl,'experience_inferential_file_index.csv'));
+end
+fid = fopen(fullfile(fp_rep,'README.md'),'w');
+if fid>0
+    fprintf(fid, '# Inferential / Experience\n\n');
+    fprintf(fid, 'This folder is the curated entry point for experience-group inferential outputs.\n');
+    fprintf(fid, 'Use `experience_inferential_file_index.csv` as the fastest file-level map into the detailed analysis outputs.\n\n');
+    fprintf(fid, 'Primary source tasks currently include:\n');
+    fprintf(fid, '- task3_trialindex_lmm\n');
+    fprintf(fid, '- task4_core_lmm_suite\n');
+    fprintf(fid, '- task5_peakindex_invertedu\n');
+    fprintf(fid, '- task6_coremetric_special\n');
+    fprintf(fid, '- task7_individual_checks\n');
+    fclose(fid);
 end
 end
