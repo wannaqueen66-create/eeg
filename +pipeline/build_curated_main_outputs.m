@@ -581,19 +581,20 @@ if isempty(T) || height(T)==0
     return;
 end
 set(0,'DefaultFigureVisible','off');
-fig = figure('Color','w','Position',[100 100 900 420]);
+fig = figure('Color','w','Position',[100 100 920 430]);
 ax = axes(fig); hold(ax,'on'); style_axes(ax);
 M = string(T.metric);
 vals = double(T.mean);
 sem = double(T.sem);
 x = 1:numel(vals);
-b = bar(ax, x, vals, 0.62, 'FaceColor',[0.78 0.86 0.94], 'EdgeColor','none'); %#ok<NASGU>
-errorbar(ax, x, vals, sem, 'k.', 'LineWidth',1.4);
+bar(ax, x, vals, 0.58, 'FaceColor',[0.76 0.86 0.94], 'EdgeColor','none');
+errorbar(ax, x, vals, sem, 'Color',[0.15 0.15 0.15], 'LineStyle','none', 'LineWidth',1.2, 'CapSize',10);
 set(ax,'XTick',x,'XTickLabel',cellstr(M));
 ylabel(ax,'Mean ± SEM');
 title(ax, sprintf('Overall core metric means [%s]', tag), 'Interpreter','none', 'FontWeight','normal');
 for i=1:numel(x)
-    text(ax, x(i), vals(i)+max(0.01,sem(i)*1.2), sprintf('%.3f\nN=%d', vals(i), round(T.N(i))), 'HorizontalAlignment','center', 'FontSize',8, 'Color',[0.2 0.2 0.2]);
+    text(ax, x(i), vals(i)+max(0.01,sem(i)*1.25), sprintf('%.3f\nN=%d', vals(i), round(T.N(i))), ...
+        'HorizontalAlignment','center', 'FontSize',7.5, 'Color',[0.18 0.18 0.18], 'BackgroundColor',[1 1 1], 'Margin',1.5);
 end
 pipeline.export_figure_png(fig, fullfile(fp_fig, sprintf('overall_metric_bar_%s.png', tag)), get_dpi(cfg));
 try; close(fig); catch; end
@@ -623,14 +624,15 @@ for mi=1:min(numel(metrics),4)
     end
     x = 1:numel(groups);
     for gi=1:numel(groups)
-        bar(x(gi), vals(gi), 0.62, 'FaceColor', colors(min(gi,2),:), 'EdgeColor','none');
+        bar(x(gi), vals(gi), 0.58, 'FaceColor', colors(min(gi,2),:), 'EdgeColor','none');
     end
-    errorbar(x, vals, sem, 'k.', 'LineWidth',1.4);
+    errorbar(x, vals, sem, 'Color',[0.15 0.15 0.15], 'LineStyle','none', 'LineWidth',1.2, 'CapSize',10);
     set(gca,'XTick',x,'XTickLabel',cellstr(groups));
     title(strrep(char(m),'_','\_'),'Interpreter','none');
     ylabel('Mean ± SEM');
     for gi=1:numel(groups)
-        text(x(gi), vals(gi)+max(0.01,sem(gi)*1.2), sprintf('%.3f\nN=%d', vals(gi), round(ns(gi))), 'HorizontalAlignment','center', 'FontSize',8, 'Color',[0.2 0.2 0.2]);
+        text(x(gi), vals(gi)+max(0.01,sem(gi)*1.25), sprintf('%.3f\nN=%d', vals(gi), round(ns(gi))), ...
+            'HorizontalAlignment','center', 'FontSize',7.5, 'Color',[0.18 0.18 0.18], 'BackgroundColor',[1 1 1], 'Margin',1.5);
     end
 end
 pipeline.export_figure_png(fig, fullfile(fp_fig, sprintf('experience_metric_bar_%s.png', tag)), get_dpi(cfg));
@@ -672,14 +674,15 @@ ax = axes(fig); hold(ax,'on'); style_axes(ax);
 M = string(T.metric);
 vals = double(T.mean); sem = double(T.sem);
 x = 1:numel(vals);
-bar(ax, x, vals, 0.62, 'FaceColor',[0.79 0.89 0.81], 'EdgeColor','none');
-errorbar(ax, x, vals, sem, 'k.', 'LineWidth',1.4);
+bar(ax, x, vals, 0.58, 'FaceColor',[0.79 0.89 0.81], 'EdgeColor','none');
+errorbar(ax, x, vals, sem, 'Color',[0.15 0.15 0.15], 'LineStyle','none', 'LineWidth',1.2, 'CapSize',10);
 yline(ax, 0, '--', 'Color',[0.4 0.4 0.4]);
 set(ax,'XTick',x,'XTickLabel',cellstr(M));
 ylabel(ax,'Mean ± SEM');
 title(ax, sprintf('Overall recovery summary [%s]', tag), 'Interpreter','none', 'FontWeight','normal');
 for i=1:numel(x)
-    text(ax, x(i), vals(i)+sign(vals(i)+eps)*max(0.01,sem(i)*1.2), sprintf('%.3f\nN=%d', vals(i), round(T.N(i))), 'HorizontalAlignment','center', 'FontSize',8, 'Color',[0.2 0.2 0.2]);
+    text(ax, x(i), vals(i)+sign(vals(i)+eps)*max(0.01,sem(i)*1.25), sprintf('%.3f\nN=%d', vals(i), round(T.N(i))), ...
+        'HorizontalAlignment','center', 'FontSize',7.5, 'Color',[0.18 0.18 0.18], 'BackgroundColor',[1 1 1], 'Margin',1.5);
 end
 pipeline.export_figure_png(fig, fullfile(fp_fig, sprintf('overall_recovery_bar_%s.png', tag)), get_dpi(cfg));
 try; close(fig); catch; end
@@ -697,15 +700,16 @@ vals = double(T.mean_delta_O_alpha); sem = double(T.sem_delta_O_alpha);
 x = 1:numel(vals);
 colors = [0.18 0.49 0.72; 0.88 0.47 0.18];
 for i=1:numel(x)
-    bar(x(i), vals(i), 0.62, 'FaceColor', colors(min(i,2),:), 'EdgeColor','none');
+    bar(x(i), vals(i), 0.58, 'FaceColor', colors(min(i,2),:), 'EdgeColor','none');
 end
-errorbar(ax, x, vals, sem, 'k.', 'LineWidth',1.4);
+errorbar(ax, x, vals, sem, 'Color',[0.15 0.15 0.15], 'LineStyle','none', 'LineWidth',1.2, 'CapSize',10);
 yline(ax, 0, '--', 'Color',[0.4 0.4 0.4]);
 set(ax,'XTick',x,'XTickLabel',cellstr(groups));
 ylabel(ax,'Mean delta_O_alpha ± SEM');
 title(ax, sprintf('Experience recovery summary [%s]', tag), 'Interpreter','none', 'FontWeight','normal');
 for i=1:numel(x)
-    text(ax, x(i), vals(i)+sign(vals(i)+eps)*max(0.01,sem(i)*1.2), sprintf('%.3f\nN=%d', vals(i), round(T.N(i))), 'HorizontalAlignment','center', 'FontSize',8, 'Color',[0.2 0.2 0.2]);
+    text(ax, x(i), vals(i)+sign(vals(i)+eps)*max(0.01,sem(i)*1.25), sprintf('%.3f\nN=%d', vals(i), round(T.N(i))), ...
+        'HorizontalAlignment','center', 'FontSize',7.5, 'Color',[0.18 0.18 0.18], 'BackgroundColor',[1 1 1], 'Margin',1.5);
 end
 pipeline.export_figure_png(fig, fullfile(fp_fig, sprintf('experience_recovery_bar_%s.png', tag)), get_dpi(cfg));
 try; close(fig); catch; end
@@ -801,16 +805,26 @@ end
 function annotate_points(x, y, se, n)
 for i=1:numel(x)
     if ~isfinite(y(i)), continue; end
-    yy = y(i) + max(0.01, abs(se(i))*1.2 + 0.01*max(1,abs(y(i))));
-    text(x(i), yy, sprintf('%.3f\nN=%d', y(i), round(n(i))), 'HorizontalAlignment','center', 'FontSize',8, 'Color',[0.2 0.2 0.2]);
+    bump = max(0.01, abs(se(i))*1.25 + 0.012*max(1,abs(y(i))));
+    % stagger labels slightly to reduce overlap in line plots
+    if mod(i,2)==0
+        yy = y(i) + 1.55*bump;
+    else
+        yy = y(i) + bump;
+    end
+    text(x(i), yy, sprintf('%.3f\nN=%d', y(i), round(n(i))), ...
+        'HorizontalAlignment','center', 'FontSize',7.5, 'Color',[0.18 0.18 0.18], ...
+        'BackgroundColor',[1 1 1], 'Margin',1.5);
 end
 end
 
 function style_axes(ax)
-set(ax, 'Box','off', 'LineWidth',0.8, 'FontName','Arial', 'FontSize',11, 'Color','w');
+set(ax, 'Box','off', 'LineWidth',0.8, 'FontName','Times New Roman', 'FontSize',11, 'Color','w');
 grid(ax, 'on');
-ax.GridAlpha = 0.12;
+ax.GridAlpha = 0.08;
 ax.GridColor = [0 0 0];
+ax.XColor = [0.18 0.18 0.18];
+ax.YColor = [0.18 0.18 0.18];
 end
 
 function dpi = get_dpi(cfg)
@@ -952,20 +966,20 @@ end
 function plot_inferential_overall_heatmap(T, tag, fp_fig, cfg)
 if isempty(T) || height(T)==0, return; end
 set(0,'DefaultFigureVisible','off');
-fig = figure('Color','w','Position',[100 100 1000 360]);
+fig = figure('Color','w','Position',[100 100 1040 380]);
 ax = axes(fig); hold(ax,'on');
 Z = [double(T.p_WWR)'; double(T.p_Complexity)'; double(T.p_WWRxComplexity)'];
 V = nan(size(Z)); V(isfinite(Z)) = 0; V(isfinite(Z) & Z<0.05)=1; V(isfinite(Z) & Z<0.01)=2; V(isfinite(Z) & Z<0.001)=3;
 imagesc(ax, V); set(ax,'YDir','normal'); axis(ax,'tight');
-colormap(ax, interp1([0 0.5 1], [0.72 0.34 0.26; 0.96 0.96 0.96; 0.31 0.47 0.67], linspace(0,1,256)));
+colormap(ax, interp1([0 0.5 1], [0.80 0.88 0.94; 0.98 0.98 0.98; 0.22 0.45 0.67], linspace(0,1,256)));
 caxis(ax,[0 3]);
 set(ax,'XTick',1:height(T),'XTickLabel',cellstr(string(T.metric)),'YTick',1:3,'YTickLabel',{'WWR','Complexity','WWR×Complexity'});
-xtickangle(ax,20); title(ax, sprintf('Inferential / Overall [%s]', tag), 'Interpreter','none');
+xtickangle(ax,18); title(ax, sprintf('Inferential / Overall [%s]', tag), 'Interpreter','none', 'FontWeight','normal');
 style_axes(ax);
 for r=1:size(Z,1)
  for c=1:size(Z,2)
   if isnan(Z(r,c)), continue; end
-  text(ax,c,r,sprintf('p=%.3g',Z(r,c)),'HorizontalAlignment','center','FontSize',8);
+  text(ax,c,r,sprintf('p=%.3g%s',Z(r,c), star_from_p(Z(r,c))),'HorizontalAlignment','center','FontSize',8, 'BackgroundColor',[1 1 1], 'Margin',1);
  end
 end
 pipeline.export_figure_png(fig, fullfile(fp_fig, sprintf('overall_inferential_heatmap_%s.png', tag)), get_dpi(cfg));
@@ -975,24 +989,36 @@ end
 function plot_inferential_experience_heatmap(T, tag, fp_fig, cfg)
 if isempty(T) || height(T)==0, return; end
 set(0,'DefaultFigureVisible','off');
-fig = figure('Color','w','Position',[100 100 1200 520]);
+fig = figure('Color','w','Position',[100 100 1260 560]);
 ax = axes(fig); hold(ax,'on');
 Z = [double(T.p_WWR)'; double(T.p_Complexity)'; double(T.p_Group)'; double(T.p_WWRxComplexity)'; double(T.p_WWRxGroup)'; double(T.p_ComplexityxGroup)'; double(T.p_threeway)'];
 V = nan(size(Z)); V(isfinite(Z)) = 0; V(isfinite(Z) & Z<0.05)=1; V(isfinite(Z) & Z<0.01)=2; V(isfinite(Z) & Z<0.001)=3;
 imagesc(ax, V); set(ax,'YDir','normal'); axis(ax,'tight');
-colormap(ax, interp1([0 0.5 1], [0.72 0.34 0.26; 0.96 0.96 0.96; 0.31 0.47 0.67], linspace(0,1,256)));
+colormap(ax, interp1([0 0.5 1], [0.80 0.88 0.94; 0.98 0.98 0.98; 0.22 0.45 0.67], linspace(0,1,256)));
 caxis(ax,[0 3]);
 set(ax,'XTick',1:height(T),'XTickLabel',cellstr(string(T.metric)),'YTick',1:7,'YTickLabel',{'WWR','Complexity','Group','WWR×Complexity','WWR×Group','Complexity×Group','3-way'});
-xtickangle(ax,20); title(ax, sprintf('Inferential / Experience [%s]', tag), 'Interpreter','none');
+xtickangle(ax,18); title(ax, sprintf('Inferential / Experience [%s]', tag), 'Interpreter','none', 'FontWeight','normal');
 style_axes(ax);
 for r=1:size(Z,1)
  for c=1:size(Z,2)
   if isnan(Z(r,c)), continue; end
-  text(ax,c,r,sprintf('p=%.3g',Z(r,c)),'HorizontalAlignment','center','FontSize',8);
+  text(ax,c,r,sprintf('p=%.3g%s',Z(r,c), star_from_p(Z(r,c))),'HorizontalAlignment','center','FontSize',8, 'BackgroundColor',[1 1 1], 'Margin',1);
  end
 end
 pipeline.export_figure_png(fig, fullfile(fp_fig, sprintf('experience_inferential_heatmap_%s.png', tag)), get_dpi(cfg));
 try; close(fig); catch; end
+end
+
+function s = star_from_p(p)
+s = '';
+if ~isfinite(p), return; end
+if p < 0.001
+    s = '***';
+elseif p < 0.01
+    s = '**';
+elseif p < 0.05
+    s = '*';
+end
 end
 
 function write_inferential_overall_readme(fp_rep, tag)
