@@ -344,7 +344,7 @@ try
                 idx = strtrim(string(sc.scene_name)) == sidName;
                 n_total = sum(idx);
                 n_valid = sum(idx & sc.ex_reason=="");
-                excl = sc.subject_id(idx & sc.ex_reason!="");
+                excl = sc.subject_id(idx & sc.ex_reason~="");
                 excl = unique(excl,'stable');
                 rows(end+1,:) = {sidName, n_total, n_valid, strjoin(excl, ';')}; %#ok<AGROW>
             end
@@ -356,7 +356,7 @@ try
                 idx = sc.scene_id==si;
                 n_total = sum(idx);
                 n_valid = sum(idx & sc.ex_reason=="");
-                excl = sc.subject_id(idx & sc.ex_reason!="");
+                excl = sc.subject_id(idx & sc.ex_reason~="");
                 excl = unique(excl,'stable');
                 rows(end+1,:) = {double(si), n_total, n_valid, strjoin(excl, ';')}; %#ok<AGROW>
             end
