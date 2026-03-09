@@ -253,6 +253,15 @@ try
     build_inferential_overall_summary(fp_sum, fp_io_tbl, fp_io_fig, fp_io_rep);
 catch
 end
+try
+    if ~isempty(AllScene)
+        build_inferential_overall_models(AllScene, cfg, 'raw', fp_io_tbl, fp_io_fig, fp_io_rep);
+    end
+    if ~isempty(AllScene_qc)
+        build_inferential_overall_models(AllScene_qc, cfg, 'qc', fp_io_tbl, fp_io_fig, fp_io_rep);
+    end
+catch
+end
 
 % ---------- inferential / experience ----------
 fp_ie = fullfile(fp_inf, 'experience');
@@ -274,6 +283,15 @@ end
 
 try
     build_inferential_experience_summary(fp_sum, fp_ie_tbl, fp_ie_fig, fp_ie_rep);
+catch
+end
+try
+    if ~isempty(AllScene)
+        build_inferential_experience_models(AllScene, cfg, 'raw', fp_ie_tbl, fp_ie_fig, fp_ie_rep);
+    end
+    if ~isempty(AllScene_qc)
+        build_inferential_experience_models(AllScene_qc, cfg, 'qc', fp_ie_tbl, fp_ie_fig, fp_ie_rep);
+    end
 catch
 end
 
@@ -803,6 +821,232 @@ try
     end
 catch
 end
+end
+
+function build_inferential_overall_models(S, cfg, tag, fp_tbl, fp_fig, fp_rep)
+if exist('fitlme','file') ~= 2
+    return;
+end
+if ~ismember('subject_id', S.Properties.VariableNames) || ~ismember('WWR', S.Properties.VariableNames) || ~ismember('Complexity', S.Properties.VariableNames)
+    return;
+end
+metrics = {"O_alpha","O_theta","O_beta","F_theta"};
+try
+    if isfield(cfg,'paper_metrics') && ~isempty(cfg.paper_metrics)
+        metrics = cellstr(string(cfg.paper_metrics));
+    end
+catch
+end
+rows = {};
+for mi=1:numel(metrics)
+    m = string(metrics{mi});
+    if ~ismember(m, S.Properties.VariableNames), continue; end
+    T = table();
+    T.Subject = categorical(string(S.subject_id));
+    T.WWR = categorical(normalize_wwr_local(S.WWR), {'15','45','75'});
+    T.Complexity = categorical(normalize_complexity_local(S.Complexity), {'ComplexityLow','ComplexityHigh'});
+    T.EEG = double(S.(char(m)));
+    keep = ~isnan(T.EEG) & ~isundefined(T.WWR) & ~isundefined(T.Complexity);
+    T = T(keep,:);
+    if height(T) < 20, continue; end
+    try
+        lme = fitlme(T, 'EEG ~ WWR*Complexity + (1|Subject)');
+        A = to_table_compat(anova(lme,'DFMethod','Satterthwaite'));
+        writetable(A, fullfile(fp_tbl, sprintf('overall_lmm_anova_%s_%s.csv', lower(char(m)), tag)));
+        pWWR = term_p(A, 'WWR');
+        pCx = term_p(A, 'Complexity');
+        pWxC = interaction_p(A, 'WWR', 'Complexity');
+        rows(end+1,:) = {m, height(T), numel(unique(string(T.Subject))), pWWR, pCx, pWxC}; %#ok<AGROW>
+    catch
+    end
+end
+if isempty(rows), return; end
+Tout = cell2table(rows, 'VariableNames', {'metric','n_rows','n_subjects','p_WWR','p_Complexity','p_WWRxComplexity'});
+writetable(Tout, fullfile(fp_tbl, sprintf('overall_inferential_summary_%s.csv', tag)));
+plot_inferential_overall_heatmap(Tout, tag, fp_fig, cfg);
+write_inferential_overall_readme(fp_rep, tag);
+end
+
+function build_inferential_experience_models(S, cfg, tag, fp_tbl, fp_fig, fp_rep)
+if exist('fitlme','file') ~= 2
+    return;
+end
+expCol = pick_group_col(S, 'ExperienceGroup', 'Experience');
+if strlength(expCol)==0 || ~ismember('subject_id', S.Properties.VariableNames) || ~ismember('WWR', S.Properties.VariableNames) || ~ismember('Complexity', S.Properties.VariableNames)
+    return;
+end
+metrics = {"O_alpha","O_theta","O_beta","F_theta"};
+try
+    if isfield(cfg,'paper_metrics') && ~isempty(cfg.paper_metrics)
+        metrics = cellstr(string(cfg.paper_metrics));
+    end
+catch
+end
+rows = {};
+for mi=1:numel(metrics)
+    m = string(metrics{mi});
+    if ~ismember(m, S.Properties.VariableNames), continue; end
+    T = table();
+    T.Subject = categorical(string(S.subject_id));
+    T.WWR = categorical(normalize_wwr_local(S.WWR), {'15','45','75'});
+    T.Complexity = categorical(normalize_complexity_local(S.Complexity), {'ComplexityLow','ComplexityHigh'});
+    T.Group = categorical(normalize_high_low_local(S.(char(expCol))), {'Low','High'});
+    T.EEG = double(S.(char(m)));
+    keep = ~isnan(T.EEG) & ~isundefined(T.WWR) & ~isundefined(T.Complexity) & ~isundefined(T.Group);
+    T = T(keep,:);
+    if height(T) < 20, continue; end
+    try
+        lme = fitlme(T, 'EEG ~ WWR*Complexity*Group + (1|Subject)');
+        A = to_table_compat(anova(lme,'DFMethod','Satterthwaite'));
+        writetable(A, fullfile(fp_tbl, sprintf('experience_lmm_anova_%s_%s.csv', lower(char(m)), tag)));
+        rows(end+1,:) = {m, height(T), numel(unique(string(T.Subject))), ...
+            term_p(A,'WWR'), term_p(A,'Complexity'), term_p(A,'Group'), ...
+            interaction_p(A,'WWR','Complexity'), interaction_p(A,'WWR','Group'), interaction_p(A,'Complexity','Group'), ...
+            threeway_p(A,'WWR','Complexity','Group')}; %#ok<AGROW>
+    catch
+    end
+end
+if isempty(rows), return; end
+Tout = cell2table(rows, 'VariableNames', {'metric','n_rows','n_subjects','p_WWR','p_Complexity','p_Group','p_WWRxComplexity','p_WWRxGroup','p_ComplexityxGroup','p_threeway'});
+writetable(Tout, fullfile(fp_tbl, sprintf('experience_inferential_summary_%s.csv', tag)));
+plot_inferential_experience_heatmap(Tout, tag, fp_fig, cfg);
+write_inferential_experience_readme(fp_rep, tag);
+end
+
+function p = term_p(A, name)
+p = NaN;
+try
+    if all(ismember({'Term','pValue'}, A.Properties.VariableNames))
+        tt = string(A.Term);
+        idx = find(tt==string(name),1,'first');
+        if ~isempty(idx), p = double(A.pValue(idx)); end
+    end
+catch
+end
+end
+
+function p = interaction_p(A, a, b)
+p = NaN;
+try
+    if all(ismember({'Term','pValue'}, A.Properties.VariableNames))
+        tt = string(A.Term);
+        idx = find(contains(tt,a) & contains(tt,b) & contains(tt,':'),1,'first');
+        if ~isempty(idx), p = double(A.pValue(idx)); end
+    end
+catch
+end
+end
+
+function p = threeway_p(A, a, b, c)
+p = NaN;
+try
+    if all(ismember({'Term','pValue'}, A.Properties.VariableNames))
+        tt = string(A.Term);
+        idx = find(contains(tt,a) & contains(tt,b) & contains(tt,c) & contains(tt,':'),1,'first');
+        if ~isempty(idx), p = double(A.pValue(idx)); end
+    end
+catch
+end
+end
+
+function plot_inferential_overall_heatmap(T, tag, fp_fig, cfg)
+if isempty(T) || height(T)==0, return; end
+set(0,'DefaultFigureVisible','off');
+fig = figure('Color','w','Position',[100 100 1000 360]);
+ax = axes(fig); hold(ax,'on');
+Z = [double(T.p_WWR)'; double(T.p_Complexity)'; double(T.p_WWRxComplexity)'];
+V = nan(size(Z)); V(isfinite(Z)) = 0; V(isfinite(Z) & Z<0.05)=1; V(isfinite(Z) & Z<0.01)=2; V(isfinite(Z) & Z<0.001)=3;
+imagesc(ax, V); set(ax,'YDir','normal'); axis(ax,'tight');
+colormap(ax, interp1([0 0.5 1], [0.72 0.34 0.26; 0.96 0.96 0.96; 0.31 0.47 0.67], linspace(0,1,256)));
+caxis(ax,[0 3]);
+set(ax,'XTick',1:height(T),'XTickLabel',cellstr(string(T.metric)),'YTick',1:3,'YTickLabel',{'WWR','Complexity','WWR×Complexity'});
+xtickangle(ax,20); title(ax, sprintf('Inferential / Overall [%s]', tag), 'Interpreter','none');
+style_axes(ax);
+for r=1:size(Z,1)
+ for c=1:size(Z,2)
+  if isnan(Z(r,c)), continue; end
+  text(ax,c,r,sprintf('p=%.3g',Z(r,c)),'HorizontalAlignment','center','FontSize',8);
+ end
+end
+pipeline.export_figure_png(fig, fullfile(fp_fig, sprintf('overall_inferential_heatmap_%s.png', tag)), get_dpi(cfg));
+try; close(fig); catch; end
+end
+
+function plot_inferential_experience_heatmap(T, tag, fp_fig, cfg)
+if isempty(T) || height(T)==0, return; end
+set(0,'DefaultFigureVisible','off');
+fig = figure('Color','w','Position',[100 100 1200 520]);
+ax = axes(fig); hold(ax,'on');
+Z = [double(T.p_WWR)'; double(T.p_Complexity)'; double(T.p_Group)'; double(T.p_WWRxComplexity)'; double(T.p_WWRxGroup)'; double(T.p_ComplexityxGroup)'; double(T.p_threeway)'];
+V = nan(size(Z)); V(isfinite(Z)) = 0; V(isfinite(Z) & Z<0.05)=1; V(isfinite(Z) & Z<0.01)=2; V(isfinite(Z) & Z<0.001)=3;
+imagesc(ax, V); set(ax,'YDir','normal'); axis(ax,'tight');
+colormap(ax, interp1([0 0.5 1], [0.72 0.34 0.26; 0.96 0.96 0.96; 0.31 0.47 0.67], linspace(0,1,256)));
+caxis(ax,[0 3]);
+set(ax,'XTick',1:height(T),'XTickLabel',cellstr(string(T.metric)),'YTick',1:7,'YTickLabel',{'WWR','Complexity','Group','WWR×Complexity','WWR×Group','Complexity×Group','3-way'});
+xtickangle(ax,20); title(ax, sprintf('Inferential / Experience [%s]', tag), 'Interpreter','none');
+style_axes(ax);
+for r=1:size(Z,1)
+ for c=1:size(Z,2)
+  if isnan(Z(r,c)), continue; end
+  text(ax,c,r,sprintf('p=%.3g',Z(r,c)),'HorizontalAlignment','center','FontSize',8);
+ end
+end
+pipeline.export_figure_png(fig, fullfile(fp_fig, sprintf('experience_inferential_heatmap_%s.png', tag)), get_dpi(cfg));
+try; close(fig); catch; end
+end
+
+function write_inferential_overall_readme(fp_rep, tag)
+fid = fopen(fullfile(fp_rep, sprintf('README_%s.md', tag)),'w');
+if fid>0
+ fprintf(fid,'# Inferential / Overall [%s]\n\n', tag);
+ fprintf(fid,'Key summary files:\n');
+ fprintf(fid,'- `overall_inferential_summary_%s.csv`\n', tag);
+ fprintf(fid,'- `overall_inferential_heatmap_%s.png`\n', tag);
+ fclose(fid);
+end
+end
+
+function write_inferential_experience_readme(fp_rep, tag)
+fid = fopen(fullfile(fp_rep, sprintf('README_%s.md', tag)),'w');
+if fid>0
+ fprintf(fid,'# Inferential / Experience [%s]\n\n', tag);
+ fprintf(fid,'Key summary files:\n');
+ fprintf(fid,'- `experience_inferential_summary_%s.csv`\n', tag);
+ fprintf(fid,'- `experience_inferential_heatmap_%s.png`\n', tag);
+ fprintf(fid,'- `experience_inferential_file_index.csv`\n');
+ fclose(fid);
+end
+end
+
+function v = to_table_compat(X)
+if istable(X), v = X; return; end
+try
+ if isa(X,'dataset'), v = dataset2table(X); return; end
+catch
+end
+try
+ v = struct2table(X); return;
+catch
+end
+error('Unsupported output type');
+end
+
+function w = normalize_wwr_local(x)
+w = string(x); w = strtrim(w);
+for i=1:numel(w)
+ tok = regexp(char(w(i)), '(\d+)', 'tokens', 'once');
+ if ~isempty(tok), w(i) = string(str2double(tok{1})); end
+end
+ok = ismember(w,["15","45","75"]); w(~ok) = "";
+end
+
+function c = normalize_complexity_local(x)
+c = string(x); c = strtrim(c); cl = lower(c); out = repmat("", numel(c), 1);
+out(ismember(cl,["low","0","c0","complexitylow"])) = "ComplexityLow";
+out(ismember(cl,["high","1","c1","complexityhigh"])) = "ComplexityHigh";
+out(c=="ComplexityLow") = "ComplexityLow"; out(c=="ComplexityHigh") = "ComplexityHigh";
+isNum = ~isnan(str2double(c)); out(isNum & str2double(c)==0) = "ComplexityLow"; out(isNum & str2double(c)==1) = "ComplexityHigh";
+c = out;
 end
 
 function build_inferential_experience_summary(fp_sum, fp_tbl, fp_fig, fp_rep)
