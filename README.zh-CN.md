@@ -1,6 +1,9 @@
 # EEG 频段功率分析流水线（中文说明）
 
 > 该文件为纯中文文档；英文+中文双语请见 `README.md`。
+>
+> 当前 `main` 分支仅保留**纯 EEG 的 MATLAB/EEGLAB 主流程**。
+> EEG × 眼动融合相关内容已单独保存在分支 `feature/eeg-eye-integration`。
 
 ## 目录
 - [项目简介](#项目简介)
