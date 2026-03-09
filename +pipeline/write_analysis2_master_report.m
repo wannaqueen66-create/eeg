@@ -99,7 +99,7 @@ for it = 1:numel(tags)
 
         % links
         add('- Task5 PeakIndex files: `analysis-2/task5_peakindex_invertedU/...`');
-        add('- Task6 O_beta special files: `analysis-2/task6_obeta_special/...`');
+        add('- Task6 core-metric special files: `analysis/task6_coremetric_special/...` (legacy fallback: `analysis-2/task6_obeta_special/...`)');
         add('- Task7 individual checks: `analysis-2/task7_individual_checks/...`');
         add('');
     end

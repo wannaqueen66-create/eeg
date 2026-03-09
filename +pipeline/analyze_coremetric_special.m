@@ -1,9 +1,17 @@
-function out = analyze_obeta_special(AllScene, fp_sum, cfg, tag)
-%ANALYZE_OBETA_SPECIAL Compatibility wrapper for historical Task6 entry.
+function out = analyze_coremetric_special(AllScene, fp_sum, cfg, tag)
+%ANALYZE_COREMETRIC_SPECIAL Task6: core-metric special robustness models.
 %
-% Historical name retained to avoid breaking older callers.
-% Canonical implementation now lives in:
-%   pipeline.analyze_coremetric_special
+% This is the canonical Task6 entry point.
+% Historical compatibility note:
+% - previously this logic lived under `analyze_obeta_special`
+% - the task now covers the repository's core metric set instead of only O_beta
+%
+% Default metrics:
+%   O_alpha, O_theta, O_beta, F_theta
+%
+% For each grouping line (ExperienceGroup / SportFreqGroup), fit:
+%   Model A: EEG ~ Group + (1|Subject)
+%   Model B: EEG ~ WWR + Complexity + Group + (1|Subject)
 
 if nargin < 4 || isempty(tag)
     tag = 'raw';
@@ -11,18 +19,17 @@ end
 if nargin < 3
     cfg = struct();
 end
-out = pipeline.analyze_coremetric_special(AllScene, fp_sum, cfg, tag);
-return;
+out = struct();
 
 if exist('fitlme','file') ~= 2
-    warning('analyze_obeta_special: fitlme not found (Stats toolbox missing). Skipping.');
+    warning('analyze_coremetric_special: fitlme not found (Stats toolbox missing). Skipping.');
     return;
 end
 
 req = {'subject_id'};
 for i=1:numel(req)
     if ~ismember(req{i}, AllScene.Properties.VariableNames)
-        warning('analyze_obeta_special: missing required column %s. Skipping.', req{i});
+        warning('analyze_coremetric_special: missing required column %s. Skipping.', req{i});
         return;
     end
 end
@@ -37,7 +44,7 @@ end
 
 hasAnyMetric = any(ismember(metrics, string(AllScene.Properties.VariableNames)));
 if ~hasAnyMetric
-    warning('analyze_obeta_special: none of task6_metrics are present. Skipping.');
+    warning('analyze_coremetric_special: none of task6_metrics are present. Skipping.');
     return;
 end
 
@@ -46,7 +53,7 @@ analyses = { ...
     struct('name','sportfreq','gcol','SportFreqGroup') ...
 };
 
-[fp_root, ~, ~, ~] = pipeline.get_analysis_task_subdirs(fp_sum, 'task6_obeta_special', tag);
+[fp_root, ~, ~, ~] = pipeline.get_analysis_task_subdirs(fp_sum, 'task6_coremetric_special', tag);
 
 T0 = AllScene;
 T0.subject_id = string(T0.subject_id);
@@ -108,8 +115,6 @@ for ai=1:numel(analyses)
             T.Complexity = categorical(string(T.Complexity), {'ComplexityLow','ComplexityHigh'});
         end
 
-        % For fair Model A vs Model B comparison, use the same complete-case sample
-        % when control predictors (WWR, Complexity) are available.
         if hasControls
             useCtrl = ~isundefined(T.WWR) & ~isundefined(T.Complexity);
             T = T(useCtrl, :);
@@ -118,23 +123,20 @@ for ai=1:numel(analyses)
             end
         end
 
-        % Save analysis-ready
         keep = {'Subject','Group','EEG'};
         if ismember('WWR', T.Properties.VariableNames); keep{end+1} = 'WWR'; end
         if ismember('Complexity', T.Properties.VariableNames); keep{end+1} = 'Complexity'; end
         writetable(T(:,keep), fullfile(fp_tbl, sprintf('%s_analysis_ready_%s.csv', lower(metc), tag)));
 
-        % Model A
         try
             lmeA = fitlme(T, 'EEG ~ Group + (1|Subject)');
         catch ME
-            warning('analyze_obeta_special: Model A failed (%s/%s/%s): %s', tag, A.name, met, ME.message);
+            warning('analyze_coremetric_special: Model A failed (%s/%s/%s): %s', tag, A.name, met, ME.message);
             continue;
         end
 
         write_lme_tables(lmeA, fp_tbl, sprintf('%s_modelA_group_only_%s', lower(metc), tag));
 
-        % Model B (controlled)
         lmeB = [];
         try
             if ismember('WWR', T.Properties.VariableNames) && ismember('Complexity', T.Properties.VariableNames)
@@ -142,24 +144,21 @@ for ai=1:numel(analyses)
                 write_lme_tables(lmeB, fp_tbl, sprintf('%s_modelB_controlled_%s', lower(metc), tag));
             end
         catch ME
-            warning('analyze_obeta_special: Model B failed (%s/%s/%s): %s', tag, A.name, met, ME.message);
+            warning('analyze_coremetric_special: Model B failed (%s/%s/%s): %s', tag, A.name, met, ME.message);
         end
 
-        % Figure 1: raw group scatter/mean
         try
             fp_png = fullfile(fp_fig, pipeline.sanitize_filename(sprintf('%s_special_%s_%s.png', lower(metc), tag, A.name)));
             plot_group_metric(T, metc, tag, A.name, fp_png);
         catch
         end
 
-        % Figure 2: Model A vs Model B group-effect robustness (Estimate + p)
         try
             fp_png2 = fullfile(fp_fig, pipeline.sanitize_filename(sprintf('%s_group_model_compare_%s_%s.png', lower(metc), tag, A.name)));
             plot_group_model_compare(lmeA, lmeB, metc, tag, A.name, fp_png2);
         catch
         end
 
-        % Report
         try
             fp_md = fullfile(fp_rep, sprintf('%s_special_report_%s.md', lower(metc), tag));
             write_report(fp_md, metc, tag, A.name, T, lmeA, lmeB);
@@ -179,7 +178,7 @@ try
     end
     writetable(C, fullfile(fp_tbl, sprintf('%s_fixed_effects.csv', stem)));
 catch ME
-    warning('analyze_obeta_special: failed to write fixed effects (%s): %s', stem, ME.message);
+    warning('analyze_coremetric_special: failed to write fixed effects (%s): %s', stem, ME.message);
 end
 try
     A = to_table_compat(anova(lme,'DFMethod','Satterthwaite'));
@@ -189,7 +188,7 @@ try
     end
     writetable(A, fullfile(fp_tbl, sprintf('%s_anova.csv', stem)));
 catch ME
-    warning('analyze_obeta_special: failed to write ANOVA (%s): %s', stem, ME.message);
+    warning('analyze_coremetric_special: failed to write ANOVA (%s): %s', stem, ME.message);
 end
 end
 
@@ -221,80 +220,57 @@ try; close(fig); catch; end
 end
 
 function plot_group_model_compare(lmeA, lmeB, metricName, tag, analysisName, fp_png)
-% Visual summary for task6 robustness check:
-% - left: Group(High vs Low) estimate ±95%CI in Model A/B
-% - right: Group p-values in Model A/B as -log10(p), with p=0.05 line
-
 if isempty(lmeA)
     return;
 end
-
-% Extract Group term from fixed-effects tables
 [eA, seA, pA] = extract_group_term(lmeA);
 if isnan(eA)
     return;
 end
-
 hasB = ~isempty(lmeB);
 if hasB
     [eB, seB, pB] = extract_group_term(lmeB);
 else
     eB = NaN; seB = NaN; pB = NaN;
 end
-
 set(0,'DefaultFigureVisible','off');
 fig = figure('Color','w','Position',[100 100 920 360]);
-
-% Left panel: estimate + 95% CI
 ax1 = subplot(1,2,1); hold(ax1,'on');
 ciA = [eA - 1.96*seA, eA + 1.96*seA];
-errorbar(ax1, 1, eA, eA-ciA(1), ciA(2)-eA, 'o', 'LineWidth',1.6, ...
-    'MarkerFaceColor',[0.2 0.5 0.9], 'Color',[0.2 0.5 0.9]);
+errorbar(ax1, 1, eA, eA-ciA(1), ciA(2)-eA, 'o', 'LineWidth',1.6, 'MarkerFaceColor',[0.2 0.5 0.9], 'Color',[0.2 0.5 0.9]);
 if hasB && isfinite(eB)
     ciB = [eB - 1.96*seB, eB + 1.96*seB];
-    errorbar(ax1, 2, eB, eB-ciB(1), ciB(2)-eB, 'o', 'LineWidth',1.6, ...
-        'MarkerFaceColor',[0.9 0.4 0.2], 'Color',[0.9 0.4 0.2]);
-    set(ax1,'XTick',[1 2],'XTickLabel',{'Model A','Model B'});
-    xlim(ax1,[0.5 2.5]);
+    errorbar(ax1, 2, eB, eB-ciB(1), ciB(2)-eB, 'o', 'LineWidth',1.6, 'MarkerFaceColor',[0.9 0.4 0.2], 'Color',[0.9 0.4 0.2]);
+    set(ax1,'XTick',[1 2],'XTickLabel',{'Model A','Model B'}); xlim(ax1,[0.5 2.5]);
 else
     ciB = [NaN NaN];
-    set(ax1,'XTick',1,'XTickLabel',{'Model A'});
-    xlim(ax1,[0.5 1.5]);
+    set(ax1,'XTick',1,'XTickLabel',{'Model A'}); xlim(ax1,[0.5 1.5]);
 end
 yline(ax1, 0, 'k--');
 ylabel(ax1, 'Group Estimate (High vs Low)');
 title(ax1, sprintf('%s group effect size', strrep(metricName,'_','\\_')), 'Interpreter','none');
 grid(ax1,'on');
-
-% Add numeric labels on left panel (beta + 95%CI + p)
-text(ax1, 1, eA, sprintf('  β=%.4g\n  95%%CI=[%.4g, %.4g]\n  p=%.4g', eA, ciA(1), ciA(2), pA), ...
-    'VerticalAlignment','bottom','HorizontalAlignment','left','FontSize',8,'Color',[0.1 0.3 0.6]);
+text(ax1, 1, eA, sprintf('  β=%.4g\n  95%%CI=[%.4g, %.4g]\n  p=%.4g', eA, ciA(1), ciA(2), pA), 'VerticalAlignment','bottom','HorizontalAlignment','left','FontSize',8,'Color',[0.1 0.3 0.6]);
 if hasB && isfinite(eB)
-    text(ax1, 2, eB, sprintf('  β=%.4g\n  95%%CI=[%.4g, %.4g]\n  p=%.4g', eB, ciB(1), ciB(2), pB), ...
-        'VerticalAlignment','bottom','HorizontalAlignment','left','FontSize',8,'Color',[0.6 0.2 0.1]);
+    text(ax1, 2, eB, sprintf('  β=%.4g\n  95%%CI=[%.4g, %.4g]\n  p=%.4g', eB, ciB(1), ciB(2), pB), 'VerticalAlignment','bottom','HorizontalAlignment','left','FontSize',8,'Color',[0.6 0.2 0.1]);
 end
-
-% Right panel: p-values as -log10(p)
 ax2 = subplot(1,2,2); hold(ax2,'on');
 if hasB && isfinite(pB)
     vals = -log10([max(pA,realmin), max(pB,realmin)]);
     bar(ax2, [1 2], vals, 0.5);
-    set(ax2,'XTick',[1 2],'XTickLabel',{'Model A','Model B'});
-    xlim(ax2,[0.5 2.5]);
+    set(ax2,'XTick',[1 2],'XTickLabel',{'Model A','Model B'}); xlim(ax2,[0.5 2.5]);
     text(ax2,1,vals(1),sprintf('  p=%.4g',pA),'VerticalAlignment','bottom','HorizontalAlignment','left','FontSize',8);
     text(ax2,2,vals(2),sprintf('  p=%.4g',pB),'VerticalAlignment','bottom','HorizontalAlignment','left','FontSize',8);
 else
     vals = -log10(max(pA,realmin));
     bar(ax2, 1, vals, 0.5);
-    set(ax2,'XTick',1,'XTickLabel',{'Model A'});
-    xlim(ax2,[0.5 1.5]);
+    set(ax2,'XTick',1,'XTickLabel',{'Model A'}); xlim(ax2,[0.5 1.5]);
     text(ax2,1,vals,sprintf('  p=%.4g',pA),'VerticalAlignment','bottom','HorizontalAlignment','left','FontSize',8);
 end
 yline(ax2, -log10(0.05), 'r--', 'p=0.05', 'LabelVerticalAlignment','bottom');
 ylabel(ax2, '-log10(p)');
 title(ax2, sprintf('Group p-values (A=%.3g%s)', pA, ternary(hasB && isfinite(pB), sprintf(', B=%.3g', pB), '')));
 grid(ax2,'on');
-
 sgtitle(sprintf('Task6 %s group robustness | %s [%s]', strrep(metricName,'_','\\_'), analysisName, tag), 'Interpreter','none');
 pipeline.export_figure_png(fig, fp_png, 300);
 try; close(fig); catch; end
@@ -306,22 +282,13 @@ try
     C = to_table_compat(lme.Coefficients);
     names = string(C.Name);
     idx = find(contains(lower(names),'group'),1,'first');
-    if isempty(idx)
-        return;
-    end
-    est = double(C.Estimate(idx));
-    se  = double(C.SE(idx));
-    p   = double(C.pValue(idx));
-
-    % Prefer ANOVA Group p when available
+    if isempty(idx), return; end
+    est = double(C.Estimate(idx)); se = double(C.SE(idx)); p = double(C.pValue(idx));
     try
         A = to_table_compat(anova(lme,'DFMethod','Satterthwaite'));
         if ismember('Term', A.Properties.VariableNames) && ismember('pValue', A.Properties.VariableNames)
-            t = string(A.Term);
-            ia = find(contains(lower(t),'group'),1,'first');
-            if ~isempty(ia)
-                p = double(A.pValue(ia));
-            end
+            t = string(A.Term); ia = find(contains(lower(t),'group'),1,'first');
+            if ~isempty(ia), p = double(A.pValue(ia)); end
         end
     catch
     end
@@ -330,11 +297,7 @@ end
 end
 
 function out = ternary(cond, a, b)
-if cond
-    out = a;
-else
-    out = b;
-end
+if cond, out = a; else, out = b; end
 end
 
 function write_report(fp_md, metricName, tag, analysisName, T, lmeA, lmeB)
@@ -347,8 +310,6 @@ if ~isempty(lmeB)
     lines(end+1) = '- Model B: `EEG ~ WWR + Complexity + Group + (1|Subject)`';
 end
 lines(end+1) = '';
-
-% Raw means
 try
     [G, grp] = findgroups(string(T.Group));
     n = splitapply(@numel, T.EEG, G);
@@ -363,12 +324,10 @@ try
     lines(end+1) = '';
 catch
 end
-
 lines(end+1) = '## LMM outputs';
 lines(end+1) = '- See exported fixed_effects/anova CSVs in tables/.';
 lines(end+1) = '- Compare Group effect in Model A vs Model B to assess robustness after controlling WWR & Complexity.';
 lines(end+1) = sprintf('- Visual summary PNG: `%s_group_model_compare_<tag>_<analysis>.png` (estimate±95%%CI + p-value comparison).', lower(metricName));
-
 fid = fopen(fp_md,'w');
 for i=1:numel(lines)
     fprintf(fid, '%s\n', lines(i));
@@ -377,60 +336,39 @@ fclose(fid);
 end
 
 function Ttbl = to_table_compat(X)
-if istable(X)
-    Ttbl = X;
-    return;
-end
+if istable(X), Ttbl = X; return; end
 try
-    if isa(X,'dataset')
-        Ttbl = dataset2table(X);
-        return;
-    end
+    if isa(X,'dataset'), Ttbl = dataset2table(X); return; end
 catch
 end
 try
-    Ttbl = struct2table(X);
-    return;
+    Ttbl = struct2table(X); return;
 catch
 end
 error('Unsupported output type for table export: %s', class(X));
 end
 
 function w = normalize_wwr(x)
-w = string(x);
-w = strtrim(w);
+w = string(x); w = strtrim(w);
 for i=1:numel(w)
     tok = regexp(char(w(i)), '(\d+)', 'tokens', 'once');
-    if ~isempty(tok)
-        w(i) = string(str2double(tok{1}));
-    end
+    if ~isempty(tok), w(i) = string(str2double(tok{1})); end
 end
-ok = ismember(w,["15","45","75"]);
-w(~ok) = "";
+ok = ismember(w,["15","45","75"]); w(~ok) = "";
 end
 
 function c = normalize_complexity(x)
-c = string(x);
-c = strtrim(c);
-cl = lower(c);
-out = repmat("", numel(c), 1);
+c = string(x); c = strtrim(c); cl = lower(c); out = repmat("", numel(c), 1);
 out(ismember(cl,["low","0","c0","complexitylow"])) = "ComplexityLow";
 out(ismember(cl,["high","1","c1","complexityhigh"])) = "ComplexityHigh";
-out(c=="ComplexityLow") = "ComplexityLow";
-out(c=="ComplexityHigh") = "ComplexityHigh";
-isNum = ~isnan(str2double(c));
-out(isNum & str2double(c)==0) = "ComplexityLow";
-out(isNum & str2double(c)==1) = "ComplexityHigh";
+out(c=="ComplexityLow") = "ComplexityLow"; out(c=="ComplexityHigh") = "ComplexityHigh";
+isNum = ~isnan(str2double(c)); out(isNum & str2double(c)==0) = "ComplexityLow"; out(isNum & str2double(c)==1) = "ComplexityHigh";
 c = out;
 end
 
 function g = normalize_high_low(x)
-s = string(x);
-s = strtrim(s);
-sl = lower(s);
-g = repmat("", numel(s), 1);
+s = string(x); s = strtrim(s); sl = lower(s); g = repmat("", numel(s), 1);
 g(ismember(sl,["high","1","高","h"])) = "High";
 g(ismember(sl,["low","0","低","l"])) = "Low";
-mask = (s=="High" | s=="Low");
-g(mask) = s(mask);
+mask = (s=="High" | s=="Low"); g(mask) = s(mask);
 end

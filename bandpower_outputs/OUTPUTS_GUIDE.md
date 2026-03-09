@@ -231,7 +231,7 @@ runs/current/batch/analysis/
   task3_trialindex_lmm/
   task4_core_lmm_suite/
   task5_peakindex_invertedu/
-  task6_obeta_special/
+  task6_coremetric_special/
   task7_individual_checks/
 ```
 
@@ -275,9 +275,9 @@ Meaning:
 - PeakIndex / inverted-U test
 - PeakIndex / 倒 U 检验
 
-### `task6_obeta_special/`
-- O_beta robustness-focused special analysis
-- O_beta 专项稳健性分析
+### `task6_coremetric_special/`
+- Core-metric robustness-focused special analysis
+- 核心指标专项稳健性分析（默认覆盖 O_alpha / O_theta / O_beta / F_theta）
 
 ### `task7_individual_checks/`
 - Outlier / influence / robustness audit
@@ -327,7 +327,7 @@ Recommended places to inspect group results:
 - `task3_trialindex_lmm/...`
 - `task4_core_lmm_suite/...`
 - `task5_peakindex_invertedu/...`
-- `task6_obeta_special/...`
+- `task6_coremetric_special/...`（兼容期内也可能看到旧路径 `task6_obeta_special/...`）
 - `task7_individual_checks/...`
 
 ## 7.3 Group labels in merged data

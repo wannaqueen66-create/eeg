@@ -65,7 +65,7 @@ Task directories should scale naturally:
 - task3_trialindex_lmm
 - task4_core_lmm_suite
 - task5_peakindex_invertedu
-- task6_obeta_special
+- task6_coremetric_special
 - task7_individual_checks
 - future task8/task9/...
 
@@ -136,7 +136,7 @@ bandpower_outputs/
             tables/
             figures/
             reports/
-        task6_obeta_special/
+        task6_coremetric_special/
           raw/
             tables/
             figures/
@@ -444,7 +444,8 @@ This keeps the first pass operationally safe.
 - `+pipeline/analyze_trialindex_lmm.m`
 - `+pipeline/analyze_core_lmm_suite.m`
 - `+pipeline/analyze_peakindex_invertedu.m`
-- `+pipeline/analyze_obeta_special.m`
+- `+pipeline/analyze_coremetric_special.m`
+- `+pipeline/analyze_obeta_special.m` (compatibility wrapper)
 - `+pipeline/analyze_individual_checks.m`
 
 ### Figure writers likely affected

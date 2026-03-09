@@ -435,6 +435,7 @@ if exist(fullfile(fp_sum,'analysis'),'dir')
         fullfile(fp_sum,'analysis','task4_core_lmm_suite',tag,'tables','factor_WWR',analysisName), ...
         fullfile(fp_sum,'analysis','task4_core_lmm_suite',tag,'tables','trend_WWR',analysisName), ...
         fullfile(fp_sum,'analysis','task5_peakindex_invertedu',tag,'tables',analysisName), ...
+        fullfile(fp_sum,'analysis','task6_coremetric_special',tag,'tables',analysisName), ...
         fullfile(fp_sum,'analysis','task6_obeta_special',tag,'tables',analysisName) ...
     };
 else
@@ -497,7 +498,7 @@ if contains(s,'task4_core_lmm_suite')
     tk = "task4";
 elseif contains(s,'task5_peakindex_invertedu')
     tk = "task5";
-elseif contains(s,'task6_obeta_special')
+elseif contains(s,'task6_coremetric_special') || contains(s,'task6_obeta_special')
     tk = "task6";
 else
     tk = "unknown";
