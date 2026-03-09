@@ -28,11 +28,7 @@ end
 out = struct();
 
 % Output dirs
-fp_root = fullfile(fp_sum, 'analysis-2', 'task3_trialindex_lmm');
-fp_tbl = fullfile(fp_root, 'tables', tag);
-fp_rep = fullfile(fp_root, 'reports', tag);
-if ~exist(fp_tbl,'dir'); mkdir(fp_tbl); end
-if ~exist(fp_rep,'dir'); mkdir(fp_rep); end
+[fp_root, fp_tbl, ~, fp_rep] = pipeline.get_analysis_task_subdirs(fp_sum, 'task3_trialindex_lmm', tag);
 
 % Check fitlme
 if exist('fitlme','file') ~= 2

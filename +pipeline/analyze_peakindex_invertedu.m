@@ -50,7 +50,7 @@ analyses = { ...
     struct('name','sportfreq','gcol','SportFreqGroup') ...
 };
 
-fp_root = fullfile(fp_sum, 'analysis-2', 'task5_peakindex_invertedU');
+[fp_root, ~, ~, ~] = pipeline.get_analysis_task_subdirs(fp_sum, 'task5_peakindex_invertedu', tag);
 
 T0 = AllScene;
 T0.subject_id = string(T0.subject_id);

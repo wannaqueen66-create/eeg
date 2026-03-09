@@ -37,7 +37,7 @@ analyses = { ...
     struct('name','sportfreq','gcol','SportFreqGroup') ...
 };
 
-fp_root = fullfile(fp_sum, 'analysis-2', 'task6_obeta_special');
+[fp_root, ~, ~, ~] = pipeline.get_analysis_task_subdirs(fp_sum, 'task6_obeta_special', tag);
 
 T0 = AllScene;
 T0.subject_id = string(T0.subject_id);

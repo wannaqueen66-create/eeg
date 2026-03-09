@@ -31,19 +31,21 @@ if exist(fp_pairs,'file')
 end
 
 % output dir (paper figures)
-% In legacy layout, keep historical location (fp_sum/paper_fig).
-% In tidy layout, use summary/figures/paper/<tag> handled by summarize.
-fp_fig = fullfile(fp_sum, 'paper_fig');
-if exist('pipeline.get_fig_dir','file') == 2
-    % If caller passes a QC subfolder (fp_sum=.../paper_fig_qc), we want figures in that folder root.
-    % summarize_bandpower_outputs now calls plot_paper_figures with fp_sum pointing to target output dir.
-    % So: detect if fp_sum endswith 'paper_fig_qc' or 'paper_fig' and write directly there.
-    [~, leaf] = fileparts(fp_sum);
-    if strcmpi(leaf,'paper_fig_qc') || strcmpi(leaf,'paper_fig')
-        fp_fig = fp_sum;
-    end
+% Stage-3 refactor behavior:
+% - when fp_sum points at batch root, route paper outputs to batch/paper/<tag>/figures
+% - otherwise preserve legacy paper_fig / paper_fig_qc semantics
+paperTag = 'raw';
+[fp_parent, leaf] = fileparts(fp_sum);
+if strcmpi(leaf,'paper_fig_qc') || strcmpi(leaf,'qc')
+    paperTag = 'qc';
 end
-if ~exist(fp_fig,'dir'); mkdir(fp_fig); end
+if (strcmpi(leaf,'raw') || strcmpi(leaf,'qc')) && strcmpi(string(regexp(fp_parent, '[^/\\]+$', 'match', 'once')), 'paper')
+    fp_fig = fp_sum;
+elseif strcmpi(leaf,'paper_fig') || strcmpi(leaf,'paper_fig_qc')
+    fp_fig = fp_sum;
+else
+    [~, ~, fp_fig, ~] = pipeline.get_paper_subdirs(fp_sum, paperTag);
+end
 
 % Style
 try

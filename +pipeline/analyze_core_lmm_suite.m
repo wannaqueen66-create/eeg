@@ -68,7 +68,8 @@ catch
 end
 
 % Output roots
-fp_root = fullfile(fp_sum, 'analysis-2', 'task4_core_lmm_suite');
+[fp_root_base, fp_task_tbl, fp_task_fig, fp_task_rep] = pipeline.get_analysis_task_subdirs(fp_sum, 'task4_core_lmm_suite', tag);
+fp_root = fp_root_base;
 fp_factor = fullfile(fp_root, 'factor_WWR');
 fp_trend  = fullfile(fp_root, 'trend_WWR');
 

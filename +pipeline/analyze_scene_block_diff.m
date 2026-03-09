@@ -30,15 +30,15 @@ end
 out = struct();
 
 % output dirs
-fp_root = fullfile(fp_sum, 'analysis-2', 'task2_C1W45_block_diff');
+[fp_root_base, fp_tbl_base, fp_fig_base, fp_rep_base] = pipeline.get_analysis_task_subdirs(fp_sum, 'task2_C1W45_block_diff', tag);
 
 branches = ["all","experience","sportfreq"];
 fp_tbl = struct(); fp_rep = struct(); fp_fig = struct();
 for bi=1:numel(branches)
     b = char(branches(bi));
-    fp_tbl.(b) = fullfile(fp_root, 'tables', tag, b);
-    fp_rep.(b) = fullfile(fp_root, 'reports', tag, b);
-    fp_fig.(b) = fullfile(fp_root, 'figures', tag, b);
+    fp_tbl.(b) = fullfile(fp_tbl_base, b);
+    fp_rep.(b) = fullfile(fp_rep_base, b);
+    fp_fig.(b) = fullfile(fp_fig_base, b);
     if ~exist(fp_tbl.(b),'dir'); mkdir(fp_tbl.(b)); end
     if ~exist(fp_rep.(b),'dir'); mkdir(fp_rep.(b)); end
     if ~exist(fp_fig.(b),'dir'); mkdir(fp_fig.(b)); end

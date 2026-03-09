@@ -15,7 +15,11 @@ if nargin < 2
 end
 
 out = struct();
-fp_a2 = fullfile(fp_sum, 'analysis-2');
+if exist(fullfile(fp_sum, 'analysis'),'dir')
+    fp_a2 = fullfile(fp_sum, 'analysis');
+else
+    fp_a2 = fullfile(fp_sum, 'analysis-2');
+end
 if ~exist(fp_a2,'dir')
     return;
 end
@@ -124,7 +128,11 @@ end
 
 function rows = collect_task4_terms(fp_sum, tag, analysisName, metrics, stemPrefix, wantedTerms)
 rows = table();
-base = fullfile(fp_sum,'analysis-2','task4_core_lmm_suite','factor_WWR','tables',char(tag),char(analysisName));
+if exist(fullfile(fp_sum,'analysis'),'dir')
+    base = fullfile(fp_sum,'analysis','task4_core_lmm_suite',char(tag),'tables','factor_WWR',char(analysisName));
+else
+    base = fullfile(fp_sum,'analysis-2','task4_core_lmm_suite','factor_WWR','tables',char(tag),char(analysisName));
+end
 if ~exist(base,'dir'); return; end
 
 for im = 1:numel(metrics)
@@ -159,7 +167,11 @@ end
 
 function rows = collect_task3_terms(fp_sum, tag, analysisName, metrics, wantedTerms)
 rows = table();
-base = fullfile(fp_sum,'analysis-2','task3_trialindex_lmm','tables',char(tag),char(analysisName));
+if exist(fullfile(fp_sum,'analysis'),'dir')
+    base = fullfile(fp_sum,'analysis','task3_trialindex_lmm',char(tag),'tables',char(analysisName));
+else
+    base = fullfile(fp_sum,'analysis-2','task3_trialindex_lmm','tables',char(tag),char(analysisName));
+end
 if ~exist(base,'dir'); return; end
 
 for im = 1:numel(metrics)
@@ -193,8 +205,13 @@ end
 
 function dirText = read_group_direction(fp_sum, tag, analysisName, metric)
 dirText = "";
-fp = fullfile(fp_sum,'analysis-2','task4_core_lmm_suite','factor_WWR','tables',char(tag),char(analysisName), ...
-    sprintf('direction_means_%s_%s.csv', metric, tag));
+if exist(fullfile(fp_sum,'analysis'),'dir')
+    fp = fullfile(fp_sum,'analysis','task4_core_lmm_suite',char(tag),'tables','factor_WWR',char(analysisName), ...
+        sprintf('direction_means_%s_%s.csv', metric, tag));
+else
+    fp = fullfile(fp_sum,'analysis-2','task4_core_lmm_suite','factor_WWR','tables',char(tag),char(analysisName), ...
+        sprintf('direction_means_%s_%s.csv', metric, tag));
+end
 if ~exist(fp,'file'); return; end
 T = safe_read(fp);
 if isempty(T); return; end

@@ -27,13 +27,7 @@ end
 out = struct();
 
 % --- output dirs ---
-fp_root = fullfile(fp_sum, 'analysis-2', 'task1_block2_restart');
-fp_tbl = fullfile(fp_root, 'tables', tag);
-fp_rep = fullfile(fp_root, 'reports', tag);
-fp_fig = fullfile(fp_root, 'figures', tag);
-if ~exist(fp_tbl,'dir'); mkdir(fp_tbl); end
-if ~exist(fp_rep,'dir'); mkdir(fp_rep); end
-if ~exist(fp_fig,'dir'); mkdir(fp_fig); end
+[fp_root, fp_tbl, fp_fig, fp_rep] = pipeline.get_analysis_task_subdirs(fp_sum, 'task1_block2_restart', tag);
 
 % --- required columns ---
 req = {'subject_id','block_id','cycle_in_block'};
