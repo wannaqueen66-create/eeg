@@ -256,9 +256,11 @@ end
 try
     if ~isempty(AllScene)
         build_inferential_overall_models(AllScene, cfg, 'raw', fp_io_tbl, fp_io_fig, fp_io_rep);
+        build_inferential_overall_trend(AllScene, cfg, 'raw', fp_io_tbl, fp_io_fig, fp_io_rep);
     end
     if ~isempty(AllScene_qc)
         build_inferential_overall_models(AllScene_qc, cfg, 'qc', fp_io_tbl, fp_io_fig, fp_io_rep);
+        build_inferential_overall_trend(AllScene_qc, cfg, 'qc', fp_io_tbl, fp_io_fig, fp_io_rep);
     end
 catch
 end
@@ -288,9 +290,11 @@ end
 try
     if ~isempty(AllScene)
         build_inferential_experience_models(AllScene, cfg, 'raw', fp_ie_tbl, fp_ie_fig, fp_ie_rep);
+        build_inferential_experience_trend(AllScene, cfg, 'raw', fp_ie_tbl, fp_ie_fig, fp_ie_rep);
     end
     if ~isempty(AllScene_qc)
         build_inferential_experience_models(AllScene_qc, cfg, 'qc', fp_ie_tbl, fp_ie_fig, fp_ie_rep);
+        build_inferential_experience_trend(AllScene_qc, cfg, 'qc', fp_ie_tbl, fp_ie_fig, fp_ie_rep);
     end
 catch
 end
@@ -925,6 +929,156 @@ Tout = cell2table(rows, 'VariableNames', {'metric','n_rows','n_subjects','p_WWR'
 writetable(Tout, fullfile(fp_tbl, sprintf('experience_inferential_summary_%s.csv', tag)));
 plot_inferential_experience_heatmap(Tout, tag, fp_fig, cfg);
 write_inferential_experience_readme(fp_rep, tag);
+end
+
+function build_inferential_overall_trend(S, cfg, tag, fp_tbl, fp_fig, fp_rep)
+if exist('fitlme','file') ~= 2
+    return;
+end
+if ~ismember('subject_id', S.Properties.VariableNames) || ~ismember('WWR', S.Properties.VariableNames) || ~ismember('Complexity', S.Properties.VariableNames)
+    return;
+end
+metrics = {"O_alpha","O_theta","O_beta","F_theta"};
+try
+    if isfield(cfg,'paper_metrics') && ~isempty(cfg.paper_metrics)
+        metrics = cellstr(string(cfg.paper_metrics));
+    end
+catch
+end
+rows = {};
+for mi=1:numel(metrics)
+    m = string(metrics{mi});
+    if ~ismember(m, S.Properties.VariableNames), continue; end
+    T = table();
+    T.Subject = categorical(string(S.subject_id));
+    T.Complexity = categorical(normalize_complexity_local(S.Complexity), {'ComplexityLow','ComplexityHigh'});
+    w = str2double(string(normalize_wwr_local(S.WWR)));
+    T.WWRc = w - 45;
+    T.WWRc2 = T.WWRc.^2;
+    T.EEG = double(S.(char(m)));
+    keep = ~isnan(T.EEG) & ~isundefined(T.Complexity) & isfinite(T.WWRc) & isfinite(T.WWRc2);
+    T = T(keep,:);
+    if height(T) < 20, continue; end
+    try
+        lmeL = fitlme(T, 'EEG ~ WWRc + Complexity + (1|Subject)');
+        lmeQ = fitlme(T, 'EEG ~ WWRc + WWRc2 + Complexity + (1|Subject)');
+        [bL,pL,bQ,pQ] = extract_trend_stats_local(lmeL, lmeQ);
+        verdict = trend_verdict(bL,pL,bQ,pQ);
+        rows(end+1,:) = {m, height(T), numel(unique(string(T.Subject))), bL, pL, bQ, pQ, verdict}; %#ok<AGROW>
+    catch
+    end
+end
+if isempty(rows), return; end
+Tout = cell2table(rows, 'VariableNames', {'metric','n_rows','n_subjects','beta_linear','p_linear','beta_quadratic','p_quadratic','trend_verdict'});
+writetable(Tout, fullfile(fp_tbl, sprintf('overall_wwr_trend_summary_%s.csv', tag)));
+plot_trend_heatmap(Tout, sprintf('Overall WWR trend [%s]', tag), fullfile(fp_fig, sprintf('overall_wwr_trend_heatmap_%s.png', tag)), cfg);
+end
+
+function build_inferential_experience_trend(S, cfg, tag, fp_tbl, fp_fig, fp_rep)
+if exist('fitlme','file') ~= 2
+    return;
+end
+expCol = pick_group_col(S, 'ExperienceGroup', 'Experience');
+if strlength(expCol)==0 || ~ismember('subject_id', S.Properties.VariableNames) || ~ismember('WWR', S.Properties.VariableNames) || ~ismember('Complexity', S.Properties.VariableNames)
+    return;
+end
+metrics = {"O_alpha","O_theta","O_beta","F_theta"};
+try
+    if isfield(cfg,'paper_metrics') && ~isempty(cfg.paper_metrics)
+        metrics = cellstr(string(cfg.paper_metrics));
+    end
+catch
+end
+rows = {};
+for mi=1:numel(metrics)
+    m = string(metrics{mi});
+    if ~ismember(m, S.Properties.VariableNames), continue; end
+    T = table();
+    T.Subject = categorical(string(S.subject_id));
+    T.Group = categorical(normalize_high_low_local(S.(char(expCol))), {'Low','High'});
+    T.Complexity = categorical(normalize_complexity_local(S.Complexity), {'ComplexityLow','ComplexityHigh'});
+    w = str2double(string(normalize_wwr_local(S.WWR)));
+    T.WWRc = w - 45;
+    T.WWRc2 = T.WWRc.^2;
+    T.EEG = double(S.(char(m)));
+    keep = ~isnan(T.EEG) & ~isundefined(T.Complexity) & ~isundefined(T.Group) & isfinite(T.WWRc) & isfinite(T.WWRc2);
+    T = T(keep,:);
+    if height(T) < 20, continue; end
+    try
+        lmeL = fitlme(T, 'EEG ~ WWRc + Complexity + Group + (1|Subject)');
+        lmeQ = fitlme(T, 'EEG ~ WWRc + WWRc2 + Complexity + Group + (1|Subject)');
+        [bL,pL,bQ,pQ] = extract_trend_stats_local(lmeL, lmeQ);
+        verdict = trend_verdict(bL,pL,bQ,pQ);
+        rows(end+1,:) = {m, height(T), numel(unique(string(T.Subject))), bL, pL, bQ, pQ, verdict}; %#ok<AGROW>
+    catch
+    end
+end
+if isempty(rows), return; end
+Tout = cell2table(rows, 'VariableNames', {'metric','n_rows','n_subjects','beta_linear','p_linear','beta_quadratic','p_quadratic','trend_verdict'});
+writetable(Tout, fullfile(fp_tbl, sprintf('experience_wwr_trend_summary_%s.csv', tag)));
+plot_trend_heatmap(Tout, sprintf('Experience WWR trend [%s]', tag), fullfile(fp_fig, sprintf('experience_wwr_trend_heatmap_%s.png', tag)), cfg);
+end
+
+function [bL,pL,bQ,pQ] = extract_trend_stats_local(lmeL, lmeQ)
+bL=NaN; pL=NaN; bQ=NaN; pQ=NaN;
+try
+    C = to_table_compat(lmeL.Coefficients);
+    n = string(C.Name); i = find(n=="WWRc",1,'first');
+    if ~isempty(i), bL = double(C.Estimate(i)); pL = double(C.pValue(i)); end
+    A = to_table_compat(anova(lmeL,'DFMethod','Satterthwaite'));
+    pA = term_p(A, 'WWRc'); if isfinite(pA), pL = pA; end
+catch
+end
+try
+    C = to_table_compat(lmeQ.Coefficients);
+    n = string(C.Name); i = find(n=="WWRc2",1,'first');
+    if ~isempty(i), bQ = double(C.Estimate(i)); pQ = double(C.pValue(i)); end
+    A = to_table_compat(anova(lmeQ,'DFMethod','Satterthwaite'));
+    pA = term_p(A, 'WWRc2'); if isfinite(pA), pQ = pA; end
+catch
+end
+end
+
+function v = trend_verdict(bL,pL,bQ,pQ)
+v = "none";
+if isfinite(pQ) && pQ < 0.05
+    if bQ < 0
+        v = "peak_45";
+    elseif bQ > 0
+        v = "trough_45";
+    else
+        v = "quadratic";
+    end
+elseif isfinite(pL) && pL < 0.05
+    if bL > 0
+        v = "linear_increase";
+    elseif bL < 0
+        v = "linear_decrease";
+    else
+        v = "linear";
+    end
+end
+end
+
+function plot_trend_heatmap(T, ttl, fp_png, cfg)
+if isempty(T) || height(T)==0, return; end
+set(0,'DefaultFigureVisible','off');
+fig = figure('Color','w','Position',[100 100 980 360]);
+ax = axes(fig); hold(ax,'on');
+Z = [double(T.p_linear)'; double(T.p_quadratic)'];
+V = nan(size(Z)); V(isfinite(Z))=0; V(isfinite(Z) & Z<0.05)=1; V(isfinite(Z) & Z<0.01)=2; V(isfinite(Z) & Z<0.001)=3;
+imagesc(ax, V); set(ax,'YDir','normal'); axis(ax,'tight');
+colormap(ax, interp1([0 0.5 1], [0.80 0.88 0.94; 0.98 0.98 0.98; 0.22 0.45 0.67], linspace(0,1,256)));
+caxis(ax,[0 3]);
+set(ax,'XTick',1:height(T),'XTickLabel',cellstr(string(T.metric)),'YTick',1:2,'YTickLabel',{'Linear','Quadratic'});
+xtickangle(ax,18); title(ax, ttl, 'Interpreter','none', 'FontWeight','normal');
+style_axes(ax);
+for c=1:height(T)
+    text(ax,c,1,sprintf('p=%.3g%s\nβ=%.3g',double(T.p_linear(c)),star_from_p(double(T.p_linear(c))),double(T.beta_linear(c))), 'HorizontalAlignment','center', 'FontSize',8, 'BackgroundColor',[1 1 1], 'Margin',1);
+    text(ax,c,2,sprintf('p=%.3g%s\nβ2=%.3g\n%s',double(T.p_quadratic(c)),star_from_p(double(T.p_quadratic(c))),double(T.beta_quadratic(c)),char(string(T.trend_verdict(c)))), 'HorizontalAlignment','center', 'FontSize',8, 'BackgroundColor',[1 1 1], 'Margin',1);
+end
+pipeline.export_figure_png(fig, fp_png, get_dpi(cfg));
+try; close(fig); catch; end
 end
 
 function p = term_p(A, name)
