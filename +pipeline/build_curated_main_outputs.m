@@ -268,6 +268,12 @@ try
         build_inferential_overall_models(AllScene_qc, cfg, 'qc', fp_io_tbl, fp_io_fig, fp_io_rep);
         build_inferential_overall_trend(AllScene_qc, cfg, 'qc', fp_io_tbl, fp_io_fig, fp_io_rep);
     end
+    if ~isempty(AllPairs)
+        build_inferential_overall_recovery(AllPairs, 'raw', fp_io_tbl, fp_io_fig, fp_io_rep);
+    end
+    if ~isempty(AllPairs_qc)
+        build_inferential_overall_recovery(AllPairs_qc, 'qc', fp_io_tbl, fp_io_fig, fp_io_rep);
+    end
 catch
 end
 
@@ -301,6 +307,12 @@ try
     if ~isempty(AllScene_qc)
         build_inferential_experience_models(AllScene_qc, cfg, 'qc', fp_ie_tbl, fp_ie_fig, fp_ie_rep);
         build_inferential_experience_trend(AllScene_qc, cfg, 'qc', fp_ie_tbl, fp_ie_fig, fp_ie_rep);
+    end
+    if ~isempty(AllPairs)
+        build_inferential_experience_recovery(AllPairs, 'raw', fp_ie_tbl, fp_ie_fig, fp_ie_rep);
+    end
+    if ~isempty(AllPairs_qc)
+        build_inferential_experience_recovery(AllPairs_qc, 'qc', fp_ie_tbl, fp_ie_fig, fp_ie_rep);
     end
 catch
 end
@@ -992,6 +1004,76 @@ plot_inferential_experience_heatmap(Tout, tag, fp_fig, cfg);
 write_inferential_experience_readme(fp_rep, tag);
 end
 
+function build_inferential_overall_recovery(P, tag, fp_tbl, fp_fig, fp_rep)
+if isempty(P) || ~istable(P)
+    return;
+end
+metrics = intersect({'delta_O_alpha','delta_O_theta','delta_O_beta'}, P.Properties.VariableNames, 'stable');
+if isempty(metrics)
+    return;
+end
+rows = {};
+for mi=1:numel(metrics)
+    m = string(metrics{mi});
+    y = double(P.(char(m)));
+    y = y(isfinite(y));
+    n = numel(y);
+    if n < 3, continue; end
+    mu = mean(y,'omitnan');
+    se = std(y,'omitnan')/sqrt(n);
+    p = NaN; tstat = NaN; df = NaN; dz = NaN;
+    try
+        [~, p, ~, st] = ttest(y, 0);
+        tstat = st.tstat; df = st.df;
+        dz = mu / std(y,'omitnan');
+    catch
+    end
+    rows(end+1,:) = {m, n, mu, se, p, tstat, df, dz}; %#ok<AGROW>
+end
+if isempty(rows), return; end
+T = cell2table(rows, 'VariableNames', {'metric','N','mean','sem','p_value','t_stat','df','cohen_dz'});
+writetable(T, fullfile(fp_tbl, sprintf('overall_recovery_inferential_summary_%s.csv', tag)));
+plot_recovery_inferential_overall(T, tag, fp_fig);
+end
+
+function build_inferential_experience_recovery(P, tag, fp_tbl, fp_fig, fp_rep)
+if isempty(P) || ~istable(P)
+    return;
+end
+expCol = pick_group_col(P, 'ExperienceGroup', 'Experience');
+if strlength(expCol)==0
+    return;
+end
+metrics = intersect({'delta_O_alpha','delta_O_theta','delta_O_beta'}, P.Properties.VariableNames, 'stable');
+if isempty(metrics)
+    return;
+end
+rows = {};
+grp = normalize_high_low_local(P.(char(expCol)));
+for mi=1:numel(metrics)
+    m = string(metrics{mi});
+    y = double(P.(char(m)));
+    keep = isfinite(y) & strlength(grp)>0;
+    y = y(keep); g = grp(keep);
+    if numel(y) < 6, continue; end
+    yL = y(g=="Low"); yH = y(g=="High");
+    if numel(yL) < 3 || numel(yH) < 3, continue; end
+    p = NaN; tstat = NaN; df = NaN; d = NaN;
+    try
+        [~, p, ~, st] = ttest2(yH, yL);
+        tstat = st.tstat; df = st.df;
+        sP = sqrt(((numel(yH)-1)*var(yH) + (numel(yL)-1)*var(yL)) / max(1,(numel(yH)+numel(yL)-2)));
+        d = (mean(yH,'omitnan') - mean(yL,'omitnan')) / sP;
+    catch
+    end
+    rows(end+1,:) = {m, numel(yH), numel(yL), mean(yH,'omitnan'), mean(yL,'omitnan'), p, tstat, df, d}; %#ok<AGROW>
+end
+if isempty(rows), return; end
+T = cell2table(rows, 'VariableNames', {'metric','N_High','N_Low','mean_High','mean_Low','p_group','t_group','df','cohen_d'});
+writetable(T, fullfile(fp_tbl, sprintf('experience_recovery_inferential_summary_%s.csv', tag)));
+plot_recovery_inferential_experience(T, tag, fp_fig);
+end
+
 function build_inferential_overall_trend(S, cfg, tag, fp_tbl, fp_fig, fp_rep)
 if exist('fitlme','file') ~= 2
     return;
@@ -1347,6 +1429,47 @@ elseif p < 0.05
 end
 end
 
+function plot_recovery_inferential_overall(T, tag, fp_fig)
+if isempty(T) || height(T)==0, return; end
+set(0,'DefaultFigureVisible','off');
+fig = figure('Color','w','Position',[100 100 920 420]);
+ax = axes(fig); hold(ax,'on'); style_axes(ax);
+vals = double(T.mean); sem = double(T.sem); x = 1:height(T);
+bar(ax, x, vals, 0.58, 'FaceColor',[0.78 0.88 0.82], 'EdgeColor','none');
+errorbar(ax, x, vals, sem, 'Color',[0.15 0.15 0.15], 'LineStyle','none', 'LineWidth',1.2, 'CapSize',10);
+yline(ax, 0, '--', 'Color',[0.4 0.4 0.4]);
+set(ax,'XTick',x,'XTickLabel',cellstr(string(T.metric)));
+ylabel(ax,'Mean ± SEM');
+title(ax, sprintf('Inferential recovery / Overall [%s]', tag), 'Interpreter','none', 'FontWeight','normal');
+for i=1:height(T)
+    text(ax, x(i), vals(i)+sign(vals(i)+eps)*max(0.01,sem(i)*1.25), sprintf('p=%.3g%s\nd=%.2f', double(T.p_value(i)), star_from_p(double(T.p_value(i))), double(T.cohen_dz(i))), 'HorizontalAlignment','center', 'FontSize',7.5, 'Color',[0.18 0.18 0.18], 'BackgroundColor',[1 1 1], 'Margin',1.5);
+end
+pipeline.export_figure_png(fig, fullfile(fp_fig, sprintf('overall_recovery_inferential_%s.png', tag)), 300);
+try; close(fig); catch; end
+end
+
+function plot_recovery_inferential_experience(T, tag, fp_fig)
+if isempty(T) || height(T)==0, return; end
+set(0,'DefaultFigureVisible','off');
+fig = figure('Color','w','Position',[100 100 980 420]);
+ax = axes(fig); hold(ax,'on'); style_axes(ax);
+vals = [double(T.mean_Low), double(T.mean_High)];
+sem = zeros(size(vals));
+x0 = 1:height(T);
+for i=1:height(T)
+    bar(ax, x0(i)-0.16, vals(i,1), 0.28, 'FaceColor',[0.18 0.49 0.72], 'EdgeColor','none');
+    bar(ax, x0(i)+0.16, vals(i,2), 0.28, 'FaceColor',[0.88 0.47 0.18], 'EdgeColor','none');
+    text(ax, x0(i), max(vals(i,:)) + 0.03*max(1,max(vals(:))), sprintf('p=%.3g%s\nd=%.2f', double(T.p_group(i)), star_from_p(double(T.p_group(i))), double(T.cohen_d(i))), 'HorizontalAlignment','center', 'FontSize',7.5, 'BackgroundColor',[1 1 1], 'Margin',1.5);
+end
+yline(ax, 0, '--', 'Color',[0.4 0.4 0.4]);
+set(ax,'XTick',x0,'XTickLabel',cellstr(string(T.metric)));
+ylabel(ax,'Group means');
+title(ax, sprintf('Inferential recovery / Experience [%s]', tag), 'Interpreter','none', 'FontWeight','normal');
+legend({'Low','High'}, 'Location','best');
+pipeline.export_figure_png(fig, fullfile(fp_fig, sprintf('experience_recovery_inferential_%s.png', tag)), 300);
+try; close(fig); catch; end
+end
+
 function write_inferential_overall_readme(fp_rep, tag)
 fid = fopen(fullfile(fp_rep, sprintf('README_%s.md', tag)),'w');
 if fid>0
@@ -1356,6 +1479,8 @@ if fid>0
  fprintf(fid,'- `overall_inferential_heatmap_%s.png`\n', tag);
  fprintf(fid,'- `overall_wwr_trend_summary_%s.csv`\n', tag);
  fprintf(fid,'- `overall_wwr_trend_heatmap_%s.png`\n', tag);
+ fprintf(fid,'- `overall_recovery_inferential_summary_%s.csv`\n', tag);
+ fprintf(fid,'- `overall_recovery_inferential_%s.png`\n', tag);
  fprintf(fid,'- `overall_inferential_file_index.csv`\n');
  fprintf(fid,'- `overall_inferential_task_counts.csv`\n');
  fprintf(fid,'- `overall_inferential_task_counts.png`\n');
@@ -1372,6 +1497,8 @@ if fid>0
  fprintf(fid,'- `experience_inferential_heatmap_%s.png`\n', tag);
  fprintf(fid,'- `experience_wwr_trend_summary_%s.csv`\n', tag);
  fprintf(fid,'- `experience_wwr_trend_heatmap_%s.png`\n', tag);
+ fprintf(fid,'- `experience_recovery_inferential_summary_%s.csv`\n', tag);
+ fprintf(fid,'- `experience_recovery_inferential_%s.png`\n', tag);
  fprintf(fid,'- `experience_inferential_file_index.csv`\n');
  fprintf(fid,'- `experience_inferential_task_counts.csv`\n');
  fprintf(fid,'- `experience_inferential_task_counts.png`\n');
