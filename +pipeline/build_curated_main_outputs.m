@@ -69,6 +69,7 @@ try
         Tcond = summarize_overall_by_factors(AllScene, cfg);
         if ~isempty(Tcond)
             writetable(Tcond, fullfile(fp_do_tbl, 'overall_scene_metric_means_by_WWR_Complexity_raw.csv'));
+            plot_overall_factor_grid(Tcond, 'raw', fp_do_fig, cfg);
         end
     end
     if ~isempty(AllScene_qc)
@@ -80,6 +81,7 @@ try
         Tcond = summarize_overall_by_factors(AllScene_qc, cfg);
         if ~isempty(Tcond)
             writetable(Tcond, fullfile(fp_do_tbl, 'overall_scene_metric_means_by_WWR_Complexity_qc.csv'));
+            plot_overall_factor_grid(Tcond, 'qc', fp_do_fig, cfg);
         end
     end
     if ~isempty(AllPairs)
@@ -135,6 +137,7 @@ try
             Tcond = summarize_scene_by_experience_factors(S, cfg);
             if ~isempty(Tcond)
                 writetable(Tcond, fullfile(fp_de_tbl, 'experience_scene_metric_means_by_WWR_Complexity_raw.csv'));
+                plot_experience_factor_grid(Tcond, 'raw', fp_de_fig, cfg);
             end
         end
     end
@@ -154,6 +157,7 @@ try
                 Tcond = summarize_scene_by_experience_factors(S, cfg);
                 if ~isempty(Tcond)
                     writetable(Tcond, fullfile(fp_de_tbl, 'experience_scene_metric_means_by_WWR_Complexity_qc.csv'));
+                    plot_experience_factor_grid(Tcond, 'qc', fp_de_fig, cfg);
                 end
             end
         end
@@ -528,6 +532,118 @@ if fid>0
     fprintf(fid, 'Current repository state still stores detailed inferential machinery in task-based folders under `batch/analysis/`.\n');
     fprintf(fid, 'If present, `MASTER_REPORT.md` is copied here as the fastest overall inferential summary.\n');
     fclose(fid);
+end
+end
+
+function plot_overall_factor_grid(T, tag, fp_fig, cfg)
+if isempty(T) || height(T)==0
+    return;
+end
+set(0,'DefaultFigureVisible','off');
+fig = figure('Color','w','Position',[80 80 1200 900]);
+tl = tiledlayout(fig,2,2,'TileSpacing','compact','Padding','compact');
+title(tl, sprintf('Overall descriptive summary by WWR × Complexity [%s]', tag), 'Interpreter','none', 'FontWeight','normal');
+metrics = unique(string(T.metric), 'stable');
+for mi=1:min(numel(metrics),4)
+    m = metrics(mi);
+    nexttile;
+    hold on;
+    style_axes(gca);
+    X = T(string(T.metric)==m,:);
+    plot_factor_lines(X, false);
+    title(strrep(char(m),'_','\_'),'Interpreter','none');
+end
+pipeline.export_figure_png(fig, fullfile(fp_fig, sprintf('overall_factor_grid_%s.png', tag)), get_dpi(cfg));
+try; close(fig); catch; end
+end
+
+function plot_experience_factor_grid(T, tag, fp_fig, cfg)
+if isempty(T) || height(T)==0
+    return;
+end
+set(0,'DefaultFigureVisible','off');
+fig = figure('Color','w','Position',[80 80 1200 900]);
+tl = tiledlayout(fig,2,2,'TileSpacing','compact','Padding','compact');
+title(tl, sprintf('Experience descriptive summary by WWR × Complexity [%s]', tag), 'Interpreter','none', 'FontWeight','normal');
+metrics = unique(string(T.metric), 'stable');
+for mi=1:min(numel(metrics),4)
+    m = metrics(mi);
+    nexttile;
+    hold on;
+    style_axes(gca);
+    X = T(string(T.metric)==m,:);
+    plot_factor_lines(X, true);
+    title(strrep(char(m),'_','\_'),'Interpreter','none');
+end
+pipeline.export_figure_png(fig, fullfile(fp_fig, sprintf('experience_factor_grid_%s.png', tag)), get_dpi(cfg));
+try; close(fig); catch; end
+end
+
+function plot_factor_lines(X, hasGroup)
+colors = [0.18 0.49 0.72; 0.88 0.47 0.18; 0.20 0.62 0.52; 0.62 0.42 0.78];
+if hasGroup
+    groups = unique(string(X.experience_group), 'stable');
+    if isempty(groups), groups = ["Low","High"]; end
+    cxLevels = unique(string(X.Complexity), 'stable');
+    if isempty(cxLevels), cxLevels = ["0","1"]; end
+    ci = 0;
+    for gi=1:numel(groups)
+        for cxi=1:numel(cxLevels)
+            ci = ci + 1;
+            g = groups(gi); cx = cxLevels(cxi);
+            Ti = X(string(X.experience_group)==g & string(X.Complexity)==cx,:);
+            if isempty(Ti), continue; end
+            [ww,o] = sort(str2double(string(Ti.WWR))); Ti = Ti(o,:);
+            ls = '-'; if contains(lower(cx),'1') || contains(lower(cx),'high'), ls='--'; end
+            errorbar(ww, Ti.mean, Ti.sem, 'o', 'LineWidth',1.5, 'Color', colors(min(ci,size(colors,1)),:), ...
+                'MarkerFaceColor', colors(min(ci,size(colors,1)),:), 'DisplayName', sprintf('%s | %s', g, cx));
+            plot(ww, Ti.mean, ls, 'LineWidth',1.7, 'Color', colors(min(ci,size(colors,1)),:), 'HandleVisibility','off');
+            annotate_points(ww, Ti.mean, Ti.sem, Ti.N);
+        end
+    end
+    legend('Location','best');
+else
+    cxLevels = unique(string(X.Complexity), 'stable');
+    if isempty(cxLevels), cxLevels = ["0","1"]; end
+    for cxi=1:numel(cxLevels)
+        cx = cxLevels(cxi);
+        Ti = X(string(X.Complexity)==cx,:);
+        if isempty(Ti), continue; end
+        [ww,o] = sort(str2double(string(Ti.WWR))); Ti = Ti(o,:);
+        ls = '-'; if contains(lower(cx),'1') || contains(lower(cx),'high'), ls='--'; end
+        errorbar(ww, Ti.mean, Ti.sem, 'o', 'LineWidth',1.5, 'Color', colors(cxi,:), ...
+            'MarkerFaceColor', colors(cxi,:), 'DisplayName', sprintf('Complexity %s', cx));
+        plot(ww, Ti.mean, ls, 'LineWidth',1.7, 'Color', colors(cxi,:), 'HandleVisibility','off');
+        annotate_points(ww, Ti.mean, Ti.sem, Ti.N);
+    end
+    legend('Location','best');
+end
+xlabel('WWR');
+ylabel('Mean ± SEM');
+end
+
+function annotate_points(x, y, se, n)
+for i=1:numel(x)
+    if ~isfinite(y(i)), continue; end
+    yy = y(i) + max(0.01, abs(se(i))*1.2 + 0.01*max(1,abs(y(i))));
+    text(x(i), yy, sprintf('%.3f\nN=%d', y(i), round(n(i))), 'HorizontalAlignment','center', 'FontSize',8, 'Color',[0.2 0.2 0.2]);
+end
+end
+
+function style_axes(ax)
+set(ax, 'Box','off', 'LineWidth',0.8, 'FontName','Arial', 'FontSize',11, 'Color','w');
+grid(ax, 'on');
+ax.GridAlpha = 0.12;
+ax.GridColor = [0 0 0];
+end
+
+function dpi = get_dpi(cfg)
+dpi = 300;
+try
+    if isfield(cfg,'paper_dpi') && ~isempty(cfg.paper_dpi)
+        dpi = double(cfg.paper_dpi);
+    end
+catch
 end
 end
 
