@@ -31,8 +31,34 @@ assert(exist(fp_sub,'dir')==7);
 assert(exist(fp_csv,'dir')==7);
 assert(exist(fp_fig,'dir')==7);
 assert(exist(fp_qc,'dir')==7);
-assert(exist(fullfile(fp_sub,'config_used.json'),'file')==2);
+assert(exist(fullfile(fp_sub,'report'),'dir')==7 || exist(fullfile(fp_sub,'config_used.json'),'file')==2);
+assert(exist(fullfile(fp_sub,'report','config_used.json'),'file')==2 || exist(fullfile(fp_sub,'config_used.json'),'file')==2);
 fprintf('[OK] prepare_output directory + config snapshot\n');
+
+% Test 3b: staged helper directories exist
+fp_run = pipeline.get_run_dir(tmp, cfg2);
+fp_sub2 = pipeline.get_subject_dir(tmp, 'subject1', cfg2);
+fp_tbl2 = pipeline.get_subject_table_dir(tmp, 'subject1', cfg2);
+fp_fig2 = pipeline.get_subject_figure_dir(tmp, 'subject1', cfg2);
+fp_qc2  = pipeline.get_subject_qc_dir(tmp, 'subject1', cfg2);
+fp_rep2 = pipeline.get_subject_report_dir(tmp, 'subject1', cfg2);
+fp_batch = pipeline.get_batch_dir(tmp, cfg2);
+fp_bm = pipeline.get_batch_merged_dir(tmp, cfg2);
+fp_bq = pipeline.get_batch_qc_dir(tmp, cfg2);
+fp_br = pipeline.get_batch_report_dir(tmp, cfg2);
+fp_ba = pipeline.get_batch_audit_dir(tmp, cfg2);
+assert(exist(fp_run,'dir')==7);
+assert(exist(fp_sub2,'dir')==7);
+assert(exist(fp_tbl2,'dir')==7);
+assert(exist(fp_fig2,'dir')==7);
+assert(exist(fp_qc2,'dir')==7);
+assert(exist(fp_rep2,'dir')==7);
+assert(exist(fp_batch,'dir')==7);
+assert(exist(fp_bm,'dir')==7);
+assert(exist(fp_bq,'dir')==7);
+assert(exist(fp_br,'dir')==7);
+assert(exist(fp_ba,'dir')==7);
+fprintf('[OK] staged output helper directories\n');
 
 
 % Test 4: scene_level export schema fields are present in pipeline script (static smoke check)

@@ -15,7 +15,10 @@ run('tests/run_smoke_tests.m');
 
 - `pipeline.load_config` default behavior
 - `pipeline.parse_input` extension validation
-- `pipeline.prepare_output` directory creation + `config_used.json`
+- `pipeline.prepare_output` directory creation + config snapshot
+- staged output path helpers for:
+  - subject dirs
+  - batch dirs
 
 ## Notes
 

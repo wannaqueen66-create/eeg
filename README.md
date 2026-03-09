@@ -180,37 +180,55 @@ Additional options:
 
 ## 9. Outputs / 输出结果
 
-Typical structure (default):
+### Current staged output layout / 当前分阶段输出布局
+
+The repository is currently migrating toward a clearer staged layout.
+At this stage, both the new structure and some legacy-compatible paths may coexist.
+
+仓库目前正在迁移到更清晰的分阶段输出结构。
+在这一阶段，新结构与部分旧式兼容路径可能会并存。
+
+Typical staged layout:
 
 ```text
 <input_set_folder>/bandpower_outputs/
-  ├─ <subject_id>/
-  │   ├─ csv/
-  │   ├─ fig/
-  │   └─ qc/
-  └─ summary/
+  └─ runs/
+     └─ current/
+        ├─ subjects/
+        │  └─ <subject_id>/
+        │     ├─ tables/
+        │     ├─ figures/
+        │     ├─ qc/
+        │     └─ report/
+        └─ batch/
+           ├─ merged/
+           ├─ qc/
+           ├─ reports/
+           ├─ audit/
+           ├─ analysis/
+           └─ paper/
 ```
 
 Notes:
 - Subject folder name equals the input `.set` **base filename** (without extension) for easy verification.
 - If `output_dir` is set in `config.json`, outputs go to `<output_dir>/...` instead.
-- Each subject output folder contains:
-  - `input_set_path.txt` (exact input file path)
-  - `<base>_report.md` (human-readable summary for sharing)
-- The batch-level markdown index is always written to:
-  - `summary/summary_report.md`
-- Batch merged analysis tables (default on via `batch_summaries=true`) are written to `summary/`:
-  - `all_subjects_scene_level.csv` (includes optional design columns if `design_path` is provided)
-  - `all_subjects_pairs_check.csv` (includes optional design columns if `design_path` is provided)
-  - `per_subject_recovery_metrics.csv` (includes SportFreq/Experience group labels when available)
-  - `fig/` (group-level plots:
-    - stats: Experience High/Low and SportFreq High/Low vs Complexity Low/High
-    - topoplots: aggregated from per-subject exported channel-level topo CSVs; requires EEGLAB topoplot)
-  - `paper_fig/` (journal-ready multi-panel figures + PDF exports)
-  - `methods_snapshot.md` (auto-generated methods/config snapshot for writing)
-- `summary/global_bandpower_summary.csv` is created in folder-batch mode when `global_summary=true`.
+- During migration, some legacy outputs may still appear under older `summary/`, `fig/`, or `paper_fig/` paths.
+- Single-subject outputs are being organized under:
+  - `subjects/<subject_id>/tables/`
+  - `subjects/<subject_id>/figures/`
+  - `subjects/<subject_id>/qc/`
+  - `subjects/<subject_id>/report/`
+- Batch-level merged and QC outputs are being organized under:
+  - `batch/merged/`
+  - `batch/qc/`
+  - `batch/reports/`
+  - `batch/audit/`
+- Analysis task outputs are being organized under:
+  - `batch/analysis/task*/{raw|qc}/...`
+- Paper-facing outputs are being organized under:
+  - `batch/paper/{raw|qc}/...`
 
-CSV includes:
+Common tables include:
 - `*_bandpower_roi.csv`
 - `*_bandpower_summary.csv`
 - `*_bandpower_tests.csv`
@@ -218,10 +236,20 @@ CSV includes:
 - `*_pairs_check.csv`
 - `*_qc.csv`
 - `*_marker_report.csv`
+- `all_subjects_scene_level.csv`
+- `all_subjects_pairs_check.csv`
+- `per_subject_recovery_metrics.csv`
+- `global_bandpower_summary.csv` (if `global_summary=true`)
+
+Common reports include:
+- `<base>_report.md`
+- `summary_report.md`
+- `qc_filter_report.md`
+- `methods_snapshot.md`
 
 Also:
 - `config_used.json`
-- `summary/global_bandpower_summary.csv` (if `global_summary=true`)
+- `input_set_path.txt`
 - `*_outputs.zip` (if `zip_output=true`)
 
 ---

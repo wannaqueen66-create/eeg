@@ -96,37 +96,51 @@ run_eeg_bandpower_pipeline('path/to/data.set', 'config.json');
 - `bands`：频段定义（已支持 `low_gamma`）
 
 ## 输出结果
-目录结构（默认）：
+### 当前分阶段输出布局
+
+仓库目前正在迁移到更清晰的分阶段输出结构。
+在这一阶段，新结构与部分旧式兼容路径可能会并存。
+
+典型布局：
 ```text
 <.set所在文件夹>/bandpower_outputs/
-  ├─ <subject_id>/
-  │   ├─ csv/
-  │   ├─ fig/
-  │   └─ qc/
-  └─ summary/
+  └─ runs/
+     └─ current/
+        ├─ subjects/
+        │  └─ <subject_id>/
+        │     ├─ tables/
+        │     ├─ figures/
+        │     ├─ qc/
+        │     └─ report/
+        └─ batch/
+           ├─ merged/
+           ├─ qc/
+           ├─ reports/
+           ├─ audit/
+           ├─ analysis/
+           └─ paper/
 ```
 
 说明：
 - 每个被试的结果文件夹名 = 输入 `.set` 的**文件名（去掉扩展名）**，便于对照核对。
 - 如果在 `config.json` 里设置了 `output_dir`，输出会写到 `<output_dir>/...`。
-- 每个被试结果文件夹内会写入：
-  - `input_set_path.txt`（记录本次处理的输入文件路径，方便追溯）
-  - `<base>_report.md`（可直接发给别人看的 Markdown 摘要）
-- 汇总文件夹会始终生成：
-  - `summary/summary_report.md`（批量运行的索引/摘要）
-- 批量分析用合并表（默认开启 `batch_summaries=true`）会写入 `summary/`：
-  - `all_subjects_scene_level.csv`（如果提供 `design_path`，会自动附加 scene_name/WWR/Cond/Complexity 等）
-  - `all_subjects_pairs_check.csv`（如果提供 `design_path`，会自动附加 scene_name/WWR/Cond/Complexity 等）
-  - `per_subject_recovery_metrics.csv`（如果提供 `design_path`，会带 SportFreq/Experience 分组标签）
-  - `fig/`（群组层面自动出图：
-    - 统计图：按 Experience(High/Low)、SportFreq(High/Low) 分组，对比 Complexity(低/高)
-    - Topoplot：从单人导出的通道级 topography CSV 汇总得到（需要 EEGLAB 的 topoplot 可用））
-  - `paper_fig/`（期刊友好的多子图结果图，并同时导出 PDF）
-  - `methods_snapshot.md`（自动生成的方法/参数快照，写论文可直接引用）
-- 文件夹批量模式下当 `global_summary=true` 时，会额外生成：
-  - `summary/global_bandpower_summary.csv`
+- 在迁移期间，一些旧式输出仍可能出现在 `summary/`、`fig/`、`paper_fig/` 等旧路径下。
+- 单被试输出正在迁移到：
+  - `subjects/<subject_id>/tables/`
+  - `subjects/<subject_id>/figures/`
+  - `subjects/<subject_id>/qc/`
+  - `subjects/<subject_id>/report/`
+- 批量汇总与 QC 输出正在迁移到：
+  - `batch/merged/`
+  - `batch/qc/`
+  - `batch/reports/`
+  - `batch/audit/`
+- analysis task 输出正在迁移到：
+  - `batch/analysis/task*/{raw|qc}/...`
+- 面向论文/汇报的输出正在迁移到：
+  - `batch/paper/{raw|qc}/...`
 
-主要文件：
+常见表格包括：
 - `*_bandpower_roi.csv`
 - `*_bandpower_summary.csv`
 - `*_bandpower_tests.csv`
@@ -134,8 +148,20 @@ run_eeg_bandpower_pipeline('path/to/data.set', 'config.json');
 - `*_pairs_check.csv`
 - `*_qc.csv`
 - `*_marker_report.csv`
+- `all_subjects_scene_level.csv`
+- `all_subjects_pairs_check.csv`
+- `per_subject_recovery_metrics.csv`
+- `global_bandpower_summary.csv`（当 `global_summary=true`）
+
+常见报告包括：
+- `<base>_report.md`
+- `summary_report.md`
+- `qc_filter_report.md`
+- `methods_snapshot.md`
+
+另外还有：
 - `config_used.json`
-- `summary/global_bandpower_summary.csv`（当 `global_summary=true`）
+- `input_set_path.txt`
 - `*_outputs.zip`（当 `zip_output=true`）
 
 ## 测试
