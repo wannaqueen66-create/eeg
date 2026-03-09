@@ -23,6 +23,7 @@ If you only want the most useful places to inspect results, use this order:
    - QC-filtered tables / QC 过滤后结果
 4. `runs/current/batch/reports/`
    - summary + methods + QC reports / 汇总与方法说明
+   - curated main index (`README_CURATED_MAIN.md`) / 新 main 主输出入口说明
 5. `runs/current/batch/analysis/`
    - task-oriented inferential outputs / 按 task 分类的正式分析结果
 6. `runs/current/batch/paper/`

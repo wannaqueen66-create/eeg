@@ -34,9 +34,11 @@ fp_inf  = fullfile(fp_sum, 'inferential');
 mkdir_if_needed(fp_desc);
 mkdir_if_needed(fp_inf);
 
-% Root-level guide for the redesigned main output surface
+% Batch-level guide for the redesigned main output surface
 try
-    fid = fopen(fullfile(fp_sum, 'README_CURATED_MAIN.md'),'w');
+    fp_batch_rep = fullfile(fp_sum, 'reports');
+    mkdir_if_needed(fp_batch_rep);
+    fid = fopen(fullfile(fp_batch_rep, 'README_CURATED_MAIN.md'),'w');
     if fid>0
         fprintf(fid, '# Curated Main Output Surface\n\n');
         fprintf(fid, 'Priority reading order for the redesigned main branch:\n');
