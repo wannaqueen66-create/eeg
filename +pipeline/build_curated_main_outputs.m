@@ -65,6 +65,7 @@ try
         Tsum = summarize_overall_scene(AllScene, cfg);
         if ~isempty(Tsum)
             writetable(Tsum, fullfile(fp_do_tbl, 'overall_scene_metric_means_raw.csv'));
+            plot_overall_metric_bar(Tsum, 'raw', fp_do_fig, cfg);
         end
         Tcond = summarize_overall_by_factors(AllScene, cfg);
         if ~isempty(Tcond)
@@ -77,6 +78,7 @@ try
         Tsum = summarize_overall_scene(AllScene_qc, cfg);
         if ~isempty(Tsum)
             writetable(Tsum, fullfile(fp_do_tbl, 'overall_scene_metric_means_qc.csv'));
+            plot_overall_metric_bar(Tsum, 'qc', fp_do_fig, cfg);
         end
         Tcond = summarize_overall_by_factors(AllScene_qc, cfg);
         if ~isempty(Tcond)
@@ -86,9 +88,19 @@ try
     end
     if ~isempty(AllPairs)
         writetable(AllPairs, fullfile(fp_do_tbl, 'pairs_overall_raw.csv'));
+        ToverRec = summarize_recovery_overall(AllPairs);
+        if ~isempty(ToverRec)
+            writetable(ToverRec, fullfile(fp_do_tbl, 'overall_recovery_means_raw.csv'));
+            plot_recovery_overall(ToverRec, 'raw', fp_do_fig, cfg);
+        end
     end
     if ~isempty(AllPairs_qc)
         writetable(AllPairs_qc, fullfile(fp_do_tbl, 'pairs_overall_qc.csv'));
+        ToverRec = summarize_recovery_overall(AllPairs_qc);
+        if ~isempty(ToverRec)
+            writetable(ToverRec, fullfile(fp_do_tbl, 'overall_recovery_means_qc.csv'));
+            plot_recovery_overall(ToverRec, 'qc', fp_do_fig, cfg);
+        end
     end
 catch
 end
@@ -105,6 +117,10 @@ try
         fprintf(fid, '- `overall_scene_metric_means_by_WWR_Complexity_qc.csv`: QC-filtered descriptive means by WWR × Complexity\n');
         fprintf(fid, '- `pairs_overall_raw.csv`: full-sample recovery/pair descriptive table\n');
         fprintf(fid, '- `pairs_overall_qc.csv`: QC-filtered recovery/pair descriptive table\n');
+        fprintf(fid, '- `overall_recovery_means_*.csv`: overall recovery summary table\n');
+        fprintf(fid, '- `overall_metric_bar_*.png`: overall core metric bar figure\n');
+        fprintf(fid, '- `overall_recovery_bar_*.png`: overall recovery bar figure\n');
+        fprintf(fid, '- `overall_factor_grid_*.png`: overall WWR × Complexity descriptive grid\n');
         fprintf(fid, '\nThis folder is intended as the simplest entry point for reading descriptive EEG results at the full-sample level.\n');
         fclose(fid);
     end
@@ -133,6 +149,7 @@ try
             Tsum = summarize_scene_by_experience(S, cfg);
             if ~isempty(Tsum)
                 writetable(Tsum, fullfile(fp_de_tbl, 'experience_scene_metric_means_raw.csv'));
+                plot_experience_metric_bar(Tsum, 'raw', fp_de_fig, cfg);
             end
             Tcond = summarize_scene_by_experience_factors(S, cfg);
             if ~isempty(Tcond)
@@ -153,6 +170,7 @@ try
                 Tsum = summarize_scene_by_experience(S, cfg);
                 if ~isempty(Tsum)
                     writetable(Tsum, fullfile(fp_de_tbl, 'experience_scene_metric_means_qc.csv'));
+                    plot_experience_metric_bar(Tsum, 'qc', fp_de_fig, cfg);
                 end
                 Tcond = summarize_scene_by_experience_factors(S, cfg);
                 if ~isempty(Tcond)
@@ -172,6 +190,7 @@ try
             Trec = summarize_recovery_by_experience(P);
             if ~isempty(Trec)
                 writetable(Trec, fullfile(fp_de_tbl, 'experience_recovery_means_raw.csv'));
+                plot_recovery_experience(Trec, 'raw', fp_de_fig, cfg);
             end
         end
     end
@@ -187,6 +206,7 @@ try
                 Trec = summarize_recovery_by_experience(P);
                 if ~isempty(Trec)
                     writetable(Trec, fullfile(fp_de_tbl, 'experience_recovery_means_qc.csv'));
+                    plot_recovery_experience(Trec, 'qc', fp_de_fig, cfg);
                 end
             end
         end
@@ -212,6 +232,9 @@ try
         fprintf(fid, '- `experience_scene_metric_means_by_WWR_Complexity_*.csv`: metric summaries by Experience × WWR × Complexity\n');
         fprintf(fid, '- `pairs_experience_*.csv`: recovery tables with valid experience labels\n');
         fprintf(fid, '- `experience_recovery_means_*.csv`: recovery summaries by Experience group\n');
+        fprintf(fid, '- `experience_metric_bar_*.png`: experience-group core metric bar figure\n');
+        fprintf(fid, '- `experience_recovery_bar_*.png`: experience-group recovery bar figure\n');
+        fprintf(fid, '- `experience_factor_grid_*.png`: experience-group WWR × Complexity descriptive grid\n');
         fprintf(fid, '\nThis folder is intended as the default grouped descriptive layer for the redesigned main branch.\n');
         fclose(fid);
     end
@@ -533,6 +556,141 @@ if fid>0
     fprintf(fid, 'If present, `MASTER_REPORT.md` is copied here as the fastest overall inferential summary.\n');
     fclose(fid);
 end
+end
+
+function plot_overall_metric_bar(T, tag, fp_fig, cfg)
+if isempty(T) || height(T)==0
+    return;
+end
+set(0,'DefaultFigureVisible','off');
+fig = figure('Color','w','Position',[100 100 900 420]);
+ax = axes(fig); hold(ax,'on'); style_axes(ax);
+M = string(T.metric);
+vals = double(T.mean);
+sem = double(T.sem);
+x = 1:numel(vals);
+b = bar(ax, x, vals, 0.62, 'FaceColor',[0.78 0.86 0.94], 'EdgeColor','none'); %#ok<NASGU>
+errorbar(ax, x, vals, sem, 'k.', 'LineWidth',1.4);
+set(ax,'XTick',x,'XTickLabel',cellstr(M));
+ylabel(ax,'Mean ± SEM');
+title(ax, sprintf('Overall core metric means [%s]', tag), 'Interpreter','none', 'FontWeight','normal');
+for i=1:numel(x)
+    text(ax, x(i), vals(i)+max(0.01,sem(i)*1.2), sprintf('%.3f\nN=%d', vals(i), round(T.N(i))), 'HorizontalAlignment','center', 'FontSize',8, 'Color',[0.2 0.2 0.2]);
+end
+pipeline.export_figure_png(fig, fullfile(fp_fig, sprintf('overall_metric_bar_%s.png', tag)), get_dpi(cfg));
+try; close(fig); catch; end
+end
+
+function plot_experience_metric_bar(T, tag, fp_fig, cfg)
+if isempty(T) || height(T)==0
+    return;
+end
+set(0,'DefaultFigureVisible','off');
+fig = figure('Color','w','Position',[80 80 1200 900]);
+tl = tiledlayout(fig,2,2,'TileSpacing','compact','Padding','compact');
+title(tl, sprintf('Experience descriptive core metric means [%s]', tag), 'Interpreter','none', 'FontWeight','normal');
+metrics = unique(string(T.metric), 'stable');
+for mi=1:min(numel(metrics),4)
+    m = metrics(mi);
+    nexttile; hold on; style_axes(gca);
+    X = T(string(T.metric)==m,:);
+    groups = unique(string(X.experience_group), 'stable');
+    colors = [0.18 0.49 0.72; 0.88 0.47 0.18];
+    vals = nan(numel(groups),1); sem = vals; ns = vals;
+    for gi=1:numel(groups)
+        idx = string(X.experience_group)==groups(gi);
+        vals(gi) = double(X.mean(find(idx,1,'first')));
+        sem(gi) = double(X.sem(find(idx,1,'first')));
+        ns(gi) = double(X.N(find(idx,1,'first')));
+    end
+    x = 1:numel(groups);
+    for gi=1:numel(groups)
+        bar(x(gi), vals(gi), 0.62, 'FaceColor', colors(min(gi,2),:), 'EdgeColor','none');
+    end
+    errorbar(x, vals, sem, 'k.', 'LineWidth',1.4);
+    set(gca,'XTick',x,'XTickLabel',cellstr(groups));
+    title(strrep(char(m),'_','\_'),'Interpreter','none');
+    ylabel('Mean ± SEM');
+    for gi=1:numel(groups)
+        text(x(gi), vals(gi)+max(0.01,sem(gi)*1.2), sprintf('%.3f\nN=%d', vals(gi), round(ns(gi))), 'HorizontalAlignment','center', 'FontSize',8, 'Color',[0.2 0.2 0.2]);
+    end
+end
+pipeline.export_figure_png(fig, fullfile(fp_fig, sprintf('experience_metric_bar_%s.png', tag)), get_dpi(cfg));
+try; close(fig); catch; end
+end
+
+function Tover = summarize_recovery_overall(P)
+Tover = table();
+try
+    metrics = intersect({'delta_O_alpha','delta_O_theta','delta_O_beta'}, P.Properties.VariableNames, 'stable');
+    if isempty(metrics)
+        return;
+    end
+    rows = {};
+    for mi=1:numel(metrics)
+        m = string(metrics{mi});
+        y = double(P.(char(m)));
+        n = sum(~isnan(y));
+        if n==0, continue; end
+        mu = mean(y,'omitnan');
+        se = std(y,'omitnan')/sqrt(n);
+        rows(end+1,:) = {m, n, mu, se}; %#ok<AGROW>
+    end
+    if ~isempty(rows)
+        Tover = cell2table(rows, 'VariableNames', {'metric','N','mean','sem'});
+    end
+catch
+    Tover = table();
+end
+end
+
+function plot_recovery_overall(T, tag, fp_fig, cfg)
+if isempty(T) || height(T)==0
+    return;
+end
+set(0,'DefaultFigureVisible','off');
+fig = figure('Color','w','Position',[100 100 900 420]);
+ax = axes(fig); hold(ax,'on'); style_axes(ax);
+M = string(T.metric);
+vals = double(T.mean); sem = double(T.sem);
+x = 1:numel(vals);
+bar(ax, x, vals, 0.62, 'FaceColor',[0.79 0.89 0.81], 'EdgeColor','none');
+errorbar(ax, x, vals, sem, 'k.', 'LineWidth',1.4);
+yline(ax, 0, '--', 'Color',[0.4 0.4 0.4]);
+set(ax,'XTick',x,'XTickLabel',cellstr(M));
+ylabel(ax,'Mean ± SEM');
+title(ax, sprintf('Overall recovery summary [%s]', tag), 'Interpreter','none', 'FontWeight','normal');
+for i=1:numel(x)
+    text(ax, x(i), vals(i)+sign(vals(i)+eps)*max(0.01,sem(i)*1.2), sprintf('%.3f\nN=%d', vals(i), round(T.N(i))), 'HorizontalAlignment','center', 'FontSize',8, 'Color',[0.2 0.2 0.2]);
+end
+pipeline.export_figure_png(fig, fullfile(fp_fig, sprintf('overall_recovery_bar_%s.png', tag)), get_dpi(cfg));
+try; close(fig); catch; end
+end
+
+function plot_recovery_experience(T, tag, fp_fig, cfg)
+if isempty(T) || height(T)==0
+    return;
+end
+set(0,'DefaultFigureVisible','off');
+fig = figure('Color','w','Position',[100 100 700 420]);
+ax = axes(fig); hold(ax,'on'); style_axes(ax);
+groups = string(T.experience_group);
+vals = double(T.mean_delta_O_alpha); sem = double(T.sem_delta_O_alpha);
+x = 1:numel(vals);
+colors = [0.18 0.49 0.72; 0.88 0.47 0.18];
+for i=1:numel(x)
+    bar(x(i), vals(i), 0.62, 'FaceColor', colors(min(i,2),:), 'EdgeColor','none');
+end
+errorbar(ax, x, vals, sem, 'k.', 'LineWidth',1.4);
+yline(ax, 0, '--', 'Color',[0.4 0.4 0.4]);
+set(ax,'XTick',x,'XTickLabel',cellstr(groups));
+ylabel(ax,'Mean delta_O_alpha ± SEM');
+title(ax, sprintf('Experience recovery summary [%s]', tag), 'Interpreter','none', 'FontWeight','normal');
+for i=1:numel(x)
+    text(ax, x(i), vals(i)+sign(vals(i)+eps)*max(0.01,sem(i)*1.2), sprintf('%.3f\nN=%d', vals(i), round(T.N(i))), 'HorizontalAlignment','center', 'FontSize',8, 'Color',[0.2 0.2 0.2]);
+end
+pipeline.export_figure_png(fig, fullfile(fp_fig, sprintf('experience_recovery_bar_%s.png', tag)), get_dpi(cfg));
+try; close(fig); catch; end
 end
 
 function plot_overall_factor_grid(T, tag, fp_fig, cfg)
