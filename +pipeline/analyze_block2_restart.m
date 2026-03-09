@@ -59,9 +59,13 @@ end
 % normalize grouping columns (if present)
 if ismember('Experience', T.Properties.VariableNames)
     T.Experience = normalize_high_low(T.Experience);
+elseif ismember('ExperienceGroup', T.Properties.VariableNames)
+    T.Experience = normalize_high_low(T.ExperienceGroup);
 end
 if ismember('SportFreq', T.Properties.VariableNames)
     T.SportFreq = normalize_high_low(T.SportFreq);
+elseif ismember('SportFreqGroup', T.Properties.VariableNames)
+    T.SportFreq = normalize_high_low(T.SportFreqGroup);
 end
 
 % subject-level wide to per-metric long
@@ -170,8 +174,14 @@ for gi=1:numel(groupTypes)
     end
 end
 
-Stats = cell2table(statsRows, 'VariableNames', {
-    'GroupType','Group','metric','N','mean_diff','sem_diff','t','df','p_ttest','cohen_dz','p_signrank'});
+if isempty(statsRows)
+    Stats = table('Size',[0 11], 'VariableTypes', ...
+        {'string','string','string','double','double','double','double','double','double','double','double'}, ...
+        'VariableNames', {'GroupType','Group','metric','N','mean_diff','sem_diff','t','df','p_ttest','cohen_dz','p_signrank'});
+else
+    Stats = cell2table(statsRows, 'VariableNames', {
+        'GroupType','Group','metric','N','mean_diff','sem_diff','t','df','p_ttest','cohen_dz','p_signrank'});
+end
 
 % Holm across metrics within each group (GroupType×Group) and test type
 try
