@@ -124,7 +124,7 @@ run_eeg_bandpower_pipeline('path/to/data.set', 'config.json');
 说明：
 - 每个被试的结果文件夹名 = 输入 `.set` 的**文件名（去掉扩展名）**，便于对照核对。
 - 如果在 `config.json` 里设置了 `output_dir`，输出会写到 `<output_dir>/...`。
-- 在迁移期间，一些旧式输出仍可能出现在 `summary/`、`fig/`、`paper_fig/` 等旧路径下。
+- 在迁移期间，一些旧式输出仍可能出现在 `summary/`、`fig/`、`paper_fig/` 等旧路径下，但新的 `main` 分支应优先通过 `descriptive/`、`inferential/`、`analysis/` 和 `paper/` 这几层来阅读结果。
 - 单被试输出正在迁移到：
   - `subjects/<subject_id>/tables/`
   - `subjects/<subject_id>/figures/`

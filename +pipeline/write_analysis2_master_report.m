@@ -1,7 +1,9 @@
 function out = write_analysis2_master_report(fp_sum, cfg)
-%WRITE_ANALYSIS2_MASTER_REPORT Build one ordered master report for analysis-2.
+%WRITE_ANALYSIS2_MASTER_REPORT Build one ordered master report for the detailed analysis layer.
 %
-% Output:
+% Preferred output:
+%   <batch>/analysis/MASTER_REPORT.md
+% Legacy fallback:
 %   <summary>/analysis-2/MASTER_REPORT.md
 %
 % Report order (requested):

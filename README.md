@@ -212,7 +212,7 @@ Typical staged layout:
 Notes:
 - Subject folder name equals the input `.set` **base filename** (without extension) for easy verification.
 - If `output_dir` is set in `config.json`, outputs go to `<output_dir>/...` instead.
-- During migration, some legacy outputs may still appear under older `summary/`, `fig/`, or `paper_fig/` paths.
+- During migration, some legacy outputs may still appear under older `summary/`, `fig/`, or `paper_fig/` paths, but the redesigned main branch should be read primarily through `descriptive/`, `inferential/`, `analysis/`, and `paper/`.
 - Single-subject outputs are being organized under:
   - `subjects/<subject_id>/tables/`
   - `subjects/<subject_id>/figures/`

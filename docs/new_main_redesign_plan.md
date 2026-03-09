@@ -124,7 +124,9 @@ This means:
 The redesigned main branch should prefer:
 - direct summary tables for `overall`
 - direct grouped summary tables for `experience`
-- mirrored inferential entry files for `experience`
+- direct inferential summary tables and PNGs for `overall`
+- direct inferential summary tables and PNGs for `experience`
+- mirrored detailed task files only as a secondary support layer
 
 while keeping `SportFreq` accessible only through detailed task outputs unless explicitly re-promoted later.
 

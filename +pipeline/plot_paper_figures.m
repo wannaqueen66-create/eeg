@@ -1,5 +1,10 @@
 function plot_paper_figures(fp_sum, cfg)
-%PLOT_PAPER_FIGURES Create journal-ready multi-panel figures under summary/paper_fig/.
+%PLOT_PAPER_FIGURES Create journal-ready multi-panel figures under the paper output layer.
+%
+% Preferred output:
+%   <batch>/paper/{raw|qc}/figures/
+% Legacy fallback:
+%   summary/paper_fig/
 %
 % Uses summary merged CSVs if present:
 %   - all_subjects_scene_level.csv

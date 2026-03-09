@@ -15,19 +15,22 @@ If you only want the most useful places to inspect results, use this order:
 
 如果你只想快速找到最重要的结果，建议按这个顺序看：
 
-1. `runs/current/subjects/`
-   - single-subject outputs / 单被试结果
-2. `runs/current/batch/merged/`
-   - merged cross-subject tables / 跨被试合并表
-3. `runs/current/batch/qc/`
-   - QC-filtered tables / QC 过滤后结果
-4. `runs/current/batch/reports/`
-   - summary + methods + QC reports / 汇总与方法说明
-   - curated main index (`README_CURATED_MAIN.md`) / 新 main 主输出入口说明
-5. `runs/current/batch/analysis/`
-   - task-oriented inferential outputs / 按 task 分类的正式分析结果
-6. `runs/current/batch/paper/`
+1. `runs/current/batch/reports/README_CURATED_MAIN.md`
+   - curated main entry / 新 main 主入口说明
+2. `runs/current/batch/descriptive/overall/`
+   - main descriptive results / 主描述性结果
+3. `runs/current/batch/descriptive/experience/`
+   - grouped descriptive results / 分组描述性结果
+4. `runs/current/batch/inferential/overall/`
+   - main inferential results / 主显著性结果
+5. `runs/current/batch/inferential/experience/`
+   - grouped inferential results / 分组显著性结果
+6. `runs/current/batch/analysis/`
+   - detailed task-oriented outputs / 详细 task 输出
+7. `runs/current/batch/paper/`
    - paper-ready figures/tables / 面向论文与汇报的整理输出
+8. `runs/current/subjects/`
+   - single-subject outputs / 单被试结果
 
 ---
 
