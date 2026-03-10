@@ -317,6 +317,14 @@ try
 catch
 end
 
+try
+    write_curated_node_report(fp_do, 'descriptive', 'overall');
+    write_curated_node_report(fp_de, 'descriptive', 'experience');
+    write_curated_node_report(fp_io, 'inferential', 'overall');
+    write_curated_node_report(fp_ie, 'inferential', 'experience');
+catch
+end
+
 end
 
 function mkdir_if_needed(p)
