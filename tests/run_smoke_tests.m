@@ -83,6 +83,25 @@ assert(contains(mainScript, 'T.P_low_gamma = out_rel40(:,12);'), 'P_low_gamma sh
 assert(contains(mainScript, 'T.O_low_gamma = out_rel40(:,18);'), 'O_low_gamma should use out_rel40 denominator');
 fprintf('[OK] low_gamma denominator mapping checks\n');
 
+% Test 6: curated node report helper writes README_NODE.md into report/
+nodeRoot = fullfile(fp_batch, 'descriptive', 'overall');
+mkdir(nodeRoot);
+mdNode = pipeline.write_curated_node_report(nodeRoot, 'descriptive', 'overall');
+assert(~isempty(mdNode) && exist(mdNode,'file')==2, 'README_NODE.md should be generated');
+nodeText = fileread(mdNode);
+assert(contains(nodeText, 'Curated Node Guide: Descriptive / Overall'), 'Node guide title missing');
+assert(contains(nodeText, 'Folder rule'), 'Node guide folder rule missing');
+assert(contains(nodeText, 'Recommended reading order'), 'Node guide reading order missing');
+fprintf('[OK] curated node report writer\n');
+
+% Test 7: curated main builder should call node-level report generation
+curatedBuilder = fileread(fullfile(fileparts(mfilename('fullpath')), '..', '+pipeline', 'build_curated_main_outputs.m'));
+assert(contains(curatedBuilder, "write_curated_node_report(fp_do, 'descriptive', 'overall')"), 'Missing descriptive/overall node report call');
+assert(contains(curatedBuilder, "write_curated_node_report(fp_de, 'descriptive', 'experience')"), 'Missing descriptive/experience node report call');
+assert(contains(curatedBuilder, "write_curated_node_report(fp_io, 'inferential', 'overall')"), 'Missing inferential/overall node report call');
+assert(contains(curatedBuilder, "write_curated_node_report(fp_ie, 'inferential', 'experience')"), 'Missing inferential/experience node report call');
+fprintf('[OK] curated main builder node report hooks\n');
+
 fprintf('All smoke tests passed.\n');
 end
 

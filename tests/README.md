@@ -19,6 +19,10 @@ run('tests/run_smoke_tests.m');
 - staged output path helpers for:
   - subject dirs
   - batch dirs
+- static schema checks for key scene-level exports
+- low-gamma denominator mapping checks
+- curated main node report generation (`report/README_NODE.md`)
+- curated main builder hook checks for all 4 main nodes
 
 ## Notes
 
