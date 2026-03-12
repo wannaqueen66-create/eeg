@@ -63,7 +63,9 @@ try
             fprintf(fid, '3. `tables/experience_scene_metric_means_by_WWR_Complexity_qc.csv`\n');
             fprintf(fid, '4. `figures/experience_factor_grid_qc.png`\n');
             fprintf(fid, '5. `tables/experience_recovery_means_qc.csv`\n');
-            fprintf(fid, '6. `figures/experience_recovery_bar_qc.png`\n\n');
+            fprintf(fid, '6. `figures/experience_recovery_bar_qc.png`\n');
+            fprintf(fid, '7. `tables/experience_trialindex_neural_response_qc.csv`\n');
+            fprintf(fid, '8. `figures/experience_trialindex_response_qc.png`\n\n');
         case "inferential::overall"
             fprintf(fid, 'This node is the curated full-sample inferential entry for the redesigned main branch.\n');
             fprintf(fid, 'Use it when you want the main effect / interaction / trend results for the whole sample without traversing detailed task outputs first.\n\n');
@@ -84,7 +86,9 @@ try
             fprintf(fid, '4. `figures/experience_wwr_trend_heatmap_qc.png`\n');
             fprintf(fid, '5. `tables/experience_recovery_inferential_summary_qc.csv`\n');
             fprintf(fid, '6. `figures/experience_recovery_inferential_qc.png`\n');
-            fprintf(fid, '7. `tables/experience_inferential_file_index.csv` for detailed source tracing\n\n');
+            fprintf(fid, '7. `tables/trialindex_lmm_summary_qc.csv` (mirrored from task3 when available)\n');
+            fprintf(fid, '8. `figures/trialindex_lmm_overview_qc_experience.png` (mirrored when available)\n');
+            fprintf(fid, '9. `tables/experience_inferential_file_index.csv` for detailed source tracing\n\n');
         otherwise
             fprintf(fid, 'This curated node provides a simplified reading surface for the redesigned main branch.\n\n');
     end

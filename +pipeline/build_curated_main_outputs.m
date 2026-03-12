@@ -78,6 +78,11 @@ try
             writetable(Tcond, fullfile(fp_do_tbl, 'overall_scene_metric_means_by_WWR_Complexity_raw.csv'));
             plot_overall_factor_grid(Tcond, 'raw', fp_do_fig, cfg);
         end
+        Ttrial = summarize_trialindex_overall(AllScene, cfg);
+        if ~isempty(Ttrial)
+            writetable(Ttrial, fullfile(fp_do_tbl, 'overall_trialindex_neural_response_raw.csv'));
+            plot_trialindex_descriptive_overall(Ttrial, 'raw', fp_do_fig, cfg);
+        end
     end
     if ~isempty(AllScene_qc)
         writetable(AllScene_qc, fullfile(fp_do_tbl, 'scene_level_overall_qc.csv'));
@@ -90,6 +95,11 @@ try
         if ~isempty(Tcond)
             writetable(Tcond, fullfile(fp_do_tbl, 'overall_scene_metric_means_by_WWR_Complexity_qc.csv'));
             plot_overall_factor_grid(Tcond, 'qc', fp_do_fig, cfg);
+        end
+        Ttrial = summarize_trialindex_overall(AllScene_qc, cfg);
+        if ~isempty(Ttrial)
+            writetable(Ttrial, fullfile(fp_do_tbl, 'overall_trialindex_neural_response_qc.csv'));
+            plot_trialindex_descriptive_overall(Ttrial, 'qc', fp_do_fig, cfg);
         end
     end
     if ~isempty(AllPairs)
@@ -121,12 +131,14 @@ try
         fprintf(fid, '- `overall_scene_metric_means_qc.csv`: QC-filtered core metric means across the full sample\n');
         fprintf(fid, '- `overall_scene_metric_means_by_WWR_Complexity_raw.csv`: descriptive means by WWR × Complexity\n');
         fprintf(fid, '- `overall_scene_metric_means_by_WWR_Complexity_qc.csv`: QC-filtered descriptive means by WWR × Complexity\n');
+        fprintf(fid, '- `overall_trialindex_neural_response_*.csv`: trial-by-trial neural response summaries across TrialIndex 1–12\n');
         fprintf(fid, '- `pairs_overall_raw.csv`: full-sample recovery/pair descriptive table\n');
         fprintf(fid, '- `pairs_overall_qc.csv`: QC-filtered recovery/pair descriptive table\n');
         fprintf(fid, '- `overall_recovery_means_*.csv`: overall recovery summary table\n');
         fprintf(fid, '- `overall_metric_bar_*.png`: overall core metric bar figure\n');
         fprintf(fid, '- `overall_recovery_bar_*.png`: overall recovery bar figure\n');
         fprintf(fid, '- `overall_factor_grid_*.png`: overall WWR × Complexity descriptive grid\n');
+        fprintf(fid, '- `overall_trialindex_response_*.png`: overall trial-by-trial neural response figure\n');
         fprintf(fid, '\nThis folder is intended as the simplest entry point for reading descriptive EEG results at the full-sample level.\n');
         fclose(fid);
     end
@@ -162,6 +174,11 @@ try
                 writetable(Tcond, fullfile(fp_de_tbl, 'experience_scene_metric_means_by_WWR_Complexity_raw.csv'));
                 plot_experience_factor_grid(Tcond, 'raw', fp_de_fig, cfg);
             end
+            Ttrial = summarize_trialindex_experience(S, cfg);
+            if ~isempty(Ttrial)
+                writetable(Ttrial, fullfile(fp_de_tbl, 'experience_trialindex_neural_response_raw.csv'));
+                plot_trialindex_descriptive_experience(Ttrial, 'raw', fp_de_fig, cfg);
+            end
         end
     end
     if ~isempty(AllScene_qc)
@@ -182,6 +199,11 @@ try
                 if ~isempty(Tcond)
                     writetable(Tcond, fullfile(fp_de_tbl, 'experience_scene_metric_means_by_WWR_Complexity_qc.csv'));
                     plot_experience_factor_grid(Tcond, 'qc', fp_de_fig, cfg);
+                end
+                Ttrial = summarize_trialindex_experience(S, cfg);
+                if ~isempty(Ttrial)
+                    writetable(Ttrial, fullfile(fp_de_tbl, 'experience_trialindex_neural_response_qc.csv'));
+                    plot_trialindex_descriptive_experience(Ttrial, 'qc', fp_de_fig, cfg);
                 end
             end
         end
@@ -236,11 +258,13 @@ try
         fprintf(fid, '- `scene_level_experience_*.csv`: scene-level descriptive tables with valid experience labels\n');
         fprintf(fid, '- `experience_scene_metric_means_*.csv`: metric summaries by Experience group (and Complexity when available)\n');
         fprintf(fid, '- `experience_scene_metric_means_by_WWR_Complexity_*.csv`: metric summaries by Experience × WWR × Complexity\n');
+        fprintf(fid, '- `experience_trialindex_neural_response_*.csv`: trial-by-trial neural response summaries by Experience group\n');
         fprintf(fid, '- `pairs_experience_*.csv`: recovery tables with valid experience labels\n');
         fprintf(fid, '- `experience_recovery_means_*.csv`: recovery summaries by Experience group\n');
         fprintf(fid, '- `experience_metric_bar_*.png`: experience-group core metric bar figure\n');
         fprintf(fid, '- `experience_recovery_bar_*.png`: experience-group recovery bar figure\n');
         fprintf(fid, '- `experience_factor_grid_*.png`: experience-group WWR × Complexity descriptive grid\n');
+        fprintf(fid, '- `experience_trialindex_response_*.png`: experience-group trial-by-trial neural response figure\n');
         fprintf(fid, '\nThis folder is intended as the default grouped descriptive layer for the redesigned main branch.\n');
         fclose(fid);
     end
@@ -329,6 +353,148 @@ end
 
 function mkdir_if_needed(p)
 if ~exist(p,'dir'); mkdir(p); end
+end
+
+function Tsum = summarize_trialindex_overall(S, cfg)
+Tsum = table();
+if isempty(S) || ~ismember('subject_id', S.Properties.VariableNames)
+    return;
+end
+trial = compute_trialindex_local(S);
+if all(~isfinite(trial))
+    return;
+end
+metrics = get_curated_metrics_local(S, cfg);
+rows = {};
+for mi = 1:numel(metrics)
+    m = string(metrics{mi});
+    if ~ismember(m, S.Properties.VariableNames), continue; end
+    y = double(S.(char(m)));
+    for ti = 1:12
+        use = isfinite(trial) & trial==ti & isfinite(y);
+        if ~any(use), continue; end
+        subj = string(S.subject_id(use));
+        y_use = y(use);
+        subj_u = unique(subj);
+        subj_means = nan(numel(subj_u),1);
+        for si = 1:numel(subj_u)
+            subj_means(si) = mean(y_use(subj==subj_u(si)), 'omitnan');
+        end
+        rows(end+1,:) = {m, ti, sum(use), numel(subj_u), mean(subj_means,'omitnan'), std(subj_means,'omitnan'), std(subj_means,'omitnan')/max(1,sqrt(numel(subj_u)))}; %#ok<AGROW>
+    end
+end
+if isempty(rows), return; end
+Tsum = cell2table(rows, 'VariableNames', {'metric','TrialIndex','n_rows','n_subjects','mean_value','sd_subject_mean','sem_subject_mean'});
+end
+
+function Tsum = summarize_trialindex_experience(S, cfg)
+Tsum = table();
+expCol = pick_group_col(S, 'ExperienceGroup', 'Experience');
+if isempty(S) || strlength(expCol)==0 || ~ismember('subject_id', S.Properties.VariableNames)
+    return;
+end
+trial = compute_trialindex_local(S);
+if all(~isfinite(trial))
+    return;
+end
+G = normalize_high_low_local(S.(char(expCol)));
+metrics = get_curated_metrics_local(S, cfg);
+rows = {};
+for mi = 1:numel(metrics)
+    m = string(metrics{mi});
+    if ~ismember(m, S.Properties.VariableNames), continue; end
+    y = double(S.(char(m)));
+    for grp = ["Low","High"]
+        for ti = 1:12
+            use = isfinite(trial) & trial==ti & isfinite(y) & G==grp;
+            if ~any(use), continue; end
+            subj = string(S.subject_id(use));
+            y_use = y(use);
+            subj_u = unique(subj);
+            subj_means = nan(numel(subj_u),1);
+            for si = 1:numel(subj_u)
+                subj_means(si) = mean(y_use(subj==subj_u(si)), 'omitnan');
+            end
+            rows(end+1,:) = {m, grp, ti, sum(use), numel(subj_u), mean(subj_means,'omitnan'), std(subj_means,'omitnan'), std(subj_means,'omitnan')/max(1,sqrt(numel(subj_u)))}; %#ok<AGROW>
+        end
+    end
+end
+if isempty(rows), return; end
+Tsum = cell2table(rows, 'VariableNames', {'metric','ExperienceGroup','TrialIndex','n_rows','n_subjects','mean_value','sd_subject_mean','sem_subject_mean'});
+end
+
+function plot_trialindex_descriptive_overall(Tsum, tag, fp_fig, cfg)
+if isempty(Tsum) || height(Tsum)==0, return; end
+metrics = unique(string(Tsum.metric), 'stable');
+if isempty(metrics), return; end
+set(0,'DefaultFigureVisible','off');
+fig = figure('Color','w','Position',[100 100 1100 700]);
+tl = tiledlayout(fig, 2, 2, 'TileSpacing','compact', 'Padding','compact');
+for i=1:min(4,numel(metrics))
+    ax = nexttile(tl); hold(ax,'on'); style_axes(ax);
+    M = Tsum(string(Tsum.metric)==metrics(i),:);
+    errorbar(ax, double(M.TrialIndex), double(M.mean_value), double(M.sem_subject_mean), '-o', 'LineWidth',1.5, 'MarkerSize',4, 'Color',[0.15 0.35 0.7]);
+    xlabel(ax,'TrialIndex'); ylabel(ax,'Mean neural response');
+    title(ax, char(metrics(i)), 'Interpreter','none', 'FontWeight','normal');
+    xlim(ax,[1 12]);
+end
+title(tl, sprintf('Overall trial-by-trial neural response [%s]', tag), 'Interpreter','none', 'FontWeight','normal');
+pipeline.export_figure_png(fig, fullfile(fp_fig, sprintf('overall_trialindex_response_%s.png', tag)), get_dpi(cfg));
+try; close(fig); catch; end
+end
+
+function plot_trialindex_descriptive_experience(Tsum, tag, fp_fig, cfg)
+if isempty(Tsum) || height(Tsum)==0, return; end
+metrics = unique(string(Tsum.metric), 'stable');
+if isempty(metrics), return; end
+set(0,'DefaultFigureVisible','off');
+fig = figure('Color','w','Position',[100 100 1100 700]);
+tl = tiledlayout(fig, 2, 2, 'TileSpacing','compact', 'Padding','compact');
+for i=1:min(4,numel(metrics))
+    ax = nexttile(tl); hold(ax,'on'); style_axes(ax);
+    M = Tsum(string(Tsum.metric)==metrics(i),:);
+    for grp = ["Low","High"]
+        Mg = M(string(M.ExperienceGroup)==grp,:);
+        if isempty(Mg), continue; end
+        if grp=="Low"
+            cc = [0.18 0.49 0.72];
+        else
+            cc = [0.88 0.47 0.18];
+        end
+        errorbar(ax, double(Mg.TrialIndex), double(Mg.mean_value), double(Mg.sem_subject_mean), '-o', 'LineWidth',1.4, 'MarkerSize',4, 'Color',cc, 'DisplayName',char(grp));
+    end
+    xlabel(ax,'TrialIndex'); ylabel(ax,'Mean neural response');
+    title(ax, char(metrics(i)), 'Interpreter','none', 'FontWeight','normal');
+    xlim(ax,[1 12]); legend(ax,'Location','best');
+end
+title(tl, sprintf('Experience-group trial-by-trial neural response [%s]', tag), 'Interpreter','none', 'FontWeight','normal');
+pipeline.export_figure_png(fig, fullfile(fp_fig, sprintf('experience_trialindex_response_%s.png', tag)), get_dpi(cfg));
+try; close(fig); catch; end
+end
+
+function trial = compute_trialindex_local(S)
+trial = nan(height(S),1);
+if ismember('scene_id', S.Properties.VariableNames)
+    trial = double(S.scene_id);
+end
+if ismember('block_id', S.Properties.VariableNames) && ismember('cycle_in_block', S.Properties.VariableNames)
+    alt = (double(S.block_id)-1)*6 + double(S.cycle_in_block);
+    bad = ~isfinite(trial) | trial<1 | trial>12;
+    trial(bad) = alt(bad);
+end
+bad = ~isfinite(trial) | trial<1 | trial>12;
+trial(bad) = nan;
+end
+
+function metrics = get_curated_metrics_local(S, cfg)
+metrics = {"O_alpha","O_theta","O_beta","F_theta"};
+try
+    if isfield(cfg,'paper_metrics') && ~isempty(cfg.paper_metrics)
+        metrics = cellstr(string(cfg.paper_metrics));
+    end
+catch
+end
+metrics = metrics(ismember(string(metrics), string(S.Properties.VariableNames)));
 end
 
 function col = pick_group_col(T, a, b)
@@ -1507,6 +1673,7 @@ if fid>0
  fprintf(fid,'- `experience_wwr_trend_heatmap_%s.png`\n', tag);
  fprintf(fid,'- `experience_recovery_inferential_summary_%s.csv`\n', tag);
  fprintf(fid,'- `experience_recovery_inferential_%s.png`\n', tag);
+ fprintf(fid,'- mirrored task3 TrialIndex outputs when available (for trial-by-trial neural response significance)\n');
  fprintf(fid,'- `experience_inferential_file_index.csv`\n');
  fprintf(fid,'- `experience_inferential_task_counts.csv`\n');
  fprintf(fid,'- `experience_inferential_task_counts.png`\n');
