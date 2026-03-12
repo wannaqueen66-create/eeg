@@ -607,6 +607,13 @@ plot_occ_psd(EEG, T, roi, fs, wlen, nover, nfft, fp_fig, base);
 %% ===== 10) view-gray 地形图（theta/alpha/beta） =====
 plot_topoplot_view_minus_gray(EEG, T, bands, totalBand30, fs, wlen, nover, nfft, fp_fig, fp_csv, fp_qc, base, designMap);
 
+%% ===== 10b) scene topo 网格图（每个 block 2x3，共两张） =====
+try
+    pipeline.plot_scene_topo_grids('subject', EEG, T, bands, totalBand30, fs, wlen, nover, nfft, fp_fig, fp_csv, fp_qc, base, designMap, '', struct());
+catch ME
+    fprintf(2, '[WARN] plot_scene_topo_grids(subject) failed: %s\n', ME.message);
+end
+
 %% ===== 11) 导出论文级汇总表 =====
 export_summary_tables(T, fp_csv, base);
 summary_files{end+1} = fullfile(fp_csv, sprintf('%s_bandpower_summary.csv', base)); %#ok<AGROW>

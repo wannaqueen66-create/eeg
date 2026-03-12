@@ -313,6 +313,12 @@ try
 catch ME
     fprintf(2, '[WARN] plot_group_topoplots failed: %s\n', ME.message);
 end
+try
+    fp_topo_scene = pipeline.get_fig_dir(fp_batch, cfg, 'topo_scene', 'raw');
+    pipeline.plot_scene_topo_grids('group', struct(), table(), cfg.bands, cfg.bands.totalBand30, [], [], [], [], fp_topo_scene, '', '', '', table(), fp_batch, cfg);
+catch ME
+    fprintf(2, '[WARN] plot_scene_topo_grids(group) failed: %s\n', ME.message);
+end
 
 % Analysis-2/task1: Block2 restart effect (raw + qc)
 try
