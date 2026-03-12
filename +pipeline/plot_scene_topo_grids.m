@@ -145,11 +145,9 @@ if nargin < 4 || isempty(fp_batch) || ~exist(fp_batch,'dir')
 end
 
 chanlocs = [];
+subjRoot = '';
 try
-    subjRoot = fullfile(fileparts(fp_batch), 'subjects');
-    if ~exist(subjRoot,'dir')
-        subjRoot = fullfile(fileparts(fileparts(fp_batch)), 'subjects');
-    end
+    subjRoot = resolve_subjects_root_from_batch(fp_batch);
     d = dir(fullfile(subjRoot, '*', 'qc', '*_chanlocs.mat'));
     if ~isempty(d)
         S = load(fullfile(d(1).folder, d(1).name));
@@ -163,13 +161,12 @@ if isempty(chanlocs) && isstruct(EEG) && isfield(EEG,'chanlocs')
     chanlocs = EEG.chanlocs;
 end
 if isempty(chanlocs)
-    warning('plot_scene_topo_grids(group): no chanlocs available.');
+    warning('plot_scene_topo_grids(group): no chanlocs available. resolved_subjects_root=%s', string(subjRoot));
     return;
 end
 
-subjRoot = fullfile(fileparts(fp_batch), 'subjects');
-if ~exist(subjRoot,'dir')
-    subjRoot = fullfile(fileparts(fileparts(fp_batch)), 'subjects');
+if strlength(string(subjRoot))==0 || ~exist(subjRoot,'dir')
+    subjRoot = resolve_subjects_root_from_batch(fp_batch);
 end
 D = dir(fullfile(subjRoot, '*', 'tables', '*_scene_topo_long.csv'));
 if isempty(D)
@@ -441,6 +438,34 @@ function s = short_cx(cx)
 s = string(cx);
 s(s=="ComplexityLow") = "Low";
 s(s=="ComplexityHigh") = "High";
+end
+
+function subjRoot = resolve_subjects_root_from_batch(fp_batch)
+subjRoot = '';
+if nargin < 1 || strlength(string(fp_batch))==0
+    return;
+end
+cur = char(string(fp_batch));
+for k = 1:6
+    cand = fullfile(cur, 'subjects');
+    if exist(cand,'dir')
+        subjRoot = cand;
+        return;
+    end
+    [parent, leaf] = fileparts(cur);
+    if isempty(parent) || strcmp(parent, cur)
+        break;
+    end
+    % Canonical staged layout: subjects live beside batch under runs/current/
+    if strcmpi(leaf, 'batch')
+        cand2 = fullfile(parent, 'subjects');
+        if exist(cand2,'dir')
+            subjRoot = cand2;
+            return;
+        end
+    end
+    cur = parent;
+end
 end
 
 function sid = canonical_subject_id_local(x)
