@@ -24,6 +24,9 @@ fp_out = pipeline.get_output_root(input_folder, cfg);
 % Canonical batch root under staged layout (or legacy summary root when applicable)
 fp_batch_base = pipeline.get_batch_dir(input_folder, cfg);
 fp_batch = fp_batch_base;
+
+% Stable source roots under current/batch (used for reading previously written outputs)
+fp_batch_source = fp_batch_base;
 fp_batch_merged = pipeline.get_batch_merged_dir(input_folder, cfg);
 fp_batch_qc = pipeline.get_batch_qc_dir(input_folder, cfg);
 fp_batch_reports = pipeline.get_batch_report_dir(input_folder, cfg);
@@ -440,7 +443,7 @@ try
     fp_paper_raw = pipeline.get_fig_dir(fp_batch, cfg, 'paper', 'raw');
     % ensure raw tables are present where plotter reads them
     try
-        fp_tbl_raw = pipeline.get_table_dir(fp_batch, cfg, 'merged_raw');
+        fp_tbl_raw = fp_batch_merged;
         copyfile(fullfile(fp_tbl_raw,'all_subjects_scene_level.csv'), fullfile(fp_paper_raw,'all_subjects_scene_level.csv'));
         if exist(fullfile(fp_tbl_raw,'all_subjects_pairs_check.csv'),'file')
             copyfile(fullfile(fp_tbl_raw,'all_subjects_pairs_check.csv'), fullfile(fp_paper_raw,'all_subjects_pairs_check.csv'));
@@ -456,13 +459,7 @@ end
 try
     if ~isequal(AllScene_qc, AllScene)
         % locate QC scene table (tidy or legacy)
-        fp_tbl_qc = fp_batch;
-        try
-            if exist('pipeline.get_table_dir','file')==2
-                fp_tbl_qc = pipeline.get_table_dir(fp_batch, cfg, 'merged_qc');
-            end
-        catch
-        end
+        fp_tbl_qc = fp_batch_qc;
         fp_scene = fullfile(fp_tbl_qc,'all_subjects_scene_level_qc.csv');
         if exist(fp_scene,'file')
             % temporarily swap file name by copying
@@ -470,22 +467,10 @@ try
             if ~exist(fp_qc_dir,'dir'); mkdir(fp_qc_dir); end
             % use plot_paper_figures but point it to the active batch dir; it reads standard filenames.
             % so we temporarily write QC tables as the standard names within fp_qc_dir.
-            fp_tbl_qc = fp_batch;
-            try
-                if exist('pipeline.get_table_dir','file')==2
-                    fp_tbl_qc = pipeline.get_table_dir(fp_batch, cfg, 'merged_qc');
-                end
-            catch
-            end
+            fp_tbl_qc = fp_batch_qc;
             copyfile(fullfile(fp_tbl_qc,'all_subjects_scene_level_qc.csv'), fullfile(fp_qc_dir,'all_subjects_scene_level.csv'));
-            % find QC tables (tidy or legacy)
-            fp_tbl_qc = fp_batch;
-            try
-                if exist('pipeline.get_table_dir','file')==2
-                    fp_tbl_qc = pipeline.get_table_dir(fp_batch, cfg, 'merged_qc');
-                end
-            catch
-            end
+            % find QC tables from the stable batch/qc source dir
+            fp_tbl_qc = fp_batch_qc;
             if exist(fullfile(fp_tbl_qc,'all_subjects_pairs_check_qc.csv'),'file')
                 copyfile(fullfile(fp_tbl_qc,'all_subjects_pairs_check_qc.csv'), fullfile(fp_qc_dir,'all_subjects_pairs_check.csv'));
             end

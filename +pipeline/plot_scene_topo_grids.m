@@ -147,7 +147,11 @@ end
 
 chanlocs = [];
 try
-    d = dir(fullfile(fileparts(fp_batch), 'subjects', '*', 'qc', '*_chanlocs.mat'));
+    subjRoot = fullfile(fileparts(fp_batch), 'subjects');
+    if ~exist(subjRoot,'dir')
+        subjRoot = fullfile(fileparts(fileparts(fp_batch)), 'subjects');
+    end
+    d = dir(fullfile(subjRoot, '*', 'qc', '*_chanlocs.mat'));
     if ~isempty(d)
         S = load(fullfile(d(1).folder, d(1).name));
         if isfield(S,'chanlocs')
@@ -165,6 +169,9 @@ if isempty(chanlocs)
 end
 
 subjRoot = fullfile(fileparts(fp_batch), 'subjects');
+if ~exist(subjRoot,'dir')
+    subjRoot = fullfile(fileparts(fileparts(fp_batch)), 'subjects');
+end
 D = dir(fullfile(subjRoot, '*', 'tables', '*_scene_topo_long.csv'));
 if isempty(D)
     D = dir(fullfile(subjRoot, '*', 'csv', '*_scene_topo_long.csv'));
