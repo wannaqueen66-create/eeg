@@ -2,7 +2,8 @@ function out = analyze_trialindex_lmm(AllScene, fp_sum, cfg, tag)
 %ANALYZE_TRIALINDEX_LMM Fit LMM with TrialIndex as covariate (adaptation trend).
 %
 % Model (per metric, per grouping type):
-%   EEG ~ Group*WWR*Complexity + TrialIndex + Group:TrialIndex + (1|Subject)
+%   base: EEG ~ Group*WWR*Complexity + TrialIndex + Group:TrialIndex + (1|Subject)
+%   if Order is available: add Order + Order:TrialIndex
 %
 % Uses view segments only.
 %
@@ -17,6 +18,7 @@ function out = analyze_trialindex_lmm(AllScene, fp_sum, cfg, tag)
 % - Requires Statistics and Machine Learning Toolbox (fitlme). If unavailable,
 %   writes a warning and skips.
 % - Requires design columns: WWR and Complexity, plus group columns.
+% - If Order exists in the attached design mapping, the model also tests Order and Order×TrialIndex.
 
 if nargin < 4 || isempty(tag)
     tag = 'raw';
@@ -82,6 +84,9 @@ if ismember('Complexity', T.Properties.VariableNames)
 end
 
 % Group columns normalization (group labels are the canonical grouping vars)
+if ismember('Order', T.Properties.VariableNames)
+    T.Order = normalize_order(T.Order);
+end
 if ismember('ExperienceGroup', T.Properties.VariableNames)
     T.ExperienceGroup = normalize_high_low(T.ExperienceGroup);
 end
@@ -174,13 +179,28 @@ for ai=1:numel(analyses)
         end
 
         % analysis-ready long table
-        Tready = table(string(Tm.subject_id), Tm.Subject, Tm.Group, Tm.WWR, Tm.Complexity, double(Tm.TrialIndex), double(Tm.Y), ...
-            'VariableNames', {'subject_id','Subject','Group','WWR','Complexity','TrialIndex','EEG'});
+        if ismember('Order', Tm.Properties.VariableNames)
+            Tready = table(string(Tm.subject_id), Tm.Subject, Tm.Group, Tm.WWR, Tm.Complexity, categorical(string(Tm.Order)), double(Tm.TrialIndex), double(Tm.Y), ...
+                'VariableNames', {'subject_id','Subject','Group','WWR','Complexity','Order','TrialIndex','EEG'});
+            try
+                if any(categories(Tready.Order)=="Order1")
+                    Tready.Order = reordercats(Tready.Order, ["Order1"; setdiff(categories(Tready.Order),"Order1","stable")]);
+                end
+            catch
+            end
+        else
+            Tready = table(string(Tm.subject_id), Tm.Subject, Tm.Group, Tm.WWR, Tm.Complexity, double(Tm.TrialIndex), double(Tm.Y), ...
+                'VariableNames', {'subject_id','Subject','Group','WWR','Complexity','TrialIndex','EEG'});
+        end
         fp_ready = fullfile(fp_tbl2, pipeline.sanitize_filename(sprintf('analysis_ready_%s_%s.csv', m, tag)));
         writetable(Tready, fp_ready);
 
         % Fit LMM
-        formula = 'EEG ~ Group*WWR*Complexity + TrialIndex + Group:TrialIndex + (1|Subject)';
+        if ismember('Order', Tready.Properties.VariableNames) && numel(categories(Tready.Order)) >= 2
+            formula = 'EEG ~ Group*WWR*Complexity + Order + TrialIndex + Group:TrialIndex + Order:TrialIndex + (1|Subject)';
+        else
+            formula = 'EEG ~ Group*WWR*Complexity + TrialIndex + Group:TrialIndex + (1|Subject)';
+        end
         try
             lme = fitlme(Tready, formula);
         catch ME
@@ -238,9 +258,9 @@ for ai=1:numel(analyses)
 
         % Collect summary row for overview figure/table
         try
-            [ti_est, ti_p, gti_est, gti_p, n_sub, n_row] = extract_trialindex_key_stats(lme, AN, Tready);
-            r = table(string(A.name), m, n_sub, n_row, ti_est, ti_p, gti_est, gti_p, ...
-                'VariableNames', {'analysis','metric','n_subjects','n_rows','trialindex_est','trialindex_p','gti_est','gti_p'});
+            [ti_est, ti_p, gti_est, gti_p, oti_est, oti_p, n_sub, n_row] = extract_trialindex_key_stats(lme, AN, Tready);
+            r = table(string(A.name), m, n_sub, n_row, ti_est, ti_p, gti_est, gti_p, oti_est, oti_p, ...
+                'VariableNames', {'analysis','metric','n_subjects','n_rows','trialindex_est','trialindex_p','gti_est','gti_p','oti_est','oti_p'});
             SumRows = [SumRows; r]; %#ok<AGROW>
         catch
         end
@@ -266,6 +286,11 @@ for ai=1:numel(analyses)
             catch
                 SumRows.gti_p_holm = nan(height(SumRows),1);
             end
+            try
+                SumRows.oti_p_holm = pipeline.holm_stepdown(double(SumRows.oti_p));
+            catch
+                SumRows.oti_p_holm = nan(height(SumRows),1);
+            end
 
             fp_sumcsv = fullfile(fp_tbl2, pipeline.sanitize_filename(sprintf('trialindex_lmm_summary_%s.csv', tag)));
             writetable(SumRows, fp_sumcsv);
@@ -274,6 +299,23 @@ for ai=1:numel(analyses)
         end
     catch ME
         fprintf(2, '[WARN] analyze_trialindex_lmm: failed overview for %s: %s\n', A.name, ME.message);
+    end
+end
+end
+
+function y = normalize_order(x)
+s = strtrim(string(x));
+y = repmat("", numel(s), 1);
+for i=1:numel(s)
+    if ~isnan(str2double(s(i)))
+        y(i) = "Order" + string(str2double(s(i)));
+    elseif strlength(s(i))>0
+        tok = regexp(char(s(i)), '(\d+)', 'tokens', 'once');
+        if ~isempty(tok)
+            y(i) = "Order" + string(str2double(tok{1}));
+        else
+            y(i) = s(i);
+        end
     end
 end
 end
@@ -349,8 +391,8 @@ end
 error('Unsupported output type for table export: %s', class(X));
 end
 
-function [ti_est, ti_p, gti_est, gti_p, n_sub, n_row] = extract_trialindex_key_stats(lme, AN, Tready)
-ti_est = NaN; ti_p = NaN; gti_est = NaN; gti_p = NaN;
+function [ti_est, ti_p, gti_est, gti_p, oti_est, oti_p, n_sub, n_row] = extract_trialindex_key_stats(lme, AN, Tready)
+ti_est = NaN; ti_p = NaN; gti_est = NaN; gti_p = NaN; oti_est = NaN; oti_p = NaN;
 n_sub = NaN; n_row = NaN;
 try
     n_sub = numel(unique(string(Tready.subject_id)));
@@ -371,6 +413,11 @@ try
         gti_est = double(C.Estimate(i2));
         gti_p = double(C.pValue(i2));
     end
+    i3 = find(contains(rn,"TrialIndex") & contains(rn,"Order"),1,'first');
+    if ~isempty(i3)
+        oti_est = double(C.Estimate(i3));
+        oti_p = double(C.pValue(i3));
+    end
 catch
 end
 
@@ -385,6 +432,10 @@ try
         i2 = find(contains(tt,"Group") & contains(tt,"TrialIndex"),1,'first');
         if ~isempty(i2)
             gti_p = double(AN.pValue(i2));
+        end
+        i3 = find(contains(tt,"Order") & contains(tt,"TrialIndex"),1,'first');
+        if ~isempty(i3)
+            oti_p = double(AN.pValue(i3));
         end
     end
 catch
@@ -480,12 +531,14 @@ lines{end+1} = sprintf('# TrialIndex LMM (%s) – %s [%s]', string(analysisName)
 lines{end+1} = '';
 lines{end+1} = 'Model:';
 lines{end+1} = '```';
-lines{end+1} = 'EEG ~ Group*WWR*Complexity + TrialIndex + Group:TrialIndex + (1|Subject)';
+lines{end+1} = 'Base: EEG ~ Group*WWR*Complexity + TrialIndex + Group:TrialIndex + (1|Subject)';
+lines{end+1} = 'If Order exists: add Order + Order:TrialIndex';
 lines{end+1} = '```';
 lines{end+1} = '';
 lines{end+1} = 'Key terms to interpret:';
 lines{end+1} = '- **TrialIndex**: overall adaptation trend across trials (1–12)';
 lines{end+1} = '- **Group:TrialIndex**: whether adaptation slope differs by group';
+lines{end+1} = '- **Order:TrialIndex**: whether the trial-by-trial slope differs across counterbalanced orders';
 lines{end+1} = '';
 lines{end+1} = 'Outputs:';
 lines{end+1} = sprintf('- analysis-ready long table: `%s`', fp_ready);
@@ -516,6 +569,12 @@ try
         lines{end+1} = sprintf('Group×TrialIndex coefficient (%s): Estimate=%.4g, SE=%.4g, t=%.3f, p=%.3g', ...
             rn(j), C.Estimate(j), C.SE(j), C.tStat(j), C.pValue(j));
     end
+    idxOTI = contains(rn, "TrialIndex") & contains(rn, "Order");
+    if any(idxOTI)
+        j = find(idxOTI, 1);
+        lines{end+1} = sprintf('Order×TrialIndex coefficient (%s): Estimate=%.4g, SE=%.4g, t=%.3f, p=%.3g', ...
+            rn(j), C.Estimate(j), C.SE(j), C.tStat(j), C.pValue(j));
+    end
 catch
 end
 
@@ -531,6 +590,10 @@ try
         j = find(contains(tt,"Group") & contains(tt,"TrialIndex"),1);
         if ~isempty(j)
             lines{end+1} = sprintf('ANOVA Group×TrialIndex: F=%.3f, p=%.3g', AN.FStat(j), AN.pValue(j));
+        end
+        k = find(contains(tt,"Order") & contains(tt,"TrialIndex"),1);
+        if ~isempty(k)
+            lines{end+1} = sprintf('ANOVA Order×TrialIndex: F=%.3f, p=%.3g', AN.FStat(k), AN.pValue(k));
         end
     end
 catch

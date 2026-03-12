@@ -83,6 +83,11 @@ try
             writetable(Ttrial, fullfile(fp_do_tbl, 'overall_trialindex_neural_response_raw.csv'));
             plot_trialindex_descriptive_overall(Ttrial, 'raw', fp_do_fig, cfg);
         end
+        TtrialOrd = summarize_trialindex_by_order(AllScene, cfg);
+        if ~isempty(TtrialOrd)
+            writetable(TtrialOrd, fullfile(fp_do_tbl, 'overall_trialindex_neural_response_by_order_raw.csv'));
+            plot_trialindex_descriptive_by_order(TtrialOrd, 'raw', fp_do_fig, cfg);
+        end
     end
     if ~isempty(AllScene_qc)
         writetable(AllScene_qc, fullfile(fp_do_tbl, 'scene_level_overall_qc.csv'));
@@ -100,6 +105,11 @@ try
         if ~isempty(Ttrial)
             writetable(Ttrial, fullfile(fp_do_tbl, 'overall_trialindex_neural_response_qc.csv'));
             plot_trialindex_descriptive_overall(Ttrial, 'qc', fp_do_fig, cfg);
+        end
+        TtrialOrd = summarize_trialindex_by_order(AllScene_qc, cfg);
+        if ~isempty(TtrialOrd)
+            writetable(TtrialOrd, fullfile(fp_do_tbl, 'overall_trialindex_neural_response_by_order_qc.csv'));
+            plot_trialindex_descriptive_by_order(TtrialOrd, 'qc', fp_do_fig, cfg);
         end
     end
     if ~isempty(AllPairs)
@@ -132,6 +142,7 @@ try
         fprintf(fid, '- `overall_scene_metric_means_by_WWR_Complexity_raw.csv`: descriptive means by WWR × Complexity\n');
         fprintf(fid, '- `overall_scene_metric_means_by_WWR_Complexity_qc.csv`: QC-filtered descriptive means by WWR × Complexity\n');
         fprintf(fid, '- `overall_trialindex_neural_response_*.csv`: trial-by-trial neural response summaries across TrialIndex 1–12\n');
+        fprintf(fid, '- `overall_trialindex_neural_response_by_order_*.csv`: trial-by-trial neural response summaries split by counterbalanced Order\n');
         fprintf(fid, '- `pairs_overall_raw.csv`: full-sample recovery/pair descriptive table\n');
         fprintf(fid, '- `pairs_overall_qc.csv`: QC-filtered recovery/pair descriptive table\n');
         fprintf(fid, '- `overall_recovery_means_*.csv`: overall recovery summary table\n');
@@ -139,6 +150,7 @@ try
         fprintf(fid, '- `overall_recovery_bar_*.png`: overall recovery bar figure\n');
         fprintf(fid, '- `overall_factor_grid_*.png`: overall WWR × Complexity descriptive grid\n');
         fprintf(fid, '- `overall_trialindex_response_*.png`: overall trial-by-trial neural response figure\n');
+        fprintf(fid, '- `overall_trialindex_response_by_order_*.png`: overall trial-by-trial neural response figure split by Order\n');
         fprintf(fid, '\nThis folder is intended as the simplest entry point for reading descriptive EEG results at the full-sample level.\n');
         fclose(fid);
     end
@@ -387,6 +399,42 @@ if isempty(rows), return; end
 Tsum = cell2table(rows, 'VariableNames', {'metric','TrialIndex','n_rows','n_subjects','mean_value','sd_subject_mean','sem_subject_mean'});
 end
 
+function Tsum = summarize_trialindex_by_order(S, cfg)
+Tsum = table();
+if isempty(S) || ~ismember('Order', S.Properties.VariableNames) || ~ismember('subject_id', S.Properties.VariableNames)
+    return;
+end
+trial = compute_trialindex_local(S);
+if all(~isfinite(trial))
+    return;
+end
+Ord = normalize_order_local(S.Order);
+metrics = get_curated_metrics_local(S, cfg);
+rows = {};
+for mi = 1:numel(metrics)
+    m = string(metrics{mi});
+    if ~ismember(m, S.Properties.VariableNames), continue; end
+    y = double(S.(char(m)));
+    for ord = unique(Ord(:))'
+        if strlength(ord)==0, continue; end
+        for ti = 1:12
+            use = isfinite(trial) & trial==ti & isfinite(y) & Ord==ord;
+            if ~any(use), continue; end
+            subj = string(S.subject_id(use));
+            y_use = y(use);
+            subj_u = unique(subj);
+            subj_means = nan(numel(subj_u),1);
+            for si = 1:numel(subj_u)
+                subj_means(si) = mean(y_use(subj==subj_u(si)), 'omitnan');
+            end
+            rows(end+1,:) = {m, ord, ti, sum(use), numel(subj_u), mean(subj_means,'omitnan'), std(subj_means,'omitnan'), std(subj_means,'omitnan')/max(1,sqrt(numel(subj_u)))}; %#ok<AGROW>
+        end
+    end
+end
+if isempty(rows), return; end
+Tsum = cell2table(rows, 'VariableNames', {'metric','Order','TrialIndex','n_rows','n_subjects','mean_value','sd_subject_mean','sem_subject_mean'});
+end
+
 function Tsum = summarize_trialindex_experience(S, cfg)
 Tsum = table();
 expCol = pick_group_col(S, 'ExperienceGroup', 'Experience');
@@ -470,6 +518,49 @@ end
 title(tl, sprintf('Experience-group trial-by-trial neural response [%s]', tag), 'Interpreter','none', 'FontWeight','normal');
 pipeline.export_figure_png(fig, fullfile(fp_fig, sprintf('experience_trialindex_response_%s.png', tag)), get_dpi(cfg));
 try; close(fig); catch; end
+end
+
+function plot_trialindex_descriptive_by_order(Tsum, tag, fp_fig, cfg)
+if isempty(Tsum) || height(Tsum)==0, return; end
+metrics = unique(string(Tsum.metric), 'stable');
+if isempty(metrics), return; end
+set(0,'DefaultFigureVisible','off');
+fig = figure('Color','w','Position',[100 100 1100 700]);
+tl = tiledlayout(fig, 2, 2, 'TileSpacing','compact', 'Padding','compact');
+for i=1:min(4,numel(metrics))
+    ax = nexttile(tl); hold(ax,'on'); style_axes(ax);
+    M = Tsum(string(Tsum.metric)==metrics(i),:);
+    ords = unique(string(M.Order), 'stable');
+    cmap = lines(max(2,numel(ords)));
+    for oi = 1:numel(ords)
+        Mo = M(string(M.Order)==ords(oi),:);
+        if isempty(Mo), continue; end
+        errorbar(ax, double(Mo.TrialIndex), double(Mo.mean_value), double(Mo.sem_subject_mean), '-o', 'LineWidth',1.4, 'MarkerSize',4, 'Color',cmap(oi,:), 'DisplayName',char(ords(oi)));
+    end
+    xlabel(ax,'TrialIndex'); ylabel(ax,'Mean neural response');
+    title(ax, char(metrics(i)), 'Interpreter','none', 'FontWeight','normal');
+    xlim(ax,[1 12]); legend(ax,'Location','best');
+end
+title(tl, sprintf('Overall trial-by-trial neural response by Order [%s]', tag), 'Interpreter','none', 'FontWeight','normal');
+pipeline.export_figure_png(fig, fullfile(fp_fig, sprintf('overall_trialindex_response_by_order_%s.png', tag)), get_dpi(cfg));
+try; close(fig); catch; end
+end
+
+function ord = normalize_order_local(x)
+ord = repmat("", numel(x), 1);
+s = strtrim(string(x));
+for i=1:numel(s)
+    if ~isnan(str2double(s(i)))
+        ord(i) = "Order" + string(str2double(s(i)));
+    elseif strlength(s(i))>0
+        tok = regexp(char(s(i)), '(\d+)', 'tokens', 'once');
+        if ~isempty(tok)
+            ord(i) = "Order" + string(str2double(tok{1}));
+        else
+            ord(i) = s(i);
+        end
+    end
+end
 end
 
 function trial = compute_trialindex_local(S)

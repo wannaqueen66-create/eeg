@@ -65,7 +65,9 @@ try
             fprintf(fid, '5. `tables/experience_recovery_means_qc.csv`\n');
             fprintf(fid, '6. `figures/experience_recovery_bar_qc.png`\n');
             fprintf(fid, '7. `tables/experience_trialindex_neural_response_qc.csv`\n');
-            fprintf(fid, '8. `figures/experience_trialindex_response_qc.png`\n\n');
+            fprintf(fid, '8. `figures/experience_trialindex_response_qc.png`\n');
+            fprintf(fid, '9. `tables/overall_trialindex_neural_response_by_order_qc.csv`\n');
+            fprintf(fid, '10. `figures/overall_trialindex_response_by_order_qc.png`\n\n');
         case "inferential::overall"
             fprintf(fid, 'This node is the curated full-sample inferential entry for the redesigned main branch.\n');
             fprintf(fid, 'Use it when you want the main effect / interaction / trend results for the whole sample without traversing detailed task outputs first.\n\n');
