@@ -27,8 +27,8 @@ catch
 end
 
 if useLegacyAnalysisLayout
-    fp_sum = pipeline.get_summary_dir(fp_in, cfg);
-    fp_task = fullfile(fp_sum, 'analysis-2', taskName);
+    fp_batch = pipeline.get_batch_dir(fp_in, cfg);
+    fp_task = fullfile(fp_batch, 'analysis-2', taskName);
 else
     fp_run = pipeline.get_run_dir(fp_in, cfg);
     fp_task = fullfile(fp_run, 'analysis', taskName);

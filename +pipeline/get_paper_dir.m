@@ -21,11 +21,11 @@ catch
 end
 
 if useLegacyPaperLayout
-    fp_sum = pipeline.get_summary_dir(fp_in, cfg);
+    fp_batch = pipeline.get_batch_dir(fp_in, cfg);
     if strcmpi(tag,'qc')
-        fp_paper = fullfile(fp_sum, 'paper_fig_qc');
+        fp_paper = fullfile(fp_batch, 'paper_fig_qc');
     else
-        fp_paper = fullfile(fp_sum, 'paper_fig');
+        fp_paper = fullfile(fp_batch, 'paper_fig');
     end
 else
     fp_run = pipeline.get_run_dir(fp_in, cfg);

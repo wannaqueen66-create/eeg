@@ -22,7 +22,7 @@ cfg = pipeline.load_config(config_path);
 fp_out = pipeline.get_output_root(input_folder, cfg);
 
 % Canonical batch root under staged layout (or legacy summary root when applicable)
-fp_batch_base = pipeline.get_summary_dir(input_folder, cfg);
+fp_batch_base = pipeline.get_batch_dir(input_folder, cfg);
 fp_batch = fp_batch_base;
 fp_batch_merged = pipeline.get_batch_merged_dir(input_folder, cfg);
 fp_batch_qc = pipeline.get_batch_qc_dir(input_folder, cfg);

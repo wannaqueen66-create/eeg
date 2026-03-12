@@ -20,10 +20,12 @@ catch
 end
 
 if useLegacyBatchLayout
-    fp_batch = pipeline.get_summary_dir(fp_in, cfg);
+    fp_out = pipeline.get_output_root(fp_in, cfg);
+    fp_batch = fullfile(fp_out, 'summary');
 else
     fp_run = pipeline.get_run_dir(fp_in, cfg);
     fp_batch = fullfile(fp_run, 'batch');
-    if ~exist(fp_batch,'dir'); mkdir(fp_batch); end
 end
+
+if ~exist(fp_batch,'dir'); mkdir(fp_batch); end
 end

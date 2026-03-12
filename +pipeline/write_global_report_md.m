@@ -6,7 +6,7 @@ function md_path = write_global_report_md(fp_in, cfg)
 %   legacy-compatible alias: <...>/summary_report.md
 
 fp_out = pipeline.get_output_root(fp_in, cfg);
-fp_batch = pipeline.get_summary_dir(fp_in, cfg);
+fp_batch = pipeline.get_batch_dir(fp_in, cfg);
 fp_rep = fp_batch;
 try
     if exist('pipeline.get_batch_report_dir','file')==2

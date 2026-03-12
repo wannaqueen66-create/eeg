@@ -426,7 +426,7 @@ This keeps the first pass operationally safe.
 ### Highest priority
 - `+pipeline/prepare_output.m`
 - `+pipeline/get_output_root.m`
-- `+pipeline/get_summary_dir.m`
+- `+pipeline/get_summary_dir.m` (now intended as a backward-compatible alias over `get_batch_dir`)
 - `+pipeline/get_fig_dir.m`
 - `+pipeline/get_table_dir.m`
 - `run_eeg_bandpower_pipeline.m`

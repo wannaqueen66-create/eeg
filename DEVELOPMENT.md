@@ -42,6 +42,7 @@ Key helpers introduced for this migration:
 - `pipeline.get_batch_qc_dir`
 - `pipeline.get_batch_report_dir`
 - `pipeline.get_batch_audit_dir`
+- `pipeline.get_summary_dir` (compatibility alias only; prefer `get_batch_dir` in new code)
 - `pipeline.get_analysis_task_subdirs`
 - `pipeline.get_paper_subdirs`
 - `pipeline.list_subject_ids`
