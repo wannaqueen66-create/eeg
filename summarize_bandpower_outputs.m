@@ -1,15 +1,16 @@
 function out = summarize_bandpower_outputs(input_folder, config_path)
-%SUMMARIZE_BANDPOWER_OUTPUTS Generate analysis-friendly batch summary tables.
+%SUMMARIZE_BANDPOWER_OUTPUTS Generate analysis-friendly batch-level outputs.
 %
 % Usage:
 %   summarize_bandpower_outputs(input_folder)
 %   summarize_bandpower_outputs(input_folder, config_path)
 %
-% This reads per-subject outputs under:
-%   <input_folder>/bandpower_outputs/<subject_id>/...
+% Main-branch canonical staged layout:
+%   reads  per-subject outputs under <input_folder>/bandpower_outputs/runs/current/subjects/<subject_id>/...
+%   writes batch-level outputs under <input_folder>/bandpower_outputs/runs/current/batch/...
 %
-% and writes merged summary CSVs into:
-%   <input_folder>/bandpower_outputs/summary/
+% Legacy compatibility:
+%   when cfg.timestamp_output_root=true, older summary-style paths may still be used.
 %
 % Output struct 'out' contains written file paths.
 
@@ -28,21 +29,43 @@ fp_batch_qc = pipeline.get_batch_qc_dir(input_folder, cfg);
 fp_batch_reports = pipeline.get_batch_report_dir(input_folder, cfg);
 fp_batch_audit = pipeline.get_batch_audit_dir(input_folder, cfg);
 
-% Optional: timestamp summary outputs only (keeps per-subject outputs stable)
+% Optional: timestamp batch summarize-runs only (keeps per-subject outputs stable)
+% Canonical main-branch names are timestamp_batch_runs / batch_runs_subdir.
+% summary_* aliases are retained for backward compatibility.
 try
-    if isfield(cfg,'timestamp_summary_only') && logical(cfg.timestamp_summary_only)
+    useTsBatchRuns = false;
+    if isfield(cfg,'timestamp_batch_runs')
+        useTsBatchRuns = logical(cfg.timestamp_batch_runs);
+    elseif isfield(cfg,'timestamp_summary_only')
+        useTsBatchRuns = logical(cfg.timestamp_summary_only);
+    end
+
+    if useTsBatchRuns
         ts = datestr(now, 'yyyymmdd_HHMMSS');
         subdir = 'runs';
-        if isfield(cfg,'summary_runs_subdir') && ~isempty(cfg.summary_runs_subdir)
+        if isfield(cfg,'batch_runs_subdir') && ~isempty(cfg.batch_runs_subdir)
+            subdir = char(string(cfg.batch_runs_subdir));
+        elseif isfield(cfg,'summary_runs_subdir') && ~isempty(cfg.summary_runs_subdir)
             subdir = char(string(cfg.summary_runs_subdir));
         end
-        fp_sum = fullfile(fp_sum_base, subdir, sprintf('summary_%s', ts));
+        fp_sum = fullfile(fp_sum_base, subdir, sprintf('batch_run_%s', ts));
         if ~exist(fp_sum,'dir'); mkdir(fp_sum); end
 
-        % pointer to latest run
+        % pointer to latest batch run
         try
-            fp_ptr = fullfile(fp_sum_base, 'latest_run.txt');
+            fp_ptr = fullfile(fp_sum_base, 'latest_batch_run.txt');
             fid = fopen(fp_ptr,'w');
+            if fid>0
+                fprintf(fid, '%s\n', fp_sum);
+                fclose(fid);
+            end
+        catch
+        end
+
+        % backward-compatible pointer name
+        try
+            fp_ptr_legacy = fullfile(fp_sum_base, 'latest_run.txt');
+            fid = fopen(fp_ptr_legacy,'w');
             if fid>0
                 fprintf(fid, '%s\n', fp_sum);
                 fclose(fid);
@@ -53,7 +76,7 @@ try
 catch
 end
 
-% Ensure summary-stage logs are written to summary/pipeline.log
+% Ensure batch-stage logs are written under the active batch output tree.
 % (Users often run summarize_bandpower_outputs separately after batch runs.)
 didStartDiary = false;
 try
