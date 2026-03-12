@@ -148,10 +148,27 @@ run_eeg_bandpower_pipeline('path/to/data.set', 'config.json');
 - `*_pairs_check.csv`
 - `*_qc.csv`
 - `*_marker_report.csv`
+- `*_scene_topo_long.csv`（单被试场景级 topo 长表，供组水平聚合）
 - `all_subjects_scene_level.csv`
 - `all_subjects_pairs_check.csv`
 - `per_subject_recovery_metrics.csv`
 - `global_bandpower_summary.csv`（当 `global_summary=true`）
+
+常见图像包括：
+- `*_scene_topogrid_<band>_block1.png`
+- `*_scene_topogrid_<band>_block2.png`
+- `group_scene_topogrid_<band>_block1.png`
+- `group_scene_topogrid_<band>_block2.png`
+- `experience_low_scene_topogrid_<band>_block1.png`
+- `experience_high_scene_topogrid_<band>_block1.png`
+- `experience_highminuslow_scene_topogrid_<band>_block1.png`
+- `overall_trialindex_response_<tag>.png`
+- `overall_trialindex_response_by_order_<tag>.png`
+- `experience_trialindex_response_<tag>.png`
+
+TrialIndex 说明：
+- TrialIndex 表示呈现顺序（1..12）。
+- 如果通过 design mapping 附加了 `Order`，task3 的 TrialIndex 模型还会额外检验 `Order` 和 `Order × TrialIndex`，用来区分顺序效应与 counterbalance 顺序效应。
 
 常见报告包括：
 - `<base>_report.md`

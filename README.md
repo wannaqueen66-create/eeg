@@ -237,10 +237,27 @@ Common tables include:
 - `*_pairs_check.csv`
 - `*_qc.csv`
 - `*_marker_report.csv`
+- `*_scene_topo_long.csv` (per-subject scene-level topo values for group aggregation)
 - `all_subjects_scene_level.csv`
 - `all_subjects_pairs_check.csv`
 - `per_subject_recovery_metrics.csv`
 - `global_bandpower_summary.csv` (if `global_summary=true`)
+
+Common figures include:
+- `*_scene_topogrid_<band>_block1.png`
+- `*_scene_topogrid_<band>_block2.png`
+- `group_scene_topogrid_<band>_block1.png`
+- `group_scene_topogrid_<band>_block2.png`
+- `experience_low_scene_topogrid_<band>_block1.png`
+- `experience_high_scene_topogrid_<band>_block1.png`
+- `experience_highminuslow_scene_topogrid_<band>_block1.png`
+- `overall_trialindex_response_<tag>.png`
+- `overall_trialindex_response_by_order_<tag>.png`
+- `experience_trialindex_response_<tag>.png`
+
+TrialIndex note:
+- TrialIndex reflects presentation order (1..12).
+- If `Order` is attached via design mapping, task3 TrialIndex models also test `Order` and `Order × TrialIndex` to separate sequence effects from counterbalanced-order effects.
 
 Common reports include:
 - `<base>_report.md`

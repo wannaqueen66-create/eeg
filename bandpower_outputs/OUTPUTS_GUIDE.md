@@ -107,6 +107,7 @@ Common figure families:
 - three-stage chain
 - scene sequence
 - topoplots
+- scene topogrids (2x3 per block, ordered by WWR × Complexity)
 
 ## 3.3 `qc/`
 Single-subject QC and audit outputs.
@@ -276,7 +277,9 @@ Expected content:
 Typical mapping:
 - `experience_scene_metric_means_*.csv` -> `experience_metric_bar_*.png`
 - `experience_scene_metric_means_by_WWR_Complexity_*.csv` -> `experience_factor_grid_*.png`
+- `experience_trialindex_neural_response_*.csv` -> `experience_trialindex_response_*.png`
 - `experience_recovery_means_*.csv` -> `experience_recovery_bar_*.png`
+- `experience_{low|high|highminuslow}_scene_topogrid_<band>_block{1|2}.png` -> scene-level topo summaries by Experience subgroup
 
 ## 5.3 `inferential/overall/`
 Curated full-sample inferential entry point.
@@ -375,6 +378,8 @@ Meaning:
 ### `task3_trialindex_lmm/`
 - TrialIndex / adaptation control model
 - 试次顺序 / 适应控制模型
+- if `Order` is present in design mapping, task3 also tests `Order` and `Order × TrialIndex`
+- 如果设计映射里提供了 `Order`，task3 还会额外检验 `Order` 与 `Order × TrialIndex`
 
 ### `task4_core_lmm_suite/`
 - Main effect / interaction / trend analysis core
