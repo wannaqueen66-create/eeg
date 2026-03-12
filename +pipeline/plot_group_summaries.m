@@ -1,4 +1,4 @@
-function plot_group_summaries(AllScene, fp_sum, cfg, tag)
+function plot_group_summaries(AllScene, fp_batch, cfg, tag)
 %PLOT_GROUP_SUMMARIES Generate group-level PNG summaries under summary figures.
 %
 % Uses merged scene-level table (typically summary/all_subjects_scene_level.csv)
@@ -22,7 +22,7 @@ if ~ismember('subject_id', AllScene.Properties.VariableNames)
 end
 
 % output dir
-fp_fig = pipeline.get_fig_dir(fp_sum, cfg, 'group', tag);
+fp_fig = pipeline.get_fig_dir(fp_batch, cfg, 'group', tag);
 
 % metrics list (configurable)
 % Journal-oriented defaults (scene effects in occipital bands + a frontal control)

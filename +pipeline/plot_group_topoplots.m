@@ -1,4 +1,4 @@
-function plot_group_topoplots(fp_out, fp_sum, cfg)
+function plot_group_topoplots(fp_out, fp_batch, cfg)
 %PLOT_GROUP_TOPOPLOTS Group-level topoplots from per-subject exported topo CSV.
 %
 % Requires per-subject files:
@@ -7,7 +7,7 @@ function plot_group_topoplots(fp_out, fp_sum, cfg)
 %   <fp_out>/<subject>/qc/<subject>_chanlocs.mat
 %
 % Produces PNGs under:
-%   <fp_sum>/fig/
+%   <fp_batch>/fig/
 %
 % Factors (between-subject): Experience, SportFreq (High/Low)
 % Metric (within-subject): viewComplexityHigh_minus_viewComplexityLow
@@ -30,7 +30,7 @@ try
     end
 catch
 end
-fp_fig = pipeline.get_fig_dir(fp_sum, cfg, 'topo', tag);
+fp_fig = pipeline.get_fig_dir(fp_batch, cfg, 'topo', tag);
 
 % Load chanlocs from first available snapshot
 D = dir(fullfile(fp_out, '*', 'qc', '*_chanlocs.mat'));
@@ -140,11 +140,11 @@ if ~ismember('Experience', Tall.Properties.VariableNames) || ~ismember('SportFre
     try
         map = table();
 
-        % Tidy layout: tables live under summary/tables/merged_raw
-        fp_tbl_raw = fp_sum;
+        % Tidy layout: tables live under batch/tables/merged_raw
+        fp_tbl_raw = fp_batch;
         try
             if exist('pipeline.get_table_dir','file')==2
-                fp_tbl_raw = pipeline.get_table_dir(fp_sum, cfg, 'merged_raw');
+                fp_tbl_raw = pipeline.get_table_dir(fp_batch, cfg, 'merged_raw');
             end
         catch
         end
@@ -158,11 +158,11 @@ if ~ismember('Experience', Tall.Properties.VariableNames) || ~ismember('SportFre
                 map = readtable(f_pairs, 'TextType','string');
             else
                 % legacy fallback
-                f_map2 = fullfile(fp_sum, 'per_subject_recovery_metrics.csv');
+                f_map2 = fullfile(fp_batch, 'per_subject_recovery_metrics.csv');
                 if exist(f_map2,'file')
                     map = readtable(f_map2, 'TextType','string');
                 else
-                    f_pairs2 = fullfile(fp_sum, 'all_subjects_pairs_check.csv');
+                    f_pairs2 = fullfile(fp_batch, 'all_subjects_pairs_check.csv');
                     if exist(f_pairs2,'file')
                         map = readtable(f_pairs2, 'TextType','string');
                     end
@@ -211,10 +211,10 @@ try
     needExG = ~ismember('ExperienceGroup', Tall.Properties.VariableNames) || all(strlength(strtrim(string(Tall.ExperienceGroup)))==0);
     needSfG = ~ismember('SportFreqGroup', Tall.Properties.VariableNames) || all(strlength(strtrim(string(Tall.SportFreqGroup)))==0);
     if needExG || needSfG
-        fp_tbl_raw = fp_sum;
+        fp_tbl_raw = fp_batch;
         try
             if exist('pipeline.get_table_dir','file')==2
-                fp_tbl_raw = pipeline.get_table_dir(fp_sum, cfg, 'merged_raw');
+                fp_tbl_raw = pipeline.get_table_dir(fp_batch, cfg, 'merged_raw');
             end
         catch
         end
@@ -222,7 +222,7 @@ try
         f_scene = fullfile(fp_tbl_raw, 'all_subjects_scene_level.csv');
         if ~exist(f_scene,'file')
             % legacy fallback
-            f_scene = fullfile(fp_sum, 'all_subjects_scene_level.csv');
+            f_scene = fullfile(fp_batch, 'all_subjects_scene_level.csv');
         end
 
         if exist(f_scene,'file')

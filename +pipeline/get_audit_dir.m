@@ -1,7 +1,7 @@
-function fp_aud = get_audit_dir(fp_sum, cfg)
+function fp_aud = get_audit_dir(fp_batch, cfg)
 %GET_AUDIT_DIR Return summary audit directory.
-% tidy:  <fp_sum>/audit/
-% legacy: <fp_sum>/
+% tidy:  <fp_batch>/audit/
+% legacy: <fp_batch>/
 
 layout = 'legacy';
 try
@@ -13,9 +13,9 @@ end
 layout = lower(strtrim(layout));
 
 if strcmp(layout,'tidy')
-    fp_aud = fullfile(fp_sum, 'audit');
+    fp_aud = fullfile(fp_batch, 'audit');
 else
-    fp_aud = fp_sum;
+    fp_aud = fp_batch;
 end
 
 if ~exist(fp_aud,'dir'); mkdir(fp_aud); end

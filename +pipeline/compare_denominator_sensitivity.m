@@ -1,4 +1,4 @@
-function out = compare_denominator_sensitivity(fp_sum, cfg)
+function out = compare_denominator_sensitivity(fp_batch, cfg)
 %COMPARE_DENOMINATOR_SENSITIVITY Compare 1–30 vs 1–40 relative power results.
 %
 % This is NOT a full LMM; it mirrors the repository's default aggregation:
@@ -10,10 +10,10 @@ function out = compare_denominator_sensitivity(fp_sum, cfg)
 
 out = struct();
 
-fp_scene = fullfile(fp_sum, 'all_subjects_scene_level_qc.csv');
+fp_scene = fullfile(fp_batch, 'all_subjects_scene_level_qc.csv');
 if ~exist(fp_scene,'file')
     % fallback to raw
-    fp_scene = fullfile(fp_sum, 'all_subjects_scene_level.csv');
+    fp_scene = fullfile(fp_batch, 'all_subjects_scene_level.csv');
 end
 if ~exist(fp_scene,'file')
     return;
@@ -118,13 +118,13 @@ end
 
 T = cell2table(Rows, 'VariableNames', {'factor','group','metric','n_subjects','delta_1_30','delta_1_40','sign_consistent','corr_subject_deltas'});
 
-fp_tbl = fp_sum;
-fp_rep = fp_sum;
+fp_tbl = fp_batch;
+fp_rep = fp_batch;
 if exist('pipeline.get_table_dir','file')==2
-    fp_tbl = pipeline.get_table_dir(fp_sum, cfg, 'sensitivity');
+    fp_tbl = pipeline.get_table_dir(fp_batch, cfg, 'sensitivity');
 end
 if exist('pipeline.get_report_dir','file')==2
-    fp_rep = pipeline.get_report_dir(fp_sum, cfg);
+    fp_rep = pipeline.get_report_dir(fp_batch, cfg);
 end
 
 out.denominator_sensitivity_csv = fullfile(fp_tbl, 'denominator_sensitivity.csv');

@@ -1,7 +1,7 @@
-function plot_group_scene_by_factors(AllScene, fp_sum, cfg, tag)
+function plot_group_scene_by_factors(AllScene, fp_batch, cfg, tag)
 %PLOT_GROUP_SCENE_BY_FACTORS Journal-friendly grouped plots by WWR and Complexity.
 %
-% Outputs (under summary/fig):
+% Outputs (under the batch figure tree):
 %   B1) Complexity facets + WWR ordering
 %   B2) WWR × Complexity interaction plot
 %
@@ -34,7 +34,7 @@ if isempty(wcol)
     return;
 end
 
-fp_fig = pipeline.get_fig_dir(fp_sum, cfg, 'wwr', tag);
+fp_fig = pipeline.get_fig_dir(fp_batch, cfg, 'wwr', tag);
 
 metrics = {"O_alpha","O_theta","O_beta","F_theta"};
 try

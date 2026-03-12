@@ -1,16 +1,16 @@
-function fp_fig = get_fig_dir(fp_sum, cfg, category, tag)
+function fp_fig = get_fig_dir(fp_batch, cfg, category, tag)
 %GET_FIG_DIR Return figure output directory.
 %
 % Historical behavior:
 %   - legacy:
-%       group/recovery/topo/scene_sequence/wwr -> <fp_sum>/fig/
-%       paper raw -> <fp_sum>/paper_fig/
-%       paper qc  -> <fp_sum>/paper_fig_qc/
+%       group/recovery/topo/scene_sequence/wwr -> <fp_batch>/fig/
+%       paper raw -> <fp_batch>/paper_fig/
+%       paper qc  -> <fp_batch>/paper_fig_qc/
 %   - tidy:
-%       <fp_sum>/figures/<category>/<tag>/
+%       <fp_batch>/figures/<category>/<tag>/
 %
 % Stage-1 refactor behavior:
-% - when fp_sum points at the new batch dir, route figures to:
+% - when fp_batch points at the active batch dir, route figures to:
 %     <batch>/figures/<category>/<tag>/
 % - otherwise preserve historical semantics
 
@@ -33,15 +33,15 @@ tag = lower(strtrim(char(string(tag))));
 
 leaf = '';
 try
-    [~, leaf] = fileparts(fp_sum);
+    [~, leaf] = fileparts(fp_batch);
 catch
 end
 
 if strcmp(layout,'tidy')
     if strcmpi(leaf,'batch')
-        fp_fig = fullfile(fp_sum, 'figures', category);
+        fp_fig = fullfile(fp_batch, 'figures', category);
     else
-        fp_fig = fullfile(fp_sum, 'figures', category);
+        fp_fig = fullfile(fp_batch, 'figures', category);
     end
     if ~isempty(tag)
         fp_fig = fullfile(fp_fig, tag);
@@ -50,12 +50,12 @@ else
     % legacy
     if strcmp(category,'paper')
         if strcmp(tag,'qc')
-            fp_fig = fullfile(fp_sum, 'paper_fig_qc');
+            fp_fig = fullfile(fp_batch, 'paper_fig_qc');
         else
-            fp_fig = fullfile(fp_sum, 'paper_fig');
+            fp_fig = fullfile(fp_batch, 'paper_fig');
         end
     else
-        fp_fig = fullfile(fp_sum, 'fig');
+        fp_fig = fullfile(fp_batch, 'fig');
     end
 end
 

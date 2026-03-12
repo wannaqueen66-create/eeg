@@ -1,4 +1,4 @@
-function out = qc_filter_and_report(fp_out, fp_sum, cfg, AllScene, AllPairs)
+function out = qc_filter_and_report(fp_out, fp_batch, cfg, AllScene, AllPairs)
 %QC_FILTER_AND_REPORT Build QC-based inclusion/exclusion, filter merged tables, and write reports.
 %
 % Outputs:
@@ -193,24 +193,24 @@ Qsub.reasons_recovery = reasons_recov;
 Qsub.rms_view_threshold = repmat(rmsViewThr, height(Qsub), 1);
 Qsub.rms_gray_threshold = repmat(rmsGrayThr, height(Qsub), 1);
 
-fp_tbl_qc = fp_sum;
-fp_rep = fp_sum;
-fp_aud = fp_sum;
+fp_tbl_qc = fp_batch;
+fp_rep = fp_batch;
+fp_aud = fp_batch;
 try
-    if exist(fullfile(fp_sum, 'qc'),'dir')
-        fp_tbl_qc = fullfile(fp_sum, 'qc');
+    if exist(fullfile(fp_batch, 'qc'),'dir')
+        fp_tbl_qc = fullfile(fp_batch, 'qc');
     elseif exist('pipeline.get_table_dir','file')==2
-        fp_tbl_qc = pipeline.get_table_dir(fp_sum, cfg, 'merged_qc');
+        fp_tbl_qc = pipeline.get_table_dir(fp_batch, cfg, 'merged_qc');
     end
-    if exist(fullfile(fp_sum, 'reports'),'dir')
-        fp_rep = fullfile(fp_sum, 'reports');
+    if exist(fullfile(fp_batch, 'reports'),'dir')
+        fp_rep = fullfile(fp_batch, 'reports');
     elseif exist('pipeline.get_report_dir','file')==2
-        fp_rep = pipeline.get_report_dir(fp_sum, cfg);
+        fp_rep = pipeline.get_report_dir(fp_batch, cfg);
     end
-    if exist(fullfile(fp_sum, 'audit'),'dir')
-        fp_aud = fullfile(fp_sum, 'audit');
+    if exist(fullfile(fp_batch, 'audit'),'dir')
+        fp_aud = fullfile(fp_batch, 'audit');
     elseif exist('pipeline.get_audit_dir','file')==2
-        fp_aud = pipeline.get_audit_dir(fp_sum, cfg);
+        fp_aud = pipeline.get_audit_dir(fp_batch, cfg);
     end
 catch
 end

@@ -1,4 +1,4 @@
-function [fp_task, fp_tbl, fp_fig, fp_rep] = get_analysis_task_subdirs(fp_sum, taskName, tag)
+function [fp_task, fp_tbl, fp_fig, fp_rep] = get_analysis_task_subdirs(fp_batch, taskName, tag)
 %GET_ANALYSIS_TASK_SUBDIRS Return staged analysis task subdirectories.
 %
 % Preferred staged layout:
@@ -8,7 +8,7 @@ function [fp_task, fp_tbl, fp_fig, fp_rep] = get_analysis_task_subdirs(fp_sum, t
 %     reports/
 %
 % Legacy-compatible fallback:
-%   <fp_sum>/analysis-2/<taskName>/
+%   <fp_batch>/analysis-2/<taskName>/
 %     tables/<tag>/
 %     figures/<tag>/
 %     reports/<tag>/
@@ -25,17 +25,17 @@ taskName = char(strtrim(string(taskName)));
 
 leaf = '';
 try
-    [~, leaf] = fileparts(fp_sum);
+    [~, leaf] = fileparts(fp_batch);
 catch
 end
 
 if strcmpi(leaf,'batch')
-    fp_task = fullfile(fp_sum, 'analysis', taskName, tag);
+    fp_task = fullfile(fp_batch, 'analysis', taskName, tag);
     fp_tbl = fullfile(fp_task, 'tables');
     fp_fig = fullfile(fp_task, 'figures');
     fp_rep = fullfile(fp_task, 'reports');
 else
-    fp_task = fullfile(fp_sum, 'analysis-2', taskName);
+    fp_task = fullfile(fp_batch, 'analysis-2', taskName);
     fp_tbl = fullfile(fp_task, 'tables', tag);
     fp_fig = fullfile(fp_task, 'figures', tag);
     fp_rep = fullfile(fp_task, 'reports', tag);

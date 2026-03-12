@@ -1,24 +1,24 @@
-function plot_paper_figures(fp_sum, cfg)
+function plot_paper_figures(fp_batch, cfg)
 %PLOT_PAPER_FIGURES Create journal-ready multi-panel figures under the paper output layer.
 %
 % Preferred output:
 %   <batch>/paper/{raw|qc}/figures/
 % Legacy fallback:
-%   summary/paper_fig/
+%   legacy paper_fig/ under the batch-compatible root
 %
 % Uses summary merged CSVs if present:
 %   - all_subjects_scene_level.csv
 %   - all_subjects_pairs_check.csv
 %
 % Output:
-%   summary/paper_fig/
+%   legacy paper_fig/ under the batch-compatible root
 
 if nargin < 2
     cfg = struct();
 end
 
-fp_scene = fullfile(fp_sum, 'all_subjects_scene_level.csv');
-fp_pairs = fullfile(fp_sum, 'all_subjects_pairs_check.csv');
+fp_scene = fullfile(fp_batch, 'all_subjects_scene_level.csv');
+fp_pairs = fullfile(fp_batch, 'all_subjects_pairs_check.csv');
 
 if ~exist(fp_scene,'file')
     warning('plot_paper_figures: missing %s', fp_scene);
@@ -37,19 +37,19 @@ end
 
 % output dir (paper figures)
 % Stage-3 refactor behavior:
-% - when fp_sum points at batch root, route paper outputs to batch/paper/<tag>/figures
+% - when fp_batch points at the batch root, route paper outputs to batch/paper/<tag>/figures
 % - otherwise preserve legacy paper_fig / paper_fig_qc semantics
 paperTag = 'raw';
-[fp_parent, leaf] = fileparts(fp_sum);
+[fp_parent, leaf] = fileparts(fp_batch);
 if strcmpi(leaf,'paper_fig_qc') || strcmpi(leaf,'qc')
     paperTag = 'qc';
 end
 if (strcmpi(leaf,'raw') || strcmpi(leaf,'qc')) && strcmpi(string(regexp(fp_parent, '[^/\\]+$', 'match', 'once')), 'paper')
-    fp_fig = fp_sum;
+    fp_fig = fp_batch;
 elseif strcmpi(leaf,'paper_fig') || strcmpi(leaf,'paper_fig_qc')
-    fp_fig = fp_sum;
+    fp_fig = fp_batch;
 else
-    [~, ~, fp_fig, ~] = pipeline.get_paper_subdirs(fp_sum, paperTag);
+    [~, ~, fp_fig, ~] = pipeline.get_paper_subdirs(fp_batch, paperTag);
 end
 
 % Style

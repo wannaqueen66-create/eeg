@@ -1,4 +1,4 @@
-function plot_group_recovery_summaries(AllPairs, fp_sum, cfg, tag)
+function plot_group_recovery_summaries(AllPairs, fp_batch, cfg, tag)
 %PLOT_GROUP_RECOVERY_SUMMARIES Group-level plots for view→gray recovery deltas.
 %
 % Reads merged pairs_check table and generates PNGs under summary figures.
@@ -21,7 +21,7 @@ if ~ismember('subject_id', AllPairs.Properties.VariableNames)
     return;
 end
 
-fp_fig = pipeline.get_fig_dir(fp_sum, cfg, 'recovery', tag);
+fp_fig = pipeline.get_fig_dir(fp_batch, cfg, 'recovery', tag);
 
 % metrics to plot (pair-level deltas)
 default_metrics = {"delta_O_alpha"};

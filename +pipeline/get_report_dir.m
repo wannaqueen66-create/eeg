@@ -1,7 +1,7 @@
-function fp_rep = get_report_dir(fp_sum, cfg)
+function fp_rep = get_report_dir(fp_batch, cfg)
 %GET_REPORT_DIR Return summary report directory.
-% tidy:  <fp_sum>/reports/
-% legacy: <fp_sum>/
+% tidy:  <fp_batch>/reports/
+% legacy: <fp_batch>/
 
 layout = 'legacy';
 try
@@ -13,9 +13,9 @@ end
 layout = lower(strtrim(layout));
 
 if strcmp(layout,'tidy')
-    fp_rep = fullfile(fp_sum, 'reports');
+    fp_rep = fullfile(fp_batch, 'reports');
 else
-    fp_rep = fp_sum;
+    fp_rep = fp_batch;
 end
 
 if ~exist(fp_rep,'dir'); mkdir(fp_rep); end

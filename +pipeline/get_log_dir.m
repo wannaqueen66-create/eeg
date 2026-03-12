@@ -1,7 +1,7 @@
-function fp_log = get_log_dir(fp_sum, cfg)
+function fp_log = get_log_dir(fp_batch, cfg)
 %GET_LOG_DIR Return summary logs directory.
-% tidy:  <fp_sum>/logs/
-% legacy: <fp_sum>/
+% tidy:  <fp_batch>/logs/
+% legacy: <fp_batch>/
 
 layout = 'legacy';
 try
@@ -13,9 +13,9 @@ end
 layout = lower(strtrim(layout));
 
 if strcmp(layout,'tidy')
-    fp_log = fullfile(fp_sum, 'logs');
+    fp_log = fullfile(fp_batch, 'logs');
 else
-    fp_log = fp_sum;
+    fp_log = fp_batch;
 end
 
 if ~exist(fp_log,'dir'); mkdir(fp_log); end
