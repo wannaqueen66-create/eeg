@@ -2,21 +2,22 @@ function md_path = write_global_report_md(fp_in, cfg)
 %WRITE_GLOBAL_REPORT_MD Write a markdown report for batch outputs.
 %
 % Creates:
-%   staged layout: <batch>/reports/summary_report.md
-%   legacy layout: <summary>/summary_report.md
+%   staged layout: <batch>/reports/batch_report.md
+%   legacy-compatible alias: <...>/summary_report.md
 
 fp_out = pipeline.get_output_root(fp_in, cfg);
-fp_summary = pipeline.get_summary_dir(fp_in, cfg);
-fp_rep = fp_summary;
+fp_batch = pipeline.get_summary_dir(fp_in, cfg);
+fp_rep = fp_batch;
 try
     if exist('pipeline.get_batch_report_dir','file')==2
         fp_rep = pipeline.get_batch_report_dir(fp_in, cfg);
     elseif exist('pipeline.get_report_dir','file')==2
-        fp_rep = pipeline.get_report_dir(fp_summary, cfg);
+        fp_rep = pipeline.get_report_dir(fp_batch, cfg);
     end
 catch
 end
-md_path = fullfile(fp_rep, 'summary_report.md');
+md_path = fullfile(fp_rep, 'batch_report.md');
+fp_md_legacy = fullfile(fp_rep, 'summary_report.md');
 
 try
     fid = fopen(md_path, 'w');
@@ -49,7 +50,7 @@ try
     fprintf(fid, '\n## Global tables\n\n');
     g = fullfile(pipeline.get_batch_merged_dir(fp_in, cfg), 'global_bandpower_summary.csv');
     if ~exist(g, 'file')
-        g = fullfile(fp_summary, 'global_bandpower_summary.csv');
+        g = fullfile(fp_batch, 'global_bandpower_summary.csv');
     end
     if exist(g, 'file')
         fprintf(fid, '- global_bandpower_summary: `%s`\n', g);
@@ -58,6 +59,14 @@ try
     end
 
     fclose(fid);
+
+    % Backward-compatible alias for older tooling/docs that still expect summary_report.md
+    try
+        if exist(md_path, 'file')
+            copyfile(md_path, fp_md_legacy);
+        end
+    catch
+    end
 catch
 end
 

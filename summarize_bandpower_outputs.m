@@ -21,9 +21,9 @@ end
 cfg = pipeline.load_config(config_path);
 fp_out = pipeline.get_output_root(input_folder, cfg);
 
-% Batch root under staged layout (or legacy summary root when applicable)
-fp_sum_base = pipeline.get_summary_dir(input_folder, cfg);
-fp_sum = fp_sum_base;
+% Canonical batch root under staged layout (or legacy summary root when applicable)
+fp_batch_base = pipeline.get_summary_dir(input_folder, cfg);
+fp_batch = fp_batch_base;
 fp_batch_merged = pipeline.get_batch_merged_dir(input_folder, cfg);
 fp_batch_qc = pipeline.get_batch_qc_dir(input_folder, cfg);
 fp_batch_reports = pipeline.get_batch_report_dir(input_folder, cfg);
@@ -48,15 +48,15 @@ try
         elseif isfield(cfg,'summary_runs_subdir') && ~isempty(cfg.summary_runs_subdir)
             subdir = char(string(cfg.summary_runs_subdir));
         end
-        fp_sum = fullfile(fp_sum_base, subdir, sprintf('batch_run_%s', ts));
-        if ~exist(fp_sum,'dir'); mkdir(fp_sum); end
+        fp_batch = fullfile(fp_batch_base, subdir, sprintf('batch_run_%s', ts));
+        if ~exist(fp_batch,'dir'); mkdir(fp_batch); end
 
         % pointer to latest batch run
         try
-            fp_ptr = fullfile(fp_sum_base, 'latest_batch_run.txt');
+            fp_ptr = fullfile(fp_batch_base, 'latest_batch_run.txt');
             fid = fopen(fp_ptr,'w');
             if fid>0
-                fprintf(fid, '%s\n', fp_sum);
+                fprintf(fid, '%s\n', fp_batch);
                 fclose(fid);
             end
         catch
@@ -64,10 +64,10 @@ try
 
         % backward-compatible pointer name
         try
-            fp_ptr_legacy = fullfile(fp_sum_base, 'latest_run.txt');
+            fp_ptr_legacy = fullfile(fp_batch_base, 'latest_run.txt');
             fid = fopen(fp_ptr_legacy,'w');
             if fid>0
-                fprintf(fid, '%s\n', fp_sum);
+                fprintf(fid, '%s\n', fp_batch);
                 fclose(fid);
             end
         catch
@@ -83,7 +83,7 @@ try
     if isfield(cfg,'save_log') && logical(cfg.save_log)
         % Timestamped log file (never overwrite previous logs)
         ts = datestr(now, 'yyyymmdd_HHMMSS');
-        fp_log = pipeline.get_log_dir(fp_sum, cfg);
+        fp_log = pipeline.get_log_dir(fp_batch, cfg);
         logPathRun = fullfile(fp_log, sprintf('pipeline_%s.log', ts));
         logPathLatest = fullfile(fp_log, 'pipeline_latest.log');
 
@@ -109,7 +109,7 @@ try
 
         fprintf('\n===== summarize_bandpower_outputs started: %s =====\n', datestr(now,31));
         fprintf('Input folder: %s\n', input_folder);
-        fprintf('Summary dir : %s\n', fp_sum);
+        fprintf('Batch dir   : %s\n', fp_batch);
         fprintf('Log file    : %s\n\n', logPathRun);
     end
 catch
@@ -199,7 +199,7 @@ AllScene_qc = AllScene;
 AllPairs_qc = AllPairs;
 try
     if isfield(cfg,'qc_apply') && logical(cfg.qc_apply)
-        qcOut = pipeline.qc_filter_and_report(fp_out, fp_sum, cfg, AllScene, AllPairs);
+        qcOut = pipeline.qc_filter_and_report(fp_out, fp_batch, cfg, AllScene, AllPairs);
         if isfield(qcOut,'AllScene_qc'); AllScene_qc = qcOut.AllScene_qc; end
         if isfield(qcOut,'AllPairs_qc'); AllPairs_qc = qcOut.AllPairs_qc; end
 
@@ -242,7 +242,7 @@ end
 
 % Group-level figures (raw)
 try
-    pipeline.plot_group_summaries(AllScene, fp_sum, cfg, 'raw');
+    pipeline.plot_group_summaries(AllScene, fp_batch, cfg, 'raw');
 catch ME
     fprintf(2, '[WARN] plot_group_summaries failed: %s\n', ME.message);
 end
@@ -251,7 +251,7 @@ end
 try
     if ~isequal(AllScene_qc, AllScene)
         cfg2 = cfg; cfg2.group_plot_metrics = getfield_def(cfg,'group_plot_metrics',{"O_alpha","O_theta","O_beta","F_theta"});
-        pipeline.plot_group_summaries(AllScene_qc, fp_sum, cfg2, 'qc');
+        pipeline.plot_group_summaries(AllScene_qc, fp_batch, cfg2, 'qc');
     end
 catch ME
     fprintf(2, '[WARN] plot_group_summaries(QC) failed: %s\n', ME.message);
@@ -259,7 +259,7 @@ end
 
 % Recovery figures (raw)
 try
-    pipeline.plot_group_recovery_summaries(AllPairs, fp_sum, cfg, 'raw');
+    pipeline.plot_group_recovery_summaries(AllPairs, fp_batch, cfg, 'raw');
 catch ME
     fprintf(2, '[WARN] plot_group_recovery_summaries failed: %s\n', ME.message);
 end
@@ -267,13 +267,13 @@ end
 % Recovery figures (QC-filtered)
 try
     if ~isequal(AllPairs_qc, AllPairs)
-        pipeline.plot_group_recovery_summaries(AllPairs_qc, fp_sum, cfg, 'qc');
+        pipeline.plot_group_recovery_summaries(AllPairs_qc, fp_batch, cfg, 'qc');
     end
 catch ME
     fprintf(2, '[WARN] plot_group_recovery_summaries(QC) failed: %s\n', ME.message);
 end
 
-% Optional: group-level topoplots under summary/fig/ (uses per-subject topo_long; QC by subject exclusion)
+% Optional: group-level topoplots under the batch figure tree (uses per-subject topo_long; QC by subject exclusion)
 try
     if isfield(qcOut,'Qsub')
         cfg.qc_include_subjects = string(qcOut.Qsub.subject_id(~qcOut.Qsub.exclude_scenelevel));
@@ -309,22 +309,22 @@ try
     catch
     end
 
-    pipeline.plot_group_topoplots(fp_out, fp_sum, cfg);
+    pipeline.plot_group_topoplots(fp_out, fp_batch, cfg);
 catch ME
     fprintf(2, '[WARN] plot_group_topoplots failed: %s\n', ME.message);
 end
 
 % Analysis-2/task1: Block2 restart effect (raw + qc)
 try
-    pipeline.analyze_block2_restart(AllScene, fp_sum, cfg, 'raw');
+    pipeline.analyze_block2_restart(AllScene, fp_batch, cfg, 'raw');
 catch ME
     fprintf(2, '[WARN] analyze_block2_restart(raw) failed: %s\n', ME.message);
 end
 try
     if exist('AllScene_qc','var') && ~isempty(AllScene_qc)
-        pipeline.analyze_block2_restart(AllScene_qc, fp_sum, cfg, 'qc');
+        pipeline.analyze_block2_restart(AllScene_qc, fp_batch, cfg, 'qc');
     else
-        pipeline.analyze_block2_restart(AllScene, fp_sum, cfg, 'qc');
+        pipeline.analyze_block2_restart(AllScene, fp_batch, cfg, 'qc');
     end
 catch ME
     fprintf(2, '[WARN] analyze_block2_restart(qc) failed: %s\n', ME.message);
@@ -332,15 +332,15 @@ end
 
 % Analysis-2/task2: C1W45 (WWR45_C1) scene, compare Block1 vs Block2 (raw + qc)
 try
-    pipeline.analyze_scene_block_diff(AllScene, fp_sum, cfg, 'raw', "WWR45_C1");
+    pipeline.analyze_scene_block_diff(AllScene, fp_batch, cfg, 'raw', "WWR45_C1");
 catch ME
     fprintf(2, '[WARN] analyze_scene_block_diff(raw) failed: %s\n', ME.message);
 end
 try
     if exist('AllScene_qc','var') && ~isempty(AllScene_qc)
-        pipeline.analyze_scene_block_diff(AllScene_qc, fp_sum, cfg, 'qc', "WWR45_C1");
+        pipeline.analyze_scene_block_diff(AllScene_qc, fp_batch, cfg, 'qc', "WWR45_C1");
     else
-        pipeline.analyze_scene_block_diff(AllScene, fp_sum, cfg, 'qc', "WWR45_C1");
+        pipeline.analyze_scene_block_diff(AllScene, fp_batch, cfg, 'qc', "WWR45_C1");
     end
 catch ME
     fprintf(2, '[WARN] analyze_scene_block_diff(qc) failed: %s\n', ME.message);
@@ -348,15 +348,15 @@ end
 
 % Analysis-2/task3: TrialIndex LMM (raw + qc)
 try
-    pipeline.analyze_trialindex_lmm(AllScene, fp_sum, cfg, 'raw');
+    pipeline.analyze_trialindex_lmm(AllScene, fp_batch, cfg, 'raw');
 catch ME
     fprintf(2, '[WARN] analyze_trialindex_lmm(raw) failed: %s\n', ME.message);
 end
 try
     if exist('AllScene_qc','var') && ~isempty(AllScene_qc)
-        pipeline.analyze_trialindex_lmm(AllScene_qc, fp_sum, cfg, 'qc');
+        pipeline.analyze_trialindex_lmm(AllScene_qc, fp_batch, cfg, 'qc');
     else
-        pipeline.analyze_trialindex_lmm(AllScene, fp_sum, cfg, 'qc');
+        pipeline.analyze_trialindex_lmm(AllScene, fp_batch, cfg, 'qc');
     end
 catch ME
     fprintf(2, '[WARN] analyze_trialindex_lmm(qc) failed: %s\n', ME.message);
@@ -364,15 +364,15 @@ end
 
 % Analysis-2/task4: Core LMM suite (factor WWR + trend screening) (raw + qc)
 try
-    pipeline.analyze_core_lmm_suite(AllScene, fp_sum, cfg, 'raw');
+    pipeline.analyze_core_lmm_suite(AllScene, fp_batch, cfg, 'raw');
 catch ME
     fprintf(2, '[WARN] analyze_core_lmm_suite(raw) failed: %s\n', ME.message);
 end
 try
     if exist('AllScene_qc','var') && ~isempty(AllScene_qc)
-        pipeline.analyze_core_lmm_suite(AllScene_qc, fp_sum, cfg, 'qc');
+        pipeline.analyze_core_lmm_suite(AllScene_qc, fp_batch, cfg, 'qc');
     else
-        pipeline.analyze_core_lmm_suite(AllScene, fp_sum, cfg, 'qc');
+        pipeline.analyze_core_lmm_suite(AllScene, fp_batch, cfg, 'qc');
     end
 catch ME
     fprintf(2, '[WARN] analyze_core_lmm_suite(qc) failed: %s\n', ME.message);
@@ -380,15 +380,15 @@ end
 
 % Analysis-2/task5: PeakIndex inverted-U test (raw + qc)
 try
-    pipeline.analyze_peakindex_invertedu(AllScene, fp_sum, cfg, 'raw');
+    pipeline.analyze_peakindex_invertedu(AllScene, fp_batch, cfg, 'raw');
 catch ME
     fprintf(2, '[WARN] analyze_peakindex_invertedu(raw) failed: %s\n', ME.message);
 end
 try
     if exist('AllScene_qc','var') && ~isempty(AllScene_qc)
-        pipeline.analyze_peakindex_invertedu(AllScene_qc, fp_sum, cfg, 'qc');
+        pipeline.analyze_peakindex_invertedu(AllScene_qc, fp_batch, cfg, 'qc');
     else
-        pipeline.analyze_peakindex_invertedu(AllScene, fp_sum, cfg, 'qc');
+        pipeline.analyze_peakindex_invertedu(AllScene, fp_batch, cfg, 'qc');
     end
 catch ME
     fprintf(2, '[WARN] analyze_peakindex_invertedu(qc) failed: %s\n', ME.message);
@@ -396,15 +396,15 @@ end
 
 % Analysis-2/task6: core-metric special robustness models (raw + qc)
 try
-    pipeline.analyze_coremetric_special(AllScene, fp_sum, cfg, 'raw');
+    pipeline.analyze_coremetric_special(AllScene, fp_batch, cfg, 'raw');
 catch ME
     fprintf(2, '[WARN] analyze_coremetric_special(raw) failed: %s\n', ME.message);
 end
 try
     if exist('AllScene_qc','var') && ~isempty(AllScene_qc)
-        pipeline.analyze_coremetric_special(AllScene_qc, fp_sum, cfg, 'qc');
+        pipeline.analyze_coremetric_special(AllScene_qc, fp_batch, cfg, 'qc');
     else
-        pipeline.analyze_coremetric_special(AllScene, fp_sum, cfg, 'qc');
+        pipeline.analyze_coremetric_special(AllScene, fp_batch, cfg, 'qc');
     end
 catch ME
     fprintf(2, '[WARN] analyze_coremetric_special(qc) failed: %s\n', ME.message);
@@ -412,29 +412,29 @@ end
 
 % Analysis-2/task7: individual-level checks + outlier-driven risk audit (raw + qc)
 try
-    pipeline.analyze_individual_checks(AllScene, fp_sum, cfg, 'raw');
+    pipeline.analyze_individual_checks(AllScene, fp_batch, cfg, 'raw');
 catch ME
     fprintf(2, '[WARN] analyze_individual_checks(raw) failed: %s\n', ME.message);
 end
 try
     if exist('AllScene_qc','var') && ~isempty(AllScene_qc)
-        pipeline.analyze_individual_checks(AllScene_qc, fp_sum, cfg, 'qc');
+        pipeline.analyze_individual_checks(AllScene_qc, fp_batch, cfg, 'qc');
     else
-        pipeline.analyze_individual_checks(AllScene, fp_sum, cfg, 'qc');
+        pipeline.analyze_individual_checks(AllScene, fp_batch, cfg, 'qc');
     end
 catch ME
     fprintf(2, '[WARN] analyze_individual_checks(qc) failed: %s\n', ME.message);
 end
 
-% In tidy layout, topo outputs land under summary/figures/topo/<tag>/.
+% In tidy layout, topo outputs land under batch/figures/topo/<tag>/.
 % If user expects files but none exist, they should check warnings above or ensure topo_long + chanlocs exist.
 
-% Paper-ready multi-panel figures under summary/paper_fig/ (raw)
+% Paper-ready multi-panel figures under batch/paper/raw/figures (raw)
 try
-    fp_paper_raw = pipeline.get_fig_dir(fp_sum, cfg, 'paper', 'raw');
+    fp_paper_raw = pipeline.get_fig_dir(fp_batch, cfg, 'paper', 'raw');
     % ensure raw tables are present where plotter reads them
     try
-        fp_tbl_raw = pipeline.get_table_dir(fp_sum, cfg, 'merged_raw');
+        fp_tbl_raw = pipeline.get_table_dir(fp_batch, cfg, 'merged_raw');
         copyfile(fullfile(fp_tbl_raw,'all_subjects_scene_level.csv'), fullfile(fp_paper_raw,'all_subjects_scene_level.csv'));
         if exist(fullfile(fp_tbl_raw,'all_subjects_pairs_check.csv'),'file')
             copyfile(fullfile(fp_tbl_raw,'all_subjects_pairs_check.csv'), fullfile(fp_paper_raw,'all_subjects_pairs_check.csv'));
@@ -446,37 +446,37 @@ catch ME
     fprintf(2, '[WARN] plot_paper_figures failed: %s\n', ME.message);
 end
 
-% Paper-ready multi-panel figures under summary/paper_fig_qc/ (QC-filtered)
+% Paper-ready multi-panel figures under batch/paper/qc/figures (QC-filtered)
 try
     if ~isequal(AllScene_qc, AllScene)
         % locate QC scene table (tidy or legacy)
-        fp_tbl_qc = fp_sum;
+        fp_tbl_qc = fp_batch;
         try
             if exist('pipeline.get_table_dir','file')==2
-                fp_tbl_qc = pipeline.get_table_dir(fp_sum, cfg, 'merged_qc');
+                fp_tbl_qc = pipeline.get_table_dir(fp_batch, cfg, 'merged_qc');
             end
         catch
         end
         fp_scene = fullfile(fp_tbl_qc,'all_subjects_scene_level_qc.csv');
         if exist(fp_scene,'file')
             % temporarily swap file name by copying
-            fp_qc_dir = pipeline.get_fig_dir(fp_sum, cfg, 'paper', 'qc');
+            fp_qc_dir = pipeline.get_fig_dir(fp_batch, cfg, 'paper', 'qc');
             if ~exist(fp_qc_dir,'dir'); mkdir(fp_qc_dir); end
-            % use plot_paper_figures but point it to fp_sum; it reads standard filenames.
+            % use plot_paper_figures but point it to the active batch dir; it reads standard filenames.
             % so we temporarily write QC tables as the standard names within fp_qc_dir.
-            fp_tbl_qc = fp_sum;
+            fp_tbl_qc = fp_batch;
             try
                 if exist('pipeline.get_table_dir','file')==2
-                    fp_tbl_qc = pipeline.get_table_dir(fp_sum, cfg, 'merged_qc');
+                    fp_tbl_qc = pipeline.get_table_dir(fp_batch, cfg, 'merged_qc');
                 end
             catch
             end
             copyfile(fullfile(fp_tbl_qc,'all_subjects_scene_level_qc.csv'), fullfile(fp_qc_dir,'all_subjects_scene_level.csv'));
             % find QC tables (tidy or legacy)
-            fp_tbl_qc = fp_sum;
+            fp_tbl_qc = fp_batch;
             try
                 if exist('pipeline.get_table_dir','file')==2
-                    fp_tbl_qc = pipeline.get_table_dir(fp_sum, cfg, 'merged_qc');
+                    fp_tbl_qc = pipeline.get_table_dir(fp_batch, cfg, 'merged_qc');
                 end
             catch
             end
@@ -492,7 +492,7 @@ end
 
 % Methods snapshot (markdown)
 try
-    pipeline.write_methods_snapshot(fp_sum, cfg);
+    pipeline.write_methods_snapshot(fp_batch, cfg);
 catch
 end
 
@@ -503,7 +503,7 @@ try
         doDen = logical(cfg.write_denom_sensitivity);
     end
     if doDen
-        pipeline.compare_denominator_sensitivity(fp_sum, cfg);
+        pipeline.compare_denominator_sensitivity(fp_batch, cfg);
     end
 catch ME
     fprintf(2, '[WARN] compare_denominator_sensitivity failed: %s\n', ME.message);
@@ -511,14 +511,14 @@ end
 
 % Group-level scene sequences (raw + QC)
 try
-    pipeline.plot_group_scene_sequences(AllScene, fp_sum, cfg, "raw");
+    pipeline.plot_group_scene_sequences(AllScene, fp_batch, cfg, "raw");
 catch ME
     fprintf(2, '[WARN] plot_group_scene_sequences(raw) failed: %s\n', ME.message);
 end
 try
-    if exist(fullfile(fp_sum,'all_subjects_scene_level_qc.csv'),'file')
-        S_qc = readtable(fullfile(fp_sum,'all_subjects_scene_level_qc.csv'));
-        pipeline.plot_group_scene_sequences(S_qc, fp_sum, cfg, "qc");
+    if exist(fullfile(fp_batch,'all_subjects_scene_level_qc.csv'),'file')
+        S_qc = readtable(fullfile(fp_batch,'all_subjects_scene_level_qc.csv'));
+        pipeline.plot_group_scene_sequences(S_qc, fp_batch, cfg, "qc");
     end
 catch ME
     fprintf(2, '[WARN] plot_group_scene_sequences(qc) failed: %s\n', ME.message);
@@ -526,14 +526,14 @@ end
 
 % Factor-sorted plots (B1/B2): WWR + Complexity
 try
-    pipeline.plot_group_scene_by_factors(AllScene, fp_sum, cfg, "raw");
+    pipeline.plot_group_scene_by_factors(AllScene, fp_batch, cfg, "raw");
 catch ME
     fprintf(2, '[WARN] plot_group_scene_by_factors(raw) failed: %s\n', ME.message);
 end
 try
-    if exist(fullfile(fp_sum,'all_subjects_scene_level_qc.csv'),'file')
-        S_qc = readtable(fullfile(fp_sum,'all_subjects_scene_level_qc.csv'));
-        pipeline.plot_group_scene_by_factors(S_qc, fp_sum, cfg, "qc");
+    if exist(fullfile(fp_batch,'all_subjects_scene_level_qc.csv'),'file')
+        S_qc = readtable(fullfile(fp_batch,'all_subjects_scene_level_qc.csv'));
+        pipeline.plot_group_scene_by_factors(S_qc, fp_batch, cfg, "qc");
     end
 catch ME
     fprintf(2, '[WARN] plot_group_scene_by_factors(qc) failed: %s\n', ME.message);
@@ -541,19 +541,19 @@ end
 
 % Analysis-2 master report in requested narrative order
 try
-    pipeline.write_analysis2_master_report(fp_sum, cfg);
+    pipeline.write_analysis2_master_report(fp_batch, cfg);
 catch ME
     fprintf(2, '[WARN] write_analysis2_master_report failed: %s\n', ME.message);
 end
 
 % Build a cleaner public-facing output surface for the redesigned main branch
 try
-    pipeline.build_curated_main_outputs(fp_sum, cfg, AllScene, AllPairs, AllScene_qc, AllPairs_qc);
+    pipeline.build_curated_main_outputs(fp_batch, cfg, AllScene, AllPairs, AllScene_qc, AllPairs_qc);
 catch ME
     fprintf(2, '[WARN] build_curated_main_outputs failed: %s\n', ME.message);
 end
 
-fprintf('Batch summaries written to: %s\n', fp_sum);
+fprintf('Batch outputs written to: %s\n', fp_batch);
 
 % Close summary-stage diary if we started it
 try

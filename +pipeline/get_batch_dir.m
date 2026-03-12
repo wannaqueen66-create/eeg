@@ -5,9 +5,10 @@ function fp_batch = get_batch_dir(fp_in, cfg)
 %   <run_dir>/batch/
 %
 % Compatibility behavior:
-% - If cfg.timestamp_output_root=true, preserve historical summary root:
+% - If cfg.timestamp_output_root=true, preserve historical summary-style root
+%   as a backward-compatible fallback:
 %     <output_root>/summary/
-% - Otherwise use:
+% - Otherwise use the canonical main-branch path:
 %     <run_dir>/batch/
 
 useLegacyBatchLayout = false;

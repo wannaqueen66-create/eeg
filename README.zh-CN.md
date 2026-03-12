@@ -155,7 +155,8 @@ run_eeg_bandpower_pipeline('path/to/data.set', 'config.json');
 
 常见报告包括：
 - `<base>_report.md`
-- `summary_report.md`
+- `batch_report.md`（规范主文件名）
+- `summary_report.md`（旧兼容别名）
 - `qc_filter_report.md`
 - `methods_snapshot.md`
 

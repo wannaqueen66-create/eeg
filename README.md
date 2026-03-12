@@ -244,7 +244,8 @@ Common tables include:
 
 Common reports include:
 - `<base>_report.md`
-- `summary_report.md`
+- `batch_report.md` (canonical)
+- `summary_report.md` (legacy-compatible alias)
 - `qc_filter_report.md`
 - `methods_snapshot.md`
 

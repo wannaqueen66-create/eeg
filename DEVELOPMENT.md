@@ -27,7 +27,8 @@ The repository is migrating toward clearer output semantics:
 Current implementation uses a staged migration strategy:
 - add path helpers first
 - migrate writers gradually
-- keep compatibility fallbacks where practical
+- treat `batch/` as the canonical batch-level surface in `main`
+- keep `summary/` only as a compatibility layer where practical
 
 Key helpers introduced for this migration:
 - `pipeline.get_run_dir`

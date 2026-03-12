@@ -1,12 +1,12 @@
 function fp_summary = get_summary_dir(fp_in, cfg)
-%GET_SUMMARY_DIR Create/return the batch-summary root directory.
+%GET_SUMMARY_DIR Backward-compatible alias for the batch root directory.
 %
 % Historical behavior:
 %   <output_root>/summary/
 %
-% Stage-1 refactor behavior:
-% - preserve historical summary root when timestamp_output_root=true
-% - otherwise route summary semantics to the new batch directory
+% Main-branch behavior:
+% - preserve historical summary root only when timestamp_output_root=true
+% - otherwise route legacy summary semantics to the canonical batch directory
 
 useLegacySummary = false;
 try

@@ -202,14 +202,18 @@ Batch-level markdown reports.
 批量级 markdown 报告。
 
 Common files:
-- `summary_report.md`
+- `batch_report.md`
+- `summary_report.md` (legacy-compatible alias)
 - `qc_filter_report.md`
 - `methods_snapshot.md`
 
 Recommended interpretation:
+- `batch_report.md`
+  - canonical entry-point index for the whole batch
+  - 整个批量输出的规范索引入口
 - `summary_report.md`
-  - entry-point index for the whole batch
-  - 整个批量输出的索引入口
+  - legacy-compatible alias of `batch_report.md`
+  - `batch_report.md` 的旧兼容别名
 - `qc_filter_report.md`
   - explains QC rules and filtering results
   - 解释 QC 规则和过滤结果
@@ -457,6 +461,7 @@ analysis-2/
 Interpretation:
 - these are compatibility paths kept during staged migration
 - they are not the preferred long-term target structure
+- in `main`, prefer the `batch/` tree as the canonical batch-level surface
 - when both exist, prefer:
   - `descriptive/`
   - `inferential/`
