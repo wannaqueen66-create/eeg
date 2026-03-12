@@ -141,7 +141,6 @@ if nargin < 4 || isempty(fp_batch) || ~exist(fp_batch,'dir')
     return;
 end
 
-% Reuse chanlocs from any snapshot already present in working outputs.
 chanlocs = [];
 try
     d = dir(fullfile(fileparts(fp_batch), 'subjects', '*', 'qc', '*_chanlocs.mat'));
@@ -161,13 +160,6 @@ if isempty(chanlocs)
     return;
 end
 
-fp_tbl = fp_batch;
-try
-    if exist('pipeline.get_table_dir','file')==2
-        fp_tbl = pipeline.get_table_dir(fp_batch, cfg, 'merged_raw');
-    end
-catch
-end
 subjRoot = fullfile(fileparts(fp_batch), 'subjects');
 D = dir(fullfile(subjRoot, '*', 'tables', '*_scene_topo_long.csv'));
 if isempty(D)
@@ -208,6 +200,40 @@ if isempty(Tall)
     return;
 end
 
+Tall.ExperienceGroup = repmat("", height(Tall), 1);
+try
+    fp_tbl_raw = fp_batch;
+    if exist('pipeline.get_table_dir','file')==2
+        fp_tbl_raw = pipeline.get_table_dir(fp_batch, cfg, 'merged_raw');
+    end
+    f_scene = fullfile(fp_tbl_raw, 'all_subjects_scene_level.csv');
+    if ~exist(f_scene,'file')
+        f_scene = fullfile(fp_batch, 'all_subjects_scene_level.csv');
+    end
+    if exist(f_scene,'file')
+        M = readtable(f_scene, 'TextType','string');
+        if ismember('subject_id', M.Properties.VariableNames)
+            sidm = canonical_subject_id_local(M.subject_id);
+            [~, ia] = unique(sidm, 'stable');
+            M = M(ia,:);
+            sidm = sidm(ia);
+            [tf, loc] = ismember(Tall.sid_key, sidm);
+            src = string([]);
+            if ismember('ExperienceGroup', M.Properties.VariableNames)
+                src = string(M.ExperienceGroup(loc(tf)));
+            elseif ismember('Experience', M.Properties.VariableNames)
+                src = string(M.Experience(loc(tf)));
+            end
+            if ~isempty(src)
+                ex = Tall.ExperienceGroup;
+                ex(tf) = normalize_high_low_local(src);
+                Tall.ExperienceGroup = ex;
+            end
+        end
+    end
+catch
+end
+
 bandNames = {'theta','alpha','beta'};
 for bi = 1:3
     bandName = string(bandNames{bi});
@@ -219,33 +245,59 @@ for bi = 1:3
     meta = meta(strlength(meta.WWRn)>0 & strlength(meta.CX)>0, :);
     if isempty(meta), continue; end
 
-    for blk = 1:2
-        useMeta = meta(double(meta.block_id)==blk,:);
-        if isempty(useMeta), continue; end
-        fig = figure('Color','w','Position',[100 100 1350 760]);
-        tl = tiledlayout(fig, 2, 3, 'TileSpacing','compact', 'Padding','compact');
-        title(tl, sprintf('Group scene topoplots | %s | block%d', upper(char(bandName)), blk), 'Interpreter','none', 'FontWeight','normal');
-        orderTbl = make_scene_grid_order(useMeta);
-        for k = 1:height(orderTbl)
-            ax = nexttile(tl); %#ok<LAXES>
-            idxRows = double(Tb.scene_id)==double(orderTbl.scene_id(k)) & double(Tb.block_id)==blk & normalize_wwr_local(Tb.WWR)==orderTbl.WWRn(k) & normalize_complexity_local(Tb.Complexity)==orderTbl.CX(k);
-            if ~any(idxRows)
-                axis off;
-                title(sprintf('missing | WWR%s %s', char(orderTbl.WWRn(k)), char(orderTbl.CX(k))), 'Interpreter','none');
-                continue;
+    groupDefs = {
+        struct('name','overall','mode','mean','mask',true(height(Tb),1)), ...
+        struct('name','experience_low','mode','mean','mask',string(Tb.ExperienceGroup)=="Low"), ...
+        struct('name','experience_high','mode','mean','mask',string(Tb.ExperienceGroup)=="High"), ...
+        struct('name','experience_highminuslow','mode','diff','maskH',string(Tb.ExperienceGroup)=="High",'maskL',string(Tb.ExperienceGroup)=="Low") ...
+    };
+
+    for gd = 1:numel(groupDefs)
+        Gd = groupDefs{gd};
+        for blk = 1:2
+            useMeta = meta(double(meta.block_id)==blk,:);
+            if isempty(useMeta), continue; end
+            fig = figure('Color','w','Position',[100 100 1350 760]);
+            tl = tiledlayout(fig, 2, 3, 'TileSpacing','compact', 'Padding','compact');
+            title(tl, sprintf('%s scene topoplots | %s | block%d', strrep(Gd.name,'_',' '), upper(char(bandName)), blk), 'Interpreter','none', 'FontWeight','normal');
+            orderTbl = make_scene_grid_order(useMeta);
+            for k = 1:height(orderTbl)
+                ax = nexttile(tl); %#ok<LAXES>
+                baseMask = double(Tb.scene_id)==double(orderTbl.scene_id(k)) & double(Tb.block_id)==blk & normalize_wwr_local(Tb.WWR)==orderTbl.WWRn(k) & normalize_complexity_local(Tb.Complexity)==orderTbl.CX(k);
+                vec = nan(numel(chanlocs),1);
+                if strcmp(Gd.mode,'mean')
+                    idxRows = baseMask & Gd.mask;
+                    if any(idxRows)
+                        G = groupsummary(Tb(idxRows,:), 'chan_idx', 'mean', 'value');
+                        idxChan = double(G.chan_idx);
+                        good = idxChan>=1 & idxChan<=numel(chanlocs);
+                        vec(idxChan(good)) = double(G.mean_value(good));
+                    end
+                else
+                    idxH = baseMask & Gd.maskH;
+                    idxL = baseMask & Gd.maskL;
+                    if any(idxH) && any(idxL)
+                        GH = groupsummary(Tb(idxH,:), 'chan_idx', 'mean', 'value');
+                        GL = groupsummary(Tb(idxL,:), 'chan_idx', 'mean', 'value');
+                        vh = nan(numel(chanlocs),1); vl = nan(numel(chanlocs),1);
+                        idxChan = double(GH.chan_idx); good = idxChan>=1 & idxChan<=numel(chanlocs); vh(idxChan(good)) = double(GH.mean_value(good));
+                        idxChan = double(GL.chan_idx); good = idxChan>=1 & idxChan<=numel(chanlocs); vl(idxChan(good)) = double(GL.mean_value(good));
+                        vec = vh - vl;
+                    end
+                end
+                if all(~isfinite(vec))
+                    axis off;
+                    title(sprintf('missing | WWR%s %s', char(orderTbl.WWRn(k)), char(orderTbl.CX(k))), 'Interpreter','none');
+                    continue;
+                end
+                topoplot(vec, chanlocs, 'electrodes','labels');
+                title(sprintf('scene%02d | WWR%s | %s', orderTbl.scene_id(k), char(orderTbl.WWRn(k)), short_cx(orderTbl.CX(k))), 'Interpreter','none', 'FontSize',10);
+                colorbar;
             end
-            G = groupsummary(Tb(idxRows,:), 'chan_idx', 'mean', 'value');
-            vec = nan(numel(chanlocs),1);
-            idxChan = double(G.chan_idx);
-            good = idxChan>=1 & idxChan<=numel(chanlocs);
-            vec(idxChan(good)) = double(G.mean_value(good));
-            topoplot(vec, chanlocs, 'electrodes','labels');
-            title(sprintf('scene%02d | WWR%s | %s', orderTbl.scene_id(k), char(orderTbl.WWRn(k)), short_cx(orderTbl.CX(k))), 'Interpreter','none', 'FontSize',10);
-            colorbar;
+            fn = pipeline.sanitize_filename(sprintf('%s_scene_topogrid_%s_block%d.png', Gd.name, bandName, blk));
+            saveas(fig, fullfile(fp_fig, fn));
+            try; close(fig); catch; end
         end
-        fn = pipeline.sanitize_filename(sprintf('group_scene_topogrid_%s_block%d.png', bandName, blk));
-        saveas(fig, fullfile(fp_fig, fn));
-        try; close(fig); catch; end
     end
 end
 end

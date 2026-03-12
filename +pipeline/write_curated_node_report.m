@@ -64,12 +64,14 @@ try
             fprintf(fid, '4. `figures/experience_factor_grid_qc.png`\n');
             fprintf(fid, '5. `figures/*scene_topogrid*_block1.png`\n');
             fprintf(fid, '6. `figures/*scene_topogrid*_block2.png`\n');
-            fprintf(fid, '7. `tables/experience_recovery_means_qc.csv`\n');
-            fprintf(fid, '8. `figures/experience_recovery_bar_qc.png`\n');
-            fprintf(fid, '9. `tables/experience_trialindex_neural_response_qc.csv`\n');
-            fprintf(fid, '10. `figures/experience_trialindex_response_qc.png`\n');
-            fprintf(fid, '11. `tables/overall_trialindex_neural_response_by_order_qc.csv`\n');
-            fprintf(fid, '12. `figures/overall_trialindex_response_by_order_qc.png`\n\n');
+            fprintf(fid, '7. `figures/experience_low_scene_topogrid_*_block1.png` / `experience_high_scene_topogrid_*_block1.png`\n');
+            fprintf(fid, '8. `figures/experience_highminuslow_scene_topogrid_*_block1.png`\n');
+            fprintf(fid, '9. `tables/experience_recovery_means_qc.csv`\n');
+            fprintf(fid, '10. `figures/experience_recovery_bar_qc.png`\n');
+            fprintf(fid, '11. `tables/experience_trialindex_neural_response_qc.csv`\n');
+            fprintf(fid, '12. `figures/experience_trialindex_response_qc.png`\n');
+            fprintf(fid, '13. `tables/overall_trialindex_neural_response_by_order_qc.csv`\n');
+            fprintf(fid, '14. `figures/overall_trialindex_response_by_order_qc.png`\n\n');
         case "inferential::overall"
             fprintf(fid, 'This node is the curated full-sample inferential entry for the redesigned main branch.\n');
             fprintf(fid, 'Use it when you want the main effect / interaction / trend results for the whole sample without traversing detailed task outputs first.\n\n');
