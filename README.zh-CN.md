@@ -149,6 +149,7 @@ run_eeg_bandpower_pipeline('path/to/data.set', 'config.json');
 - `*_qc.csv`
 - `*_marker_report.csv`
 - `*_scene_topo_long.csv`（单被试场景级 topo 长表，供组水平聚合）
+- `*_scene_topogrid_layout_block*.csv`（2x3 topo 网格布局清单，用于核对 scene / WWR / Complexity 排位）
 - `all_subjects_scene_level.csv`
 - `all_subjects_pairs_check.csv`
 - `per_subject_recovery_metrics.csv`

@@ -238,6 +238,7 @@ Common tables include:
 - `*_qc.csv`
 - `*_marker_report.csv`
 - `*_scene_topo_long.csv` (per-subject scene-level topo values for group aggregation)
+- `*_scene_topogrid_layout_block*.csv` (2x3 topo-grid layout manifest for checking scene / WWR / Complexity placement)
 - `all_subjects_scene_level.csv`
 - `all_subjects_pairs_check.csv`
 - `per_subject_recovery_metrics.csv`

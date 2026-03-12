@@ -105,6 +105,10 @@ for bi = 1:3
         tl = tiledlayout(fig, 2, 3, 'TileSpacing','compact', 'Padding','compact');
         title(tl, sprintf('%s scene topoplots | %s | block%d', upper(char(bandName)), base, blk), 'Interpreter','none', 'FontWeight','normal');
         orderTbl = make_scene_grid_order(meta(use,:));
+        try
+            writetable(add_layout_indices(orderTbl, blk), fullfile(fp_csv, sprintf('%s_scene_topogrid_layout_block%d.csv', base, blk)));
+        catch
+        end
         for k = 1:height(orderTbl)
             ax = nexttile(tl); %#ok<LAXES>
             idx = find(meta.scene_id==orderTbl.scene_id(k) & meta.Block==blk & meta.WWRn==orderTbl.WWRn(k) & meta.CX==orderTbl.CX(k), 1, 'first');
@@ -261,6 +265,10 @@ for bi = 1:3
             tl = tiledlayout(fig, 2, 3, 'TileSpacing','compact', 'Padding','compact');
             title(tl, sprintf('%s scene topoplots | %s | block%d', strrep(Gd.name,'_',' '), upper(char(bandName)), blk), 'Interpreter','none', 'FontWeight','normal');
             orderTbl = make_scene_grid_order(useMeta);
+            try
+                writetable(add_layout_indices(orderTbl, blk), fullfile(fp_fig, sprintf('%s_scene_topogrid_layout_block%d.csv', Gd.name, blk)));
+            catch
+            end
             for k = 1:height(orderTbl)
                 ax = nexttile(tl); %#ok<LAXES>
                 baseMask = double(Tb.scene_id)==double(orderTbl.scene_id(k)) & double(Tb.block_id)==blk & normalize_wwr_local(Tb.WWR)==orderTbl.WWRn(k) & normalize_complexity_local(Tb.Complexity)==orderTbl.CX(k);
@@ -381,9 +389,15 @@ function orderTbl = make_scene_grid_order(meta)
 wwrLevels = ["15","45","75"];
 cxLevels = ["ComplexityLow","ComplexityHigh"];
 rows = {};
+meta.WWRn = normalize_wwr_local(meta.WWRn);
+meta.CX = normalize_complexity_local(meta.CX);
+try
+    meta = sortrows(meta, {'CX','WWRn','scene_id'});
+catch
+end
 for r = 1:numel(cxLevels)
     for c = 1:numel(wwrLevels)
-        idx = find(meta.WWRn==wwrLevels(c) & meta.CX==cxLevels(r), 1, 'first');
+        idx = find(string(meta.WWRn)==wwrLevels(c) & string(meta.CX)==cxLevels(r), 1, 'first');
         if ~isempty(idx)
             rows(end+1,:) = {double(meta.scene_id(idx)), string(meta.WWRn(idx)), string(meta.CX(idx))}; %#ok<AGROW>
         else
@@ -392,6 +406,30 @@ for r = 1:numel(cxLevels)
     end
 end
 orderTbl = cell2table(rows, 'VariableNames', {'scene_id','WWRn','CX'});
+end
+
+function T = add_layout_indices(orderTbl, block_id)
+T = orderTbl;
+T.block_id = repmat(double(block_id), height(T), 1);
+row_idx = nan(height(T),1);
+col_idx = nan(height(T),1);
+for i = 1:height(T)
+    if string(T.CX(i))=="ComplexityLow"
+        row_idx(i) = 1;
+    elseif string(T.CX(i))=="ComplexityHigh"
+        row_idx(i) = 2;
+    end
+    if string(T.WWRn(i))=="15"
+        col_idx(i) = 1;
+    elseif string(T.WWRn(i))=="45"
+        col_idx(i) = 2;
+    elseif string(T.WWRn(i))=="75"
+        col_idx(i) = 3;
+    end
+end
+T.row_idx = row_idx;
+T.col_idx = col_idx;
+T = movevars(T, {'block_id','row_idx','col_idx'}, 'Before', 1);
 end
 
 function s = short_cx(cx)

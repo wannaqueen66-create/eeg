@@ -108,6 +108,7 @@ Common figure families:
 - scene sequence
 - topoplots
 - scene topogrids (2x3 per block, ordered by WWR × Complexity)
+- scene topogrid layout CSVs for checking 2x3 panel placement
 
 ## 3.3 `qc/`
 Single-subject QC and audit outputs.
