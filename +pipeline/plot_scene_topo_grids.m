@@ -102,15 +102,14 @@ for bi = 1:3
         use = find(meta.Block==blk);
         if isempty(use), continue; end
         fig = figure('Color','w','Position',[100 100 1350 760]);
-        tl = tiledlayout(fig, 2, 3, 'TileSpacing','compact', 'Padding','compact');
-        title(tl, sprintf('%s scene topoplots | %s | block%d', upper(char(bandName)), base, blk), 'Interpreter','none', 'FontWeight','normal');
+        sgtitle(sprintf('%s scene topoplots | %s | block%d', upper(char(bandName)), base, blk), 'Interpreter','none', 'FontWeight','normal');
         orderTbl = make_scene_grid_order(meta(use,:));
         try
             writetable(add_layout_indices(orderTbl, blk), fullfile(fp_csv, sprintf('%s_scene_topogrid_layout_block%d.csv', base, blk)));
         catch
         end
         for k = 1:height(orderTbl)
-            ax = nexttile(tl); %#ok<LAXES>
+            ax = subplot(2, 3, k); %#ok<LAXES>
             idx = find(meta.scene_id==orderTbl.scene_id(k) & meta.Block==blk & meta.WWRn==orderTbl.WWRn(k) & meta.CX==orderTbl.CX(k), 1, 'first');
             if isempty(idx)
                 axis off;
@@ -269,15 +268,14 @@ for bi = 1:3
             useMeta = meta(double(meta.block_id)==blk,:);
             if isempty(useMeta), continue; end
             fig = figure('Color','w','Position',[100 100 1350 760]);
-            tl = tiledlayout(fig, 2, 3, 'TileSpacing','compact', 'Padding','compact');
-            title(tl, sprintf('%s scene topoplots | %s | block%d', strrep(Gd.name,'_',' '), upper(char(bandName)), blk), 'Interpreter','none', 'FontWeight','normal');
+            sgtitle(sprintf('%s scene topoplots | %s | block%d', strrep(Gd.name,'_',' '), upper(char(bandName)), blk), 'Interpreter','none', 'FontWeight','normal');
             orderTbl = make_scene_grid_order(useMeta);
             try
                 writetable(add_layout_indices(orderTbl, blk), fullfile(fp_fig, sprintf('%s_scene_topogrid_layout_block%d.csv', Gd.name, blk)));
             catch
             end
             for k = 1:height(orderTbl)
-                ax = nexttile(tl); %#ok<LAXES>
+                ax = subplot(2, 3, k); %#ok<LAXES>
                 baseMask = double(Tb.scene_id)==double(orderTbl.scene_id(k)) & double(Tb.block_id)==blk & normalize_wwr_local(Tb.WWR)==orderTbl.WWRn(k) & normalize_complexity_local(Tb.Complexity)==orderTbl.CX(k);
                 vec = nan(numel(chanlocs),1);
                 if strcmp(Gd.mode,'mean')
