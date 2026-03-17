@@ -110,6 +110,7 @@ for bi = 1:3
             writetable(add_layout_indices(orderTbl, blk), fullfile(fp_csv, sprintf('%s_scene_topogrid_layout_block%d.csv', base, blk)));
         catch
         end
+        clim = compute_panel_clim_from_vectors(sceneTopo(use), false);
         for k = 1:height(orderTbl)
             ax = subplot(2, 3, k); %#ok<LAXES>
             idx = find(meta.scene_id==orderTbl.scene_id(k) & meta.Block==blk & meta.WWRn==orderTbl.WWRn(k) & meta.CX==orderTbl.CX(k), 1, 'first');
@@ -118,9 +119,10 @@ for bi = 1:3
                 title(sprintf('missing | WWR%s %s', char(orderTbl.WWRn(k)), char(orderTbl.CX(k))), 'Interpreter','none');
                 continue;
             end
-            topoplot(sceneTopo{idx}, EEG.chanlocs, 'electrodes','labels');
+            topoplot(sceneTopo{idx}, EEG.chanlocs, 'electrodes','labels', 'maplimits', clim);
+            apply_topo_colormap(ax, false);
             title(sprintf('scene%02d | WWR%s | %s', orderTbl.scene_id(k), char(orderTbl.WWRn(k)), short_cx(orderTbl.CX(k))), 'Interpreter','none', 'FontSize',10);
-            colorbar;
+            cb = colorbar; cb.Color = [0.2 0.2 0.2];
         end
         fn = pipeline.sanitize_filename(sprintf('%s_scene_topogrid_%s_block%d.png', base, bandName, blk));
         saveas(fig, fullfile(fp_fig, fn));
@@ -136,6 +138,7 @@ for bi = 1:3
             writetable(add_layout_indices(orderTbl, NaN), fullfile(fp_csv, sprintf('%s_scene_topogrid_layout_allblocks.csv', base)));
         catch
         end
+        clim = compute_panel_clim_from_vectors(comboTopo, false);
         for k = 1:height(orderTbl)
             ax = subplot(2, 3, k); %#ok<LAXES>
             idx = find(comboMeta.WWRn==orderTbl.WWRn(k) & comboMeta.CX==orderTbl.CX(k), 1, 'first');
@@ -144,9 +147,10 @@ for bi = 1:3
                 title(sprintf('missing | WWR%s %s', char(orderTbl.WWRn(k)), char(orderTbl.CX(k))), 'Interpreter','none');
                 continue;
             end
-            topoplot(comboTopo{idx}, EEG.chanlocs, 'electrodes','labels');
+            topoplot(comboTopo{idx}, EEG.chanlocs, 'electrodes','labels', 'maplimits', clim);
+            apply_topo_colormap(ax, false);
             title(sprintf('combined | WWR%s | %s', char(orderTbl.WWRn(k)), short_cx(orderTbl.CX(k))), 'Interpreter','none', 'FontSize',10);
-            colorbar;
+            cb = colorbar; cb.Color = [0.2 0.2 0.2];
         end
         fn = pipeline.sanitize_filename(sprintf('%s_scene_topogrid_%s_allblocks.png', base, bandName));
         saveas(fig, fullfile(fp_fig, fn));
@@ -347,9 +351,10 @@ for bi = 1:3
                     title(sprintf('missing | WWR%s %s', char(orderTbl.WWRn(k)), char(orderTbl.CX(k))), 'Interpreter','none');
                     continue;
                 end
-                topoplot(vec, chanlocs, 'electrodes','labels');
+                topoplot(vec, chanlocs, 'electrodes','labels', 'maplimits', compute_panel_clim_from_rows(Tb, Gd, bandName, blk, false));
+                apply_topo_colormap(ax, false);
                 title(sprintf('scene%02d | WWR%s | %s', orderTbl.scene_id(k), char(orderTbl.WWRn(k)), short_cx(orderTbl.CX(k))), 'Interpreter','none', 'FontSize',10);
-                colorbar;
+                cb = colorbar; cb.Color = [0.2 0.2 0.2];
             end
             fn = pipeline.sanitize_filename(sprintf('%s_scene_topogrid_%s_block%d.png', Gd.name, bandName, blk));
             saveas(fig, fullfile(fp_fig, fn));
@@ -402,9 +407,11 @@ for bi = 1:3
                     title(sprintf('missing | WWR%s %s', char(orderTbl.WWRn(k)), char(orderTbl.CX(k))), 'Interpreter','none');
                     continue;
                 end
-                topoplot(vec, chanlocs, 'electrodes','labels');
+                isDiff = strcmp(Gd.mode,'diff');
+                topoplot(vec, chanlocs, 'electrodes','labels', 'maplimits', compute_panel_clim_from_rows(Tb, Gd, bandName, NaN, isDiff));
+                apply_topo_colormap(ax, isDiff);
                 title(sprintf('combined | WWR%s | %s', char(orderTbl.WWRn(k)), short_cx(orderTbl.CX(k))), 'Interpreter','none', 'FontSize',10);
-                colorbar;
+                cb = colorbar; cb.Color = [0.2 0.2 0.2];
             end
             fn = pipeline.sanitize_filename(sprintf('%s_scene_topogrid_%s_allblocks.png', Gd.name, bandName));
             saveas(fig, fullfile(fp_fig, fn));
@@ -625,6 +632,71 @@ function s = short_cx(cx)
 s = string(cx);
 s(s=="ComplexityLow") = "Low";
 s(s=="ComplexityHigh") = "High";
+end
+
+function clim = compute_panel_clim_from_vectors(vecs, symmetric)
+vals = [];
+for i = 1:numel(vecs)
+    if ~isempty(vecs{i})
+        vals = [vals; double(vecs{i}(:))]; %#ok<AGROW>
+    end
+end
+vals = vals(isfinite(vals));
+if isempty(vals)
+    clim = 'absmax';
+    return;
+end
+if nargin >= 2 && symmetric
+    mx = max(abs(vals));
+    clim = [-mx mx];
+else
+    clim = [min(vals) max(vals)];
+    if clim(1) == clim(2)
+        d = max(abs(clim(1))*0.05, eps);
+        clim = [clim(1)-d, clim(2)+d];
+    end
+end
+end
+
+function clim = compute_panel_clim_from_rows(Tb, Gd, bandName, blk, symmetric)
+maskBand = lower(strtrim(string(Tb.band))) == lower(strtrim(string(bandName)));
+mask = maskBand;
+if nargin >= 4 && isfinite(double(blk))
+    mask = mask & double(Tb.block_id)==double(blk);
+end
+if strcmp(Gd.mode,'mean')
+    mask = mask & Gd.mask;
+else
+    mask = mask & (Gd.maskH | Gd.maskL);
+end
+vals = double(Tb.value(mask));
+vals = vals(isfinite(vals));
+if isempty(vals)
+    clim = 'absmax';
+    return;
+end
+if nargin >= 5 && symmetric
+    mx = max(abs(vals));
+    clim = [-mx mx];
+else
+    clim = [min(vals) max(vals)];
+    if clim(1) == clim(2)
+        d = max(abs(clim(1))*0.05, eps);
+        clim = [clim(1)-d, clim(2)+d];
+    end
+end
+end
+
+function apply_topo_colormap(ax, isDiff)
+if nargin < 2
+    isDiff = false;
+end
+if isDiff
+    cm = interp1([0 0.5 1], [0.23 0.30 0.75; 0.97 0.97 0.97; 0.72 0.19 0.16], linspace(0,1,256));
+else
+    cm = parula(256);
+end
+colormap(ax, cm);
 end
 
 function subjRoot = resolve_subjects_root_from_batch(fp_batch)

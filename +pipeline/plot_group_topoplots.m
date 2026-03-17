@@ -363,29 +363,56 @@ for fi=1:numel(factors)
             continue;
         end
 
+        % Plot Low / High with shared non-diff scale
+        valsAbs = [double(topo.Low(:)); double(topo.High(:))];
+        valsAbs = valsAbs(isfinite(valsAbs));
+        if isempty(valsAbs)
+            climAbs = 'absmax';
+        else
+            climAbs = [min(valsAbs) max(valsAbs)];
+            if climAbs(1) == climAbs(2)
+                d = max(abs(climAbs(1))*0.05, eps);
+                climAbs = [climAbs(1)-d, climAbs(2)+d];
+            end
+        end
+
         % Plot Low
         fig = figure('Name', sprintf('%s %s %s Low', fac, band, metricName), 'Position',[100 100 700 520]);
-        topoplot(topo.Low, chanlocs, 'electrodes','labels');
+        ax = axes(fig);
+        topoplot(topo.Low, chanlocs, 'electrodes','labels', 'maplimits', climAbs);
+        colormap(ax, parula(256));
         title(sprintf('%s | %s | %s | Low', fac, band, metricName), 'Interpreter','none');
-        colorbar;
+        cb = colorbar; cb.Color = [0.2 0.2 0.2];
         f1 = fullfile(fp_fig, pipeline.sanitize_filename(sprintf('group_topo_%s_%s_%s_Low.png', lower(fac), band, metricName)));
         saveas(fig, f1);
         try; close(fig); catch; end
 
         % Plot High
         fig = figure('Name', sprintf('%s %s %s High', fac, band, metricName), 'Position',[100 100 700 520]);
-        topoplot(topo.High, chanlocs, 'electrodes','labels');
+        ax = axes(fig);
+        topoplot(topo.High, chanlocs, 'electrodes','labels', 'maplimits', climAbs);
+        colormap(ax, parula(256));
         title(sprintf('%s | %s | %s | High', fac, band, metricName), 'Interpreter','none');
-        colorbar;
+        cb = colorbar; cb.Color = [0.2 0.2 0.2];
         f2 = fullfile(fp_fig, pipeline.sanitize_filename(sprintf('group_topo_%s_%s_%s_High.png', lower(fac), band, metricName)));
         saveas(fig, f2);
         try; close(fig); catch; end
 
         % Plot High - Low
+        dvec = topo.High - topo.Low;
+        valsDiff = double(dvec(:)); valsDiff = valsDiff(isfinite(valsDiff));
+        if isempty(valsDiff)
+            climDiff = 'absmax';
+        else
+            mx = max(abs(valsDiff));
+            climDiff = [-mx mx];
+        end
         fig = figure('Name', sprintf('%s %s %s High-Low', fac, band, metricName), 'Position',[100 100 700 520]);
-        topoplot(topo.High - topo.Low, chanlocs, 'electrodes','labels');
+        ax = axes(fig);
+        topoplot(dvec, chanlocs, 'electrodes','labels', 'maplimits', climDiff);
+        colormap(ax, interp1([0 0.5 1], [0.23 0.30 0.75; 0.97 0.97 0.97; 0.72 0.19 0.16], linspace(0,1,256)));
         title(sprintf('%s | %s | %s | High - Low', fac, band, metricName), 'Interpreter','none');
-        colorbar;
+        cb = colorbar; cb.Color = [0.2 0.2 0.2];
         f3 = fullfile(fp_fig, pipeline.sanitize_filename(sprintf('group_topo_%s_%s_%s_HighMinusLow.png', lower(fac), band, metricName)));
         saveas(fig, f3);
         try; close(fig); catch; end
