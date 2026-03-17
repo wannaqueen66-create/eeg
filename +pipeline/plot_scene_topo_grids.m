@@ -737,3 +737,12 @@ end
 sid = regexprep(sid, '\\.set$', '', 'ignorecase');
 sid = strtrim(sid);
 end
+
+function y = normalize_high_low_local(x)
+s = lower(strtrim(string(x)));
+s(ismember(s,["high","h","1","true","yes","y","高"])) = "high";
+s(ismember(s,["low","l","0","false","no","n","低"])) = "low";
+y = repmat("", numel(s), 1);
+y(s=="high") = "High";
+y(s=="low")  = "Low";
+end

@@ -32,7 +32,7 @@ out = struct();
 % output dirs
 [fp_root_base, fp_tbl_base, fp_fig_base, fp_rep_base] = pipeline.get_analysis_task_subdirs(fp_sum, 'task2_C1W45_block_diff', tag);
 
-branches = ["all","experience"];
+branches = ["all","experience","sportfreq"];
 fp_tbl = struct(); fp_rep = struct(); fp_fig = struct();
 for bi=1:numel(branches)
     b = char(branches(bi));
@@ -228,6 +228,18 @@ else
 end
 
 % --- branch: SportFreq groups ---
+if ~isfield(fp_tbl, 'sportfreq')
+    fp_tbl.sportfreq = fullfile(fp_tbl_base, 'sportfreq');
+    if ~exist(fp_tbl.sportfreq,'dir'); mkdir(fp_tbl.sportfreq); end
+end
+if ~isfield(fp_rep, 'sportfreq')
+    fp_rep.sportfreq = fullfile(fp_rep_base, 'sportfreq');
+    if ~exist(fp_rep.sportfreq,'dir'); mkdir(fp_rep.sportfreq); end
+end
+if ~isfield(fp_fig, 'sportfreq')
+    fp_fig.sportfreq = fullfile(fp_fig_base, 'sportfreq');
+    if ~exist(fp_fig.sportfreq,'dir'); mkdir(fp_fig.sportfreq); end
+end
 if ismember('SportFreq', S.Properties.VariableNames) && any(strlength(strtrim(string(S.SportFreq)))>0)
     fp_sub_sf = fullfile(fp_tbl.sportfreq, sprintf('scene_blockdiff_subjectlevel_%s.csv', tag));
     writetable(S, fp_sub_sf);
