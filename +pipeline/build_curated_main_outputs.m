@@ -1140,8 +1140,8 @@ set(ax,'XTick',x,'XTickLabel',cellstr(groups));
 ylabel(ax,'Mean delta_O_alpha ± SEM');
 title(ax, sprintf('Experience recovery summary [%s]', tag), 'Interpreter','none', 'FontWeight','normal');
 for i=1:numel(x)
-    text(ax, x(i), vals(i)+sign(vals(i)+eps)*max(0.01,sem(i)*1.15), sprintf('mean=%.3f\nSEM=%.3f\nN=%d', vals(i), sem(i), round(T.N(i))), ...
-        'HorizontalAlignment','center', 'FontSize',7.3, 'Color',C.dark, 'BackgroundColor',[1 1 1], 'Margin',1.2);
+    text(ax, x(i), vals(i)+sign(vals(i)+eps)*max(0.02,abs(vals(i))*0.04 + sem(i)*1.35), sprintf('mean=%.3f\nSEM=%.3f\nN=%d', vals(i), sem(i), round(T.N(i))), ...
+        'HorizontalAlignment','center', 'FontSize',6.8, 'Color',C.dark, 'BackgroundColor',[1 1 1], 'Margin',1.0);
 end
 pipeline.export_figure_png(fig, fullfile(fp_fig, sprintf('experience_recovery_bar_%s.png', tag)), get_dpi(cfg));
 try; close(fig); catch; end
@@ -1647,8 +1647,8 @@ set(ax,'XTick',1:height(T),'XTickLabel',cellstr(string(T.metric)),'YTick',1:2,'Y
 xtickangle(ax,18); title(ax, ttl, 'Interpreter','none', 'FontWeight','normal');
 style_axes(ax);
 for c=1:height(T)
-    text(ax,c,1,sprintf('p=%.3g%s\nβ=%.3g',double(T.p_linear(c)),star_from_p(double(T.p_linear(c))),double(T.beta_linear(c))), 'HorizontalAlignment','center', 'FontSize',8, 'BackgroundColor',[1 1 1], 'Margin',1);
-    text(ax,c,2,sprintf('p=%.3g%s\nβ2=%.3g\n%s',double(T.p_quadratic(c)),star_from_p(double(T.p_quadratic(c))),double(T.beta_quadratic(c)),char(string(T.trend_verdict(c)))), 'HorizontalAlignment','center', 'FontSize',8, 'BackgroundColor',[1 1 1], 'Margin',1);
+    text(ax,c,1,sprintf('p=%.3g%s\nβ=%.3g',double(T.p_linear(c)),star_from_p(double(T.p_linear(c))),double(T.beta_linear(c))), 'HorizontalAlignment','center', 'FontSize',7.0, 'BackgroundColor',[1 1 1], 'Margin',0.8);
+    text(ax,c,2,sprintf('p=%.3g%s\nβ2=%.3g\n%s',double(T.p_quadratic(c)),star_from_p(double(T.p_quadratic(c))),double(T.beta_quadratic(c)),char(string(T.trend_verdict(c)))), 'HorizontalAlignment','center', 'FontSize',7.0, 'BackgroundColor',[1 1 1], 'Margin',0.8);
 end
 pipeline.export_figure_png(fig, fp_png, get_dpi(cfg));
 try; close(fig); catch; end
