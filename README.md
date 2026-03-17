@@ -247,11 +247,19 @@ Common tables include:
 Common figures include:
 - `*_scene_topogrid_<band>_block1.png`
 - `*_scene_topogrid_<band>_block2.png`
+- `*_scene_topogrid_<band>_allblocks.png`
 - `group_scene_topogrid_<band>_block1.png`
 - `group_scene_topogrid_<band>_block2.png`
+- `group_scene_topogrid_<band>_allblocks.png`
 - `experience_low_scene_topogrid_<band>_block1.png`
+- `experience_low_scene_topogrid_<band>_block2.png`
+- `experience_low_scene_topogrid_<band>_allblocks.png`
 - `experience_high_scene_topogrid_<band>_block1.png`
+- `experience_high_scene_topogrid_<band>_block2.png`
+- `experience_high_scene_topogrid_<band>_allblocks.png`
 - `experience_highminuslow_scene_topogrid_<band>_block1.png`
+- `experience_highminuslow_scene_topogrid_<band>_block2.png`
+- `experience_highminuslow_scene_topogrid_<band>_allblocks.png`
 - `overall_trialindex_response_<tag>.png`
 - `overall_trialindex_response_by_order_<tag>.png`
 - `experience_trialindex_response_<tag>.png`

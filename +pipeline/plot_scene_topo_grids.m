@@ -11,9 +11,10 @@ function plot_scene_topo_grids(mode, EEG, T, bands, totalBand, fs, wlen, nover, 
 %   row1 = ComplexityLow  + WWR 15 / 45 / 75
 %   row2 = ComplexityHigh + WWR 15 / 45 / 75
 %
-% For the 12 scenes, two figures are produced when data exist:
-%   block1 -> scenes 1..6
-%   block2 -> scenes 7..12
+% For the 12 scenes, figures are produced when data exist:
+%   block1    -> scenes 1..6
+%   block2    -> scenes 7..12
+%   allblocks -> collapse block1+block2 into one 2x3 grid by WWR x Complexity
 
 if nargin < 1 || isempty(mode)
     mode = 'subject';
@@ -121,6 +122,32 @@ for bi = 1:3
             colorbar;
         end
         fn = pipeline.sanitize_filename(sprintf('%s_scene_topogrid_%s_block%d.png', base, bandName, blk));
+        saveas(fig, fullfile(fp_fig, fn));
+        try; close(fig); catch; end
+    end
+
+    [comboTopo, comboMeta] = collapse_scene_topos_across_blocks(sceneTopo, meta);
+    if ~isempty(comboTopo)
+        fig = figure('Color','w','Position',[100 100 1350 760]);
+        sgtitle(sprintf('%s scene topoplots | %s | allblocks', upper(char(bandName)), base), 'Interpreter','none', 'FontWeight','normal');
+        orderTbl = make_scene_grid_order(comboMeta);
+        try
+            writetable(add_layout_indices(orderTbl, NaN), fullfile(fp_csv, sprintf('%s_scene_topogrid_layout_allblocks.csv', base)));
+        catch
+        end
+        for k = 1:height(orderTbl)
+            ax = subplot(2, 3, k); %#ok<LAXES>
+            idx = find(comboMeta.WWRn==orderTbl.WWRn(k) & comboMeta.CX==orderTbl.CX(k), 1, 'first');
+            if isempty(idx)
+                axis off;
+                title(sprintf('missing | WWR%s %s', char(orderTbl.WWRn(k)), char(orderTbl.CX(k))), 'Interpreter','none');
+                continue;
+            end
+            topoplot(comboTopo{idx}, EEG.chanlocs, 'electrodes','labels');
+            title(sprintf('combined | WWR%s | %s', char(orderTbl.WWRn(k)), short_cx(orderTbl.CX(k))), 'Interpreter','none', 'FontSize',10);
+            colorbar;
+        end
+        fn = pipeline.sanitize_filename(sprintf('%s_scene_topogrid_%s_allblocks.png', base, bandName));
         saveas(fig, fullfile(fp_fig, fn));
         try; close(fig); catch; end
     end
@@ -308,6 +335,56 @@ for bi = 1:3
             saveas(fig, fullfile(fp_fig, fn));
             try; close(fig); catch; end
         end
+
+        comboMeta = unique(Tb(:, {'WWR','Complexity'}), 'rows');
+        comboMeta.WWRn = normalize_wwr_local(comboMeta.WWR);
+        comboMeta.CX = normalize_complexity_local(comboMeta.Complexity);
+        comboMeta = comboMeta(strlength(comboMeta.WWRn)>0 & strlength(comboMeta.CX)>0, :);
+        if ~isempty(comboMeta)
+            fig = figure('Color','w','Position',[100 100 1350 760]);
+            sgtitle(sprintf('%s scene topoplots | %s | allblocks', strrep(Gd.name,'_',' '), upper(char(bandName))), 'Interpreter','none', 'FontWeight','normal');
+            orderTbl = make_scene_grid_order(comboMeta);
+            try
+                writetable(add_layout_indices(orderTbl, NaN), fullfile(fp_fig, sprintf('%s_scene_topogrid_layout_allblocks.csv', Gd.name)));
+            catch
+            end
+            for k = 1:height(orderTbl)
+                ax = subplot(2, 3, k); %#ok<LAXES>
+                baseMask = normalize_wwr_local(Tb.WWR)==orderTbl.WWRn(k) & normalize_complexity_local(Tb.Complexity)==orderTbl.CX(k);
+                vec = nan(numel(chanlocs),1);
+                if strcmp(Gd.mode,'mean')
+                    idxRows = baseMask & Gd.mask;
+                    if any(idxRows)
+                        G = groupsummary(Tb(idxRows,:), 'chan_idx', 'mean', 'value');
+                        idxChan = double(G.chan_idx);
+                        good = idxChan>=1 & idxChan<=numel(chanlocs);
+                        vec(idxChan(good)) = double(G.mean_value(good));
+                    end
+                else
+                    idxH = baseMask & Gd.maskH;
+                    idxL = baseMask & Gd.maskL;
+                    if any(idxH) && any(idxL)
+                        GH = groupsummary(Tb(idxH,:), 'chan_idx', 'mean', 'value');
+                        GL = groupsummary(Tb(idxL,:), 'chan_idx', 'mean', 'value');
+                        vh = nan(numel(chanlocs),1); vl = nan(numel(chanlocs),1);
+                        idxChan = double(GH.chan_idx); good = idxChan>=1 & idxChan<=numel(chanlocs); vh(idxChan(good)) = double(GH.mean_value(good));
+                        idxChan = double(GL.chan_idx); good = idxChan>=1 & idxChan<=numel(chanlocs); vl(idxChan(good)) = double(GL.mean_value(good));
+                        vec = vh - vl;
+                    end
+                end
+                if all(~isfinite(vec))
+                    axis off;
+                    title(sprintf('missing | WWR%s %s', char(orderTbl.WWRn(k)), char(orderTbl.CX(k))), 'Interpreter','none');
+                    continue;
+                end
+                topoplot(vec, chanlocs, 'electrodes','labels');
+                title(sprintf('combined | WWR%s | %s', char(orderTbl.WWRn(k)), short_cx(orderTbl.CX(k))), 'Interpreter','none', 'FontSize',10);
+                colorbar;
+            end
+            fn = pipeline.sanitize_filename(sprintf('%s_scene_topogrid_%s_allblocks.png', Gd.name, bandName));
+            saveas(fig, fullfile(fp_fig, fn));
+            try; close(fig); catch; end
+        end
     end
 end
 end
@@ -412,7 +489,11 @@ end
 
 function T = add_layout_indices(orderTbl, block_id)
 T = orderTbl;
-T.block_id = repmat(double(block_id), height(T), 1);
+if nargin < 2 || ~isfinite(double(block_id))
+    T.block_id = repmat(NaN, height(T), 1);
+else
+    T.block_id = repmat(double(block_id), height(T), 1);
+end
 row_idx = nan(height(T),1);
 col_idx = nan(height(T),1);
 for i = 1:height(T)
@@ -432,6 +513,35 @@ end
 T.row_idx = row_idx;
 T.col_idx = col_idx;
 T = movevars(T, {'block_id','row_idx','col_idx'}, 'Before', 1);
+end
+
+function [comboTopo, comboMeta] = collapse_scene_topos_across_blocks(sceneTopo, meta)
+comboTopo = {};
+comboMeta = table();
+if isempty(sceneTopo) || isempty(meta)
+    return;
+end
+baseMeta = unique(meta(:, {'WWRn','CX'}), 'rows');
+baseMeta = baseMeta(strlength(baseMeta.WWRn)>0 & strlength(baseMeta.CX)>0, :);
+if isempty(baseMeta)
+    return;
+end
+comboTopo = cell(height(baseMeta), 1);
+for i = 1:height(baseMeta)
+    idx = find(meta.WWRn==baseMeta.WWRn(i) & meta.CX==baseMeta.CX(i));
+    vecs = [];
+    for j = idx(:)'
+        if j <= numel(sceneTopo) && ~isempty(sceneTopo{j})
+            vecs = [vecs, double(sceneTopo{j}(:))]; %#ok<AGROW>
+        end
+    end
+    if ~isempty(vecs)
+        comboTopo{i} = mean(vecs, 2, 'omitnan');
+    else
+        comboTopo{i} = [];
+    end
+end
+comboMeta = baseMeta;
 end
 
 function s = short_cx(cx)
