@@ -346,6 +346,9 @@ for ci=1:2
     hHigh = scatter(ax, nan, nan, 26, cols(2,:), 'filled', 'MarkerFaceAlpha',0.55, 'DisplayName','High');
 
     xbase = 1:3;
+    groupOffset = 0.24;
+    boxWidth = 0.16;
+    jitterWidth = 0.05;
     for gi=1:2
         g = ["Low","High"];
         gg = g(gi);
@@ -353,19 +356,20 @@ for ci=1:2
             w = wwrLevels(wi);
             y = Csub.EEG_mean(string(Csub.Complexity)==cx & string(Csub.WWR)==w & string(Csub.Group)==gg);
             if isempty(y); continue; end
-            x0 = xbase(wi) + (gi-1.5)*0.18;
+            x0 = xbase(wi) + (gi-1.5)*groupOffset;
             try
-                boxchart(ax, repmat(x0, numel(y),1), y, 'BoxWidth',0.22, 'MarkerStyle','none', 'BoxFaceColor', cols(gi,:), 'BoxFaceAlpha',0.25, 'HandleVisibility','off');
+                boxchart(ax, repmat(x0, numel(y),1), y, 'BoxWidth',boxWidth, 'MarkerStyle','none', 'BoxFaceColor', cols(gi,:), 'BoxFaceAlpha',0.25, 'HandleVisibility','off');
             catch
                 % fallback if boxchart unavailable
                 q = quantile(y,[0.25 0.5 0.75]);
-                plot(ax,[x0-0.08 x0+0.08],[q(2) q(2)],'-','Color',cols(gi,:),'LineWidth',2, 'HandleVisibility','off');
+                plot(ax,[x0-boxWidth/2 x0+boxWidth/2],[q(2) q(2)],'-','Color',cols(gi,:),'LineWidth',2, 'HandleVisibility','off');
             end
-            xj = x0 + (rand(size(y))-0.5)*0.08;
+            xj = x0 + (rand(size(y))-0.5)*jitterWidth;
             scatter(ax, xj, y, 14, cols(gi,:), 'filled', 'MarkerFaceAlpha',0.55, 'HandleVisibility','off');
         end
     end
 
+    xlim(ax, [0.5 3.5]);
     set(ax,'XTick',1:3,'XTickLabel',cellstr(wwrLevels));
     xlabel(ax,'WWR');
     ylabel(ax, dv);
