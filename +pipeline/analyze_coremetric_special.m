@@ -264,7 +264,7 @@ else
     vals = -log10(max(pA,realmin));
     bar(ax2, 1, vals, 0.5);
     set(ax2,'XTick',1,'XTickLabel',{'Model A'}); xlim(ax2,[0.5 1.5]);
-    text(ax2,1,vals,sprintf('  p=%.4g',pA),'VerticalAlignment','bottom','HorizontalAlignment','left','FontSize',8);
+    text(ax2,1,vals+0.04*max(vals),sprintf('p=%.4g',pA),'VerticalAlignment','bottom','HorizontalAlignment','center','FontSize',7,'BackgroundColor',[1 1 1],'Margin',0.8);
 end
 yline(ax2, -log10(0.05), 'r--', 'p=0.05', 'LabelVerticalAlignment','bottom');
 ylabel(ax2, '-log10(p)');

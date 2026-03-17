@@ -266,11 +266,11 @@ title(ax1, sprintf('%s group effect size', strrep(metricName,'_','\\_')), 'Inter
 grid(ax1,'on');
 
 % Add numeric labels on left panel (beta + 95%CI + p)
-text(ax1, 1, eA, sprintf('  β=%.4g\n  95%%CI=[%.4g, %.4g]\n  p=%.4g', eA, ciA(1), ciA(2), pA), ...
-    'VerticalAlignment','bottom','HorizontalAlignment','left','FontSize',8,'Color',[0.1 0.3 0.6]);
+text(ax1, 1, eA + sign(eA+eps)*max(0.02, 0.08*max(abs([eA; ciA(:)]))), sprintf('β=%.4g\n95%%CI=[%.4g, %.4g]\np=%.4g', eA, ciA(1), ciA(2), pA), ...
+    'VerticalAlignment','bottom','HorizontalAlignment','center','FontSize',7,'Color',[0.1 0.3 0.6], 'BackgroundColor',[1 1 1], 'Margin',0.8);
 if hasB && isfinite(eB)
-    text(ax1, 2, eB, sprintf('  β=%.4g\n  95%%CI=[%.4g, %.4g]\n  p=%.4g', eB, ciB(1), ciB(2), pB), ...
-        'VerticalAlignment','bottom','HorizontalAlignment','left','FontSize',8,'Color',[0.6 0.2 0.1]);
+    text(ax1, 2, eB + sign(eB+eps)*max(0.02, 0.08*max(abs([eB; ciB(:)]))), sprintf('β=%.4g\n95%%CI=[%.4g, %.4g]\np=%.4g', eB, ciB(1), ciB(2), pB), ...
+        'VerticalAlignment','bottom','HorizontalAlignment','center','FontSize',7,'Color',[0.6 0.2 0.1], 'BackgroundColor',[1 1 1], 'Margin',0.8);
 end
 
 % Right panel: p-values as -log10(p)

@@ -483,7 +483,7 @@ for r=1:4
         else
             txt = sprintf('PI mean=%.3g%s\np=%.3g\nN=%d', Z(r,c), star, p, round(N(c)));
         end
-        text(ax,c,r,txt,'HorizontalAlignment','center','VerticalAlignment','middle','FontSize',8);
+        text(ax,c,r,txt,'HorizontalAlignment','center','VerticalAlignment','middle','FontSize',7,'BackgroundColor',[1 1 1],'Margin',0.8);
     end
 end
 

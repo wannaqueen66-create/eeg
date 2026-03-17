@@ -491,7 +491,7 @@ function plot_factor_figures(T, dv, tag, analysisName, fp_fig)
 set(0,'DefaultFigureVisible','off');
 
 % 1) mean by WWR
-fig = figure('Color','w','Position',[60 60 850 320]);
+fig = figure('Color','w','Position',[60 60 1080 340]);
 ax = subplot(1,3,1); hold(ax,'on');
 plot_mean_by(ax, T, 'WWR'); title(ax,'Mean by WWR');
 ax2 = subplot(1,3,2); hold(ax2,'on');
