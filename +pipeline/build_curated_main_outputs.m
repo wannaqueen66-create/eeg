@@ -47,7 +47,7 @@ try
         fprintf(fid, '3. `inferential/overall/`\n');
         fprintf(fid, '4. `inferential/experience/`\n\n');
         fprintf(fid, 'The detailed task-based outputs remain available under `analysis/`, but the redesigned main branch intentionally prioritizes only two visible branches by default: `overall` and `experience`.\n\n');
-        fprintf(fid, 'Note: SportFreq analyses are still present in detailed outputs, but are currently treated as secondary rather than first-class curated outputs.\n');
+        fprintf(fid, 'Note: Only ExperienceGroup is exposed in current main-branch grouped outputs.\n');
         fclose(fid);
     end
 catch

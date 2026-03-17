@@ -34,7 +34,7 @@ try
 catch
 end
 
-analyses = {"experience","sportfreq"};
+analyses = {"experience"};
 metrics = {"O_theta","F_theta","O_alpha","O_beta"};
 
 lines = {};

@@ -32,7 +32,7 @@ out = struct();
 % output dirs
 [fp_root_base, fp_tbl_base, fp_fig_base, fp_rep_base] = pipeline.get_analysis_task_subdirs(fp_sum, 'task2_C1W45_block_diff', tag);
 
-branches = ["all","experience","sportfreq"];
+branches = ["all","experience"];
 fp_tbl = struct(); fp_rep = struct(); fp_fig = struct();
 for bi=1:numel(branches)
     b = char(branches(bi));

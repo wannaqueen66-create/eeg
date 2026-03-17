@@ -75,8 +75,7 @@ fp_trend  = fullfile(fp_root, 'trend_WWR');
 
 % Grouping analyses
 analyses = { ...
-    struct('name','experience','gcol','ExperienceGroup'), ...
-    struct('name','sportfreq','gcol','SportFreqGroup') ...
+    struct('name','experience','gcol','ExperienceGroup') ...
 };
 
 T0 = AllScene;
@@ -126,7 +125,7 @@ for mi = 1:numel(metrics)
         end
         T = T0(:, vars);
         T.Properties.VariableNames{4} = 'GroupRaw';
-        % GroupRaw comes from canonical group columns (ExperienceGroup/SportFreqGroup)
+        % GroupRaw comes from canonical group columns (ExperienceGroup)
         T.EEG = double(T.(dvc));
         T.Group = normalize_high_low(T.GroupRaw);
         T = remove_missing_rows(T);

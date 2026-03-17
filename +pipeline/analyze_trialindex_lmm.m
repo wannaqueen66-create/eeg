@@ -9,10 +9,10 @@ function out = analyze_trialindex_lmm(AllScene, fp_sum, cfg, tag)
 %
 % Outputs under:
 %   <summary>/analysis-2/task3_trialindex_lmm/
-%     tables/<tag>/{experience|sportfreq}/analysis_ready_<metric>_<tag>.csv
-%     tables/<tag>/{experience|sportfreq}/lmm_fixed_effects_<metric>_<tag>.csv
-%     tables/<tag>/{experience|sportfreq}/lmm_anova_<metric>_<tag>.csv
-%     reports/<tag>/{experience|sportfreq}/trialindex_lmm_report_<metric>_<tag>.md
+%     tables/<tag>/{experience}/analysis_ready_<metric>_<tag>.csv
+%     tables/<tag>/{experience}/lmm_fixed_effects_<metric>_<tag>.csv
+%     tables/<tag>/{experience}/lmm_anova_<metric>_<tag>.csv
+%     reports/<tag>/{experience}/trialindex_lmm_report_<metric>_<tag>.md
 %
 % Notes:
 % - Requires Statistics and Machine Learning Toolbox (fitlme). If unavailable,
@@ -105,8 +105,7 @@ end
 
 % Setup grouping analyses
 analyses = { ...
-    struct('name','experience','gcol','ExperienceGroup'), ...
-    struct('name','sportfreq','gcol','SportFreqGroup') ...
+    struct('name','experience','gcol','ExperienceGroup') ...
 };
 
 for ai=1:numel(analyses)

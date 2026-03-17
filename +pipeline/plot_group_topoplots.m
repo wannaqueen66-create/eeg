@@ -98,7 +98,7 @@ try
 catch
 end
 
-% Attach between-subject factors (ExperienceGroup/SportFreqGroup preferred) if missing in topo_long
+% Attach between-subject factors (ExperienceGroup preferred) if missing in topo_long
 % topo_long exported from single-subject stage may only include subject_id/chan/band/metric/value.
 % First priority: direct group map produced in current summarize run.
 if (~ismember('ExperienceGroup', Tall.Properties.VariableNames) || all(strlength(strtrim(string(Tall.ExperienceGroup)))==0)) || ...
@@ -270,23 +270,18 @@ end
 
 % If still missing or invalid factor columns, bail with a clear warning
 hasEx = ismember('ExperienceGroup', Tall.Properties.VariableNames);
-hasSf = ismember('SportFreqGroup', Tall.Properties.VariableNames);
-validEx = false; validSf = false;
+validEx = false;
 if hasEx
     ex = lower(strtrim(string(Tall.ExperienceGroup)));
     validEx = any(ex=="high" | ex=="low" | ex=="高" | ex=="低" | ex=="1" | ex=="0" | ex=="h" | ex=="l");
 end
-if hasSf
-    sf = lower(strtrim(string(Tall.SportFreqGroup)));
-    validSf = any(sf=="high" | sf=="low" | sf=="高" | sf=="低" | sf=="1" | sf=="0" | sf=="h" | sf=="l");
-end
-if ~(validEx || validSf)
+if ~validEx
     try
         nSubTopo = numel(unique(Tall.sid_key));
     catch
         nSubTopo = NaN;
     end
-    warning('plot_group_topoplots: ExperienceGroup/SportFreqGroup not found in topo_long and could not be attached from summary tables. No group topoplots were generated. topo_subjects=%g', nSubTopo);
+    warning('plot_group_topoplots: ExperienceGroup not found in topo_long and could not be attached from summary tables. No group topoplots were generated. topo_subjects=%g', nSubTopo);
     return;
 end
 
@@ -294,7 +289,7 @@ end
 metricName = "viewComplexityHigh_minus_viewComplexityLow";
 bands = ["theta","alpha","beta"];
 
-factors = ["ExperienceGroup","SportFreqGroup"];
+factors = ["ExperienceGroup"];
 
 for fi=1:numel(factors)
     fac = factors(fi);
