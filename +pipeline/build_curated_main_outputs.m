@@ -362,6 +362,11 @@ catch
 end
 
 try
+    build_batch_unified_surface(fp_sum, out);
+catch
+end
+
+try
     write_batch_navigation_readme(fp_sum, out);
 catch
 end
@@ -370,6 +375,42 @@ end
 
 function mkdir_if_needed(p)
 if ~exist(p,'dir'); mkdir(p); end
+end
+
+function build_batch_unified_surface(fp_sum, out)
+if nargin < 2
+    out = struct();
+end
+fp_tables = fullfile(fp_sum, 'tables');
+fp_figures = fullfile(fp_sum, 'figures');
+fp_analysis = fullfile(fp_sum, 'analysis');
+fp_reports = fullfile(fp_sum, 'reports');
+fp_audit = fullfile(fp_sum, 'audit');
+mkdir_if_needed(fp_tables); mkdir_if_needed(fp_figures); mkdir_if_needed(fp_analysis); mkdir_if_needed(fp_reports); mkdir_if_needed(fp_audit);
+
+% tables
+copy_dir_contents_if_exists(fullfile(fp_sum, 'merged'), fullfile(fp_tables, 'merged'));
+copy_dir_contents_if_exists(fullfile(fp_sum, 'qc'), fullfile(fp_tables, 'qc'));
+copy_dir_contents_if_exists(fullfile(fp_sum, 'descriptive', 'overall', 'tables'), fullfile(fp_tables, 'descriptive', 'overall'));
+copy_dir_contents_if_exists(fullfile(fp_sum, 'descriptive', 'experience', 'tables'), fullfile(fp_tables, 'descriptive', 'experience'));
+copy_dir_contents_if_exists(fullfile(fp_sum, 'inferential', 'overall', 'tables'), fullfile(fp_tables, 'inferential', 'overall'));
+copy_dir_contents_if_exists(fullfile(fp_sum, 'inferential', 'experience', 'tables'), fullfile(fp_tables, 'inferential', 'experience'));
+
+% figures
+copy_dir_contents_if_exists(fullfile(fp_sum, 'descriptive', 'overall', 'figures'), fullfile(fp_figures, 'descriptive', 'overall'));
+copy_dir_contents_if_exists(fullfile(fp_sum, 'descriptive', 'experience', 'figures'), fullfile(fp_figures, 'descriptive', 'experience'));
+copy_dir_contents_if_exists(fullfile(fp_sum, 'inferential', 'overall', 'figures'), fullfile(fp_figures, 'inferential', 'overall'));
+copy_dir_contents_if_exists(fullfile(fp_sum, 'inferential', 'experience', 'figures'), fullfile(fp_figures, 'inferential', 'experience'));
+copy_dir_contents_if_exists(fullfile(fp_sum, 'figures', 'topo_scene'), fullfile(fp_figures, 'topo_scene'));
+copy_dir_contents_if_exists(fullfile(fp_sum, 'figures', 'group'), fullfile(fp_figures, 'group'));
+copy_dir_contents_if_exists(fullfile(fp_sum, 'figures', 'recovery'), fullfile(fp_figures, 'recovery'));
+copy_dir_contents_if_exists(fullfile(fp_sum, 'figures', 'scene_sequence'), fullfile(fp_figures, 'scene_sequence'));
+
+% analysis / reports / audit keep canonical dirs but expose stable roots
+mkdir_if_needed(fullfile(fp_analysis, 'task_outputs'));
+copy_dir_contents_if_exists(fullfile(fp_sum, 'analysis'), fullfile(fp_analysis, 'task_outputs'));
+copy_dir_contents_if_exists(fullfile(fp_sum, 'reports'), fp_reports);
+copy_dir_contents_if_exists(fullfile(fp_sum, 'audit'), fp_audit);
 end
 
 function write_batch_navigation_readme(fp_sum, out)
@@ -385,23 +426,22 @@ fprintf(fid, 'This folder is the main entry for batch-level outputs. Read in thi
 fprintf(fid, '这个文件夹是批量输出主入口。建议按下面顺序阅读：\n\n');
 fprintf(fid, '1. `reports/batch_report.md`\n');
 fprintf(fid, '2. `reports/qc_filter_report.md`\n');
-fprintf(fid, '3. `descriptive/overall/figures/`\n');
-fprintf(fid, '4. `descriptive/experience/figures/`\n');
+fprintf(fid, '3. `figures/descriptive/overall/`\n');
+fprintf(fid, '4. `figures/descriptive/experience/`\n');
 fprintf(fid, '5. `figures/topo_scene/` and grouped topo figures\n');
-fprintf(fid, '6. `inferential/overall/`\n');
-fprintf(fid, '7. `inferential/experience/`\n');
-fprintf(fid, '8. `analysis/` for detailed task-level outputs\n\n');
-fprintf(fid, '## Recommended reading map / 推荐查看路径\n\n');
-fprintf(fid, '- **Reports / 报告**: `reports/`\n');
-fprintf(fid, '- **Merged tables / 合并主表**: `merged/`\n');
-fprintf(fid, '- **QC tables / QC 过滤表**: `qc/`\n');
-fprintf(fid, '- **Descriptive figures / 描述图**: `descriptive/overall/figures/`, `descriptive/experience/figures/`\n');
-fprintf(fid, '- **Inferential outputs / 推断分析**: `inferential/overall/`, `inferential/experience/`\n');
-fprintf(fid, '- **Detailed task outputs / 任务级细节**: `analysis/`\n');
-fprintf(fid, '- **Audit / 审计**: `audit/`\n\n');
+fprintf(fid, '6. `tables/merged/` and `tables/qc/`\n');
+fprintf(fid, '7. `tables/inferential/overall/`\n');
+fprintf(fid, '8. `tables/inferential/experience/`\n');
+fprintf(fid, '9. `analysis/task_outputs/` for detailed task-level outputs\n\n');
+fprintf(fid, '## Unified surface / 统一入口层\n\n');
+fprintf(fid, '- `tables/` → merged / qc / descriptive / inferential 的统一表入口\n');
+fprintf(fid, '- `figures/` → descriptive / inferential / topo / recovery 的统一图入口\n');
+fprintf(fid, '- `reports/` → 批量报告主入口\n');
+fprintf(fid, '- `analysis/task_outputs/` → 详细 task 级输出\n');
+fprintf(fid, '- `audit/` → 审计文件\n\n');
 fprintf(fid, '## Notes / 说明\n\n');
 fprintf(fid, '- Current repository still contains both curated outputs and detailed task outputs.\n');
-fprintf(fid, '- 目前仓库仍同时保留了精简主入口和详细 task 输出，因此底层结构仍会显得偏复杂。\n');
+fprintf(fid, '- 当前仓库仍保留底层详细 task 输出；上面新增的 `tables/` / `figures/` 是便于阅读的统一镜像入口。\n');
 fprintf(fid, '- For grouped outputs on the main branch, prioritize **Experience** rather than SportFreq.\n');
 fprintf(fid, '- main 分支当前分组输出以 **Experience** 为主，不再把 SportFreq 作为主入口。\n\n');
 if isfield(out,'descriptive_overall')
@@ -412,6 +452,17 @@ if isfield(out,'descriptive_overall')
     if isfield(out,'inferential_experience'); fprintf(fid, '- inferential_experience: `%s`\n', out.inferential_experience); end
 end
 fclose(fid);
+end
+
+function copy_dir_contents_if_exists(srcDir, dstDir)
+if nargin < 2 || ~exist(srcDir, 'dir')
+    return;
+end
+mkdir_if_needed(dstDir);
+try
+    copyfile(fullfile(srcDir, '*'), dstDir, 'f');
+catch
+end
 end
 
 function Tsum = summarize_trialindex_overall(S, cfg)
