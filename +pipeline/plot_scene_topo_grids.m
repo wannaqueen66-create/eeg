@@ -234,33 +234,40 @@ if isempty(Tall)
     return;
 end
 
-Tall.ExperienceGroup = repmat("", height(Tall), 1);
+if ~ismember('ExperienceGroup', Tall.Properties.VariableNames)
+    Tall.ExperienceGroup = repmat("", height(Tall), 1);
+else
+    Tall.ExperienceGroup = normalize_high_low_local(Tall.ExperienceGroup);
+end
 try
-    fp_tbl_raw = fp_batch;
-    if exist('pipeline.get_table_dir','file')==2
-        fp_tbl_raw = pipeline.get_table_dir(fp_batch, cfg, 'merged_raw');
-    end
-    f_scene = fullfile(fp_tbl_raw, 'all_subjects_scene_level.csv');
-    if ~exist(f_scene,'file')
-        f_scene = fullfile(fp_batch, 'all_subjects_scene_level.csv');
-    end
-    if exist(f_scene,'file')
-        M = readtable(f_scene, 'TextType','string');
-        if ismember('subject_id', M.Properties.VariableNames)
-            sidm = canonical_subject_id_local(M.subject_id);
-            [~, ia] = unique(sidm, 'stable');
-            M = M(ia,:);
-            sidm = sidm(ia);
-            [tf, loc] = ismember(Tall.sid_key, sidm);
-            src = string([]);
-            if ismember('ExperienceGroup', M.Properties.VariableNames)
-                src = string(M.ExperienceGroup(loc(tf)));
-            elseif ismember('Experience', M.Properties.VariableNames)
-                src = string(M.Experience(loc(tf)));
-            end
-            if ~isempty(src)
+    needAttach = all(strlength(strtrim(string(Tall.ExperienceGroup)))==0);
+    if needAttach
+        fp_tbl_raw = fp_batch;
+        if exist('pipeline.get_table_dir','file')==2
+            fp_tbl_raw = pipeline.get_table_dir(fp_batch, cfg, 'merged_raw');
+        end
+        f_scene = fullfile(fp_tbl_raw, 'all_subjects_scene_level.csv');
+        if ~exist(f_scene,'file')
+            f_scene = fullfile(fp_batch, 'all_subjects_scene_level.csv');
+        end
+        if exist(f_scene,'file')
+            M = readtable(f_scene, 'TextType','string');
+            if ismember('subject_id', M.Properties.VariableNames)
+                sidm = canonical_subject_id_local(M.subject_id);
+                [~, ia] = unique(sidm, 'stable');
+                M = M(ia,:);
+                sidm = sidm(ia);
+                [tf, loc] = ismember(Tall.sid_key, sidm);
+                src = repmat("", height(Tall), 1);
+                if ismember('ExperienceGroup', M.Properties.VariableNames)
+                    src(tf) = string(M.ExperienceGroup(loc(tf)));
+                elseif ismember('Experience', M.Properties.VariableNames)
+                    src(tf) = string(M.Experience(loc(tf)));
+                end
+                src = normalize_high_low_local(src);
                 ex = Tall.ExperienceGroup;
-                ex(tf) = normalize_high_low_local(src);
+                fillMask = tf & strlength(strtrim(src))>0;
+                ex(fillMask) = src(fillMask);
                 Tall.ExperienceGroup = ex;
             end
         end
@@ -278,6 +285,13 @@ for bi = 1:3
     meta.CX = normalize_complexity_local(meta.Complexity);
     meta = meta(strlength(meta.WWRn)>0 & strlength(meta.CX)>0, :);
     if isempty(meta), continue; end
+
+    Tb.ExperienceGroup = normalize_high_low_local(Tb.ExperienceGroup);
+    try
+        fprintf('[scene topo group] band=%s | overall_rows=%d | exp_low_rows=%d | exp_high_rows=%d\n', ...
+            char(bandName), height(Tb), sum(string(Tb.ExperienceGroup)=="Low"), sum(string(Tb.ExperienceGroup)=="High"));
+    catch
+    end
 
     groupDefs = {
         struct('name','overall','mode','mean','mask',true(height(Tb),1)), ...
@@ -323,6 +337,11 @@ for bi = 1:3
                     end
                 end
                 if all(~isfinite(vec))
+                    try
+                        fprintf(2, '[scene topo group] missing panel: group=%s band=%s block=%d WWR=%s CX=%s\n', ...
+                            Gd.name, char(bandName), blk, char(orderTbl.WWRn(k)), char(orderTbl.CX(k)));
+                    catch
+                    end
                     axis off;
                     title(sprintf('missing | WWR%s %s', char(orderTbl.WWRn(k)), char(orderTbl.CX(k))), 'Interpreter','none');
                     continue;
@@ -373,6 +392,11 @@ for bi = 1:3
                     end
                 end
                 if all(~isfinite(vec))
+                    try
+                        fprintf(2, '[scene topo group] missing panel: group=%s band=%s allblocks WWR=%s CX=%s\n', ...
+                            Gd.name, char(bandName), char(orderTbl.WWRn(k)), char(orderTbl.CX(k)));
+                    catch
+                    end
                     axis off;
                     title(sprintf('missing | WWR%s %s', char(orderTbl.WWRn(k)), char(orderTbl.CX(k))), 'Interpreter','none');
                     continue;
