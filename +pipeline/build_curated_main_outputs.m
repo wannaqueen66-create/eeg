@@ -1091,6 +1091,7 @@ end
 
 function plot_factor_lines(X, hasGroup)
 colors = [0.18 0.49 0.72; 0.88 0.47 0.18; 0.20 0.62 0.52; 0.62 0.42 0.78];
+wwrLevels = [15 45 75];
 if hasGroup
     groups = unique(string(X.experience_group), 'stable');
     if isempty(groups), groups = ["Low","High"]; end
@@ -1103,12 +1104,12 @@ if hasGroup
             g = groups(gi); cx = cxLevels(cxi);
             Ti = X(string(X.experience_group)==g & string(X.Complexity)==cx,:);
             if isempty(Ti), continue; end
-            [ww,o] = sort(str2double(string(Ti.WWR))); Ti = Ti(o,:);
+            [xpos, ypos, ysem, yn] = map_factor_points_to_discrete_wwr(Ti, wwrLevels);
             ls = '-'; if contains(lower(cx),'1') || contains(lower(cx),'high'), ls='--'; end
-            errorbar(ww, Ti.mean, Ti.sem, 'o', 'LineWidth',1.5, 'Color', colors(min(ci,size(colors,1)),:), ...
+            errorbar(xpos, ypos, ysem, 'o', 'LineWidth',1.5, 'Color', colors(min(ci,size(colors,1)),:), ...
                 'MarkerFaceColor', colors(min(ci,size(colors,1)),:), 'DisplayName', sprintf('%s | %s', g, cx));
-            plot(ww, Ti.mean, ls, 'LineWidth',1.7, 'Color', colors(min(ci,size(colors,1)),:), 'HandleVisibility','off');
-            annotate_points(ww, Ti.mean, Ti.sem, Ti.N);
+            plot(xpos, ypos, ls, 'LineWidth',1.7, 'Color', colors(min(ci,size(colors,1)),:), 'HandleVisibility','off');
+            annotate_points(xpos, ypos, ysem, yn);
         end
     end
     legend('Location','best');
@@ -1119,17 +1120,35 @@ else
         cx = cxLevels(cxi);
         Ti = X(string(X.Complexity)==cx,:);
         if isempty(Ti), continue; end
-        [ww,o] = sort(str2double(string(Ti.WWR))); Ti = Ti(o,:);
+        [xpos, ypos, ysem, yn] = map_factor_points_to_discrete_wwr(Ti, wwrLevels);
         ls = '-'; if contains(lower(cx),'1') || contains(lower(cx),'high'), ls='--'; end
-        errorbar(ww, Ti.mean, Ti.sem, 'o', 'LineWidth',1.5, 'Color', colors(cxi,:), ...
+        errorbar(xpos, ypos, ysem, 'o', 'LineWidth',1.5, 'Color', colors(cxi,:), ...
             'MarkerFaceColor', colors(cxi,:), 'DisplayName', sprintf('Complexity %s', cx));
-        plot(ww, Ti.mean, ls, 'LineWidth',1.7, 'Color', colors(cxi,:), 'HandleVisibility','off');
-        annotate_points(ww, Ti.mean, Ti.sem, Ti.N);
+        plot(xpos, ypos, ls, 'LineWidth',1.7, 'Color', colors(cxi,:), 'HandleVisibility','off');
+        annotate_points(xpos, ypos, ysem, yn);
     end
     legend('Location','best');
 end
+set(gca, 'XTick', wwrLevels, 'XTickLabel', compose('%d', wwrLevels));
+xlim([12 78]);
 xlabel('WWR');
 ylabel('Mean ± SEM');
+end
+
+function [xpos, ypos, ysem, yn] = map_factor_points_to_discrete_wwr(Ti, wwrLevels)
+TiWWR = str2double(string(Ti.WWR));
+ypos = nan(size(wwrLevels));
+ysem = nan(size(wwrLevels));
+yn = nan(size(wwrLevels));
+for i = 1:numel(wwrLevels)
+    idx = find(TiWWR == wwrLevels(i), 1, 'first');
+    if ~isempty(idx)
+        ypos(i) = double(Ti.mean(idx));
+        ysem(i) = double(Ti.sem(idx));
+        yn(i) = double(Ti.N(idx));
+    end
+end
+xpos = wwrLevels;
 end
 
 function annotate_points(x, y, se, n)
