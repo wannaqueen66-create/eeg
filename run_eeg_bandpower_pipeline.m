@@ -1454,9 +1454,9 @@ if any(high_hf)
                     label(ii) = "";
                 else
                     if strlength(sn(ii))>0
-                        label(ii) = "round" + sprintf('%02d', T.scene_id(ii)) + "_" + sn(ii);
+                        label(ii) = "trial" + sprintf('%02d', T.scene_id(ii)) + "_" + sn(ii);
                     else
-                        label(ii) = "round" + sprintf('%02d', T.scene_id(ii)) + "_W" + w(ii) + "_" + cnd(ii);
+                        label(ii) = "trial" + sprintf('%02d', T.scene_id(ii)) + "_W" + w(ii) + "_" + cnd(ii);
                     end
                 end
             end
@@ -1685,15 +1685,15 @@ try
                 if isnan(T.scene_id(ii))
                     label(ii) = "";
                 elseif strlength(sn(ii))>0
-                    label(ii) = "round" + sprintf('%02d', T.scene_id(ii)) + "_" + sn(ii);
+                    label(ii) = "trial" + sprintf('%02d', T.scene_id(ii)) + "_" + sn(ii);
                 else
-                    label(ii) = "round" + sprintf('%02d', T.scene_id(ii));
+                    label(ii) = "trial" + sprintf('%02d', T.scene_id(ii));
                 end
             end
         else
             for ii=1:height(T)
                 if ~isnan(T.scene_id(ii))
-                    label(ii) = "round" + sprintf('%02d', T.scene_id(ii));
+                    label(ii) = "trial" + sprintf('%02d', T.scene_id(ii));
                 end
             end
         end
