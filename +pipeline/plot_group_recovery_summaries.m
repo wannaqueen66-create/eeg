@@ -192,7 +192,7 @@ for fi=1:numel(factors)
             ylabel(met,'Interpreter','none');
             title(sprintf('Recovery (%s): %s', fac, met), 'Interpreter','none');
             for ii=1:height(Tsum)
-                text(ii, Tsum.mean(ii), sprintf(' n=%d', Tsum.n(ii)), 'VerticalAlignment','bottom', 'HorizontalAlignment','center');
+                text(ii, Tsum.mean(ii) + max(0.02, abs(Tsum.mean(ii))*0.04 + Tsum.sem(ii)), sprintf('n=%d', Tsum.n(ii)), 'VerticalAlignment','bottom', 'HorizontalAlignment','center');
             end
             f1 = fullfile(fp_fig, pipeline.sanitize_filename(sprintf('group_%s_%s.png', lower(fac), met)));
             saveas(fig, f1);

@@ -537,7 +537,7 @@ end
 set(ax,'XTick',1:numel(xl),'XTickLabel',xl);
 grid(ax,'on');
 xlabel(ax, xfac);
-legend(ax,'Location','best');
+legend(ax,'Location','northeastoutside');
 end
 
 function write_factor_report(fp_md, dv, tag, A, lme1, lme2, lme3, did3, Summ)

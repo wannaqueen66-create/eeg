@@ -214,7 +214,7 @@ xlim(ax,[0.5 2.5]);
 ylabel(ax, strrep(metricName,'_','\\_'), 'Interpreter','none');
 grid(ax,'on');
 title(ax, sprintf('Task6 %s special | %s [%s]', strrep(metricName,'_','\\_'), analysisName, tag), 'Interpreter','none');
-legend(ax,'Location','best');
+legend(ax,'Location','northeastoutside');
 pipeline.export_figure_png(fig, fp_png, 300);
 try; close(fig); catch; end
 end
