@@ -1072,18 +1072,27 @@ if isempty(T) || height(T)==0
     return;
 end
 set(0,'DefaultFigureVisible','off');
-fig = figure('Color','w','Position',[80 80 1200 900]);
-tl = tiledlayout(fig,2,2,'TileSpacing','compact','Padding','compact');
-title(tl, sprintf('Experience descriptive summary by WWR [%s]', tag), 'Interpreter','none', 'FontWeight','normal');
+fig = figure('Color','w','Position',[80 80 1450 900]);
+tl = tiledlayout(fig,2,4,'TileSpacing','compact','Padding','compact');
+title(tl, sprintf('Experience descriptive summary by WWR × Complexity [%s]', tag), 'Interpreter','none', 'FontWeight','normal');
 metrics = unique(string(T.metric), 'stable');
-for mi=1:min(numel(metrics),4)
-    m = metrics(mi);
-    nexttile;
-    hold on;
-    style_axes(gca);
-    X = T(string(T.metric)==m,:);
-    plot_experience_lines_collapsed_complexity(X);
-    title(strrep(char(m),'_','\_'),'Interpreter','none');
+metrics = metrics(1:min(numel(metrics),4));
+cxLevels = ["0","1"];
+for cxi = 1:numel(cxLevels)
+    cx = cxLevels(cxi);
+    for mi=1:numel(metrics)
+        m = metrics(mi);
+        nexttile;
+        hold on;
+        style_axes(gca);
+        X = T(string(T.metric)==m & string(T.Complexity)==cx,:);
+        plot_experience_lines_by_complexity(X);
+        cxLabel = "ComplexityLow";
+        if contains(lower(cx),'1') || contains(lower(cx),'high')
+            cxLabel = "ComplexityHigh";
+        end
+        title(sprintf('%s | %s', strrep(char(m),'_','\_'), char(cxLabel)), 'Interpreter','none');
+    end
 end
 pipeline.export_figure_png(fig, fullfile(fp_fig, sprintf('experience_factor_grid_%s.png', tag)), get_dpi(cfg));
 try; close(fig); catch; end
@@ -1151,7 +1160,7 @@ end
 xpos = wwrLevels;
 end
 
-function plot_experience_lines_collapsed_complexity(X)
+function plot_experience_lines_by_complexity(X)
 wwrLevels = [15 45 75];
 colors = [0.18 0.49 0.72; 0.88 0.47 0.18];
 groups = unique(string(X.experience_group), 'stable');
@@ -1160,7 +1169,7 @@ for gi = 1:numel(groups)
     g = groups(gi);
     Ti = X(string(X.experience_group)==g,:);
     if isempty(Ti), continue; end
-    [xpos, ypos, ysem, yn] = collapse_group_over_complexity(Ti, wwrLevels);
+    [xpos, ypos, ysem, yn] = map_factor_points_to_discrete_wwr(Ti, wwrLevels);
     errorbar(xpos, ypos, ysem, 'o-', 'LineWidth',1.6, 'Color', colors(min(gi,2),:), ...
         'MarkerFaceColor', colors(min(gi,2),:), 'DisplayName', char(g));
     annotate_points(xpos, ypos, ysem, yn);
@@ -1170,24 +1179,6 @@ xlim([12 78]);
 xlabel('WWR');
 ylabel('Mean ± SEM');
 legend('Location','best');
-end
-
-function [xpos, ypos, ysem, yn] = collapse_group_over_complexity(Ti, wwrLevels)
-TiWWR = str2double(string(Ti.WWR));
-ypos = nan(size(wwrLevels));
-ysem = nan(size(wwrLevels));
-yn = nan(size(wwrLevels));
-for i = 1:numel(wwrLevels)
-    idx = find(TiWWR == wwrLevels(i));
-    if isempty(idx), continue; end
-    m = double(Ti.mean(idx));
-    s = double(Ti.sem(idx));
-    n = double(Ti.N(idx));
-    ypos(i) = mean(m, 'omitnan');
-    ysem(i) = mean(s, 'omitnan');
-    yn(i) = sum(n, 'omitnan');
-end
-xpos = wwrLevels;
 end
 
 function annotate_points(x, y, se, n)
