@@ -361,10 +361,57 @@ try
 catch
 end
 
+try
+    write_batch_navigation_readme(fp_sum, out);
+catch
+end
+
 end
 
 function mkdir_if_needed(p)
 if ~exist(p,'dir'); mkdir(p); end
+end
+
+function write_batch_navigation_readme(fp_sum, out)
+if nargin < 2
+    out = struct();
+end
+fid = fopen(fullfile(fp_sum, 'README.md'), 'w');
+if fid <= 0
+    return;
+end
+fprintf(fid, '# Batch Output Navigation / 批量输出导航\n\n');
+fprintf(fid, 'This folder is the main entry for batch-level outputs. Read in this order:\n\n');
+fprintf(fid, '这个文件夹是批量输出主入口。建议按下面顺序阅读：\n\n');
+fprintf(fid, '1. `reports/batch_report.md`\n');
+fprintf(fid, '2. `reports/qc_filter_report.md`\n');
+fprintf(fid, '3. `descriptive/overall/figures/`\n');
+fprintf(fid, '4. `descriptive/experience/figures/`\n');
+fprintf(fid, '5. `figures/topo_scene/` and grouped topo figures\n');
+fprintf(fid, '6. `inferential/overall/`\n');
+fprintf(fid, '7. `inferential/experience/`\n');
+fprintf(fid, '8. `analysis/` for detailed task-level outputs\n\n');
+fprintf(fid, '## Recommended reading map / 推荐查看路径\n\n');
+fprintf(fid, '- **Reports / 报告**: `reports/`\n');
+fprintf(fid, '- **Merged tables / 合并主表**: `merged/`\n');
+fprintf(fid, '- **QC tables / QC 过滤表**: `qc/`\n');
+fprintf(fid, '- **Descriptive figures / 描述图**: `descriptive/overall/figures/`, `descriptive/experience/figures/`\n');
+fprintf(fid, '- **Inferential outputs / 推断分析**: `inferential/overall/`, `inferential/experience/`\n');
+fprintf(fid, '- **Detailed task outputs / 任务级细节**: `analysis/`\n');
+fprintf(fid, '- **Audit / 审计**: `audit/`\n\n');
+fprintf(fid, '## Notes / 说明\n\n');
+fprintf(fid, '- Current repository still contains both curated outputs and detailed task outputs.\n');
+fprintf(fid, '- 目前仓库仍同时保留了精简主入口和详细 task 输出，因此底层结构仍会显得偏复杂。\n');
+fprintf(fid, '- For grouped outputs on the main branch, prioritize **Experience** rather than SportFreq.\n');
+fprintf(fid, '- main 分支当前分组输出以 **Experience** 为主，不再把 SportFreq 作为主入口。\n\n');
+if isfield(out,'descriptive_overall')
+    fprintf(fid, '## Curated nodes generated in this run / 本轮生成的精简节点\n\n');
+    if isfield(out,'descriptive_overall'); fprintf(fid, '- descriptive_overall: `%s`\n', out.descriptive_overall); end
+    if isfield(out,'descriptive_experience'); fprintf(fid, '- descriptive_experience: `%s`\n', out.descriptive_experience); end
+    if isfield(out,'inferential_overall'); fprintf(fid, '- inferential_overall: `%s`\n', out.inferential_overall); end
+    if isfield(out,'inferential_experience'); fprintf(fid, '- inferential_experience: `%s`\n', out.inferential_experience); end
+end
+fclose(fid);
 end
 
 function Tsum = summarize_trialindex_overall(S, cfg)
