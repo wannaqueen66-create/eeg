@@ -96,7 +96,8 @@ for bi = 1:3
     end
 
     for ii = 1:numel(sceneTopo)
-        allRows(end+1,:) = {string(base), double(meta.scene_id(ii)), double(meta.Block(ii)), string(meta.WWRn(ii)), string(meta.CX(ii)), bandName, sceneTopo{ii}}; %#ok<AGROW>
+        extra = extract_scene_meta_row(S, meta.scene_id(ii), meta.Block(ii), meta.WWRn(ii), meta.CX(ii));
+        allRows(end+1,:) = {string(base), double(meta.scene_id(ii)), double(meta.Block(ii)), string(meta.WWRn(ii)), string(meta.CX(ii)), bandName, sceneTopo{ii}, extra}; %#ok<AGROW>
     end
 
     for blk = 1:2
@@ -451,13 +452,61 @@ end
 function write_scene_topo_long(fp, rows, nbchan)
 out = {};
 for i = 1:size(rows,1)
-    sid = rows{i,1}; scene_id = rows{i,2}; block_id = rows{i,3}; wwr = rows{i,4}; cx = rows{i,5}; band = rows{i,6}; vec = rows{i,7};
+    sid = rows{i,1}; scene_id = rows{i,2}; block_id = rows{i,3}; wwr = rows{i,4}; cx = rows{i,5}; band = rows{i,6}; vec = rows{i,7}; extra = rows{i,8};
+    if isempty(extra) || ~isstruct(extra)
+        extra = default_scene_meta_struct();
+    end
     for ch = 1:nbchan
-        out(end+1,:) = {sid, scene_id, block_id, wwr, cx, ch, band, double(vec(ch))}; %#ok<AGROW>
+        out(end+1,:) = {sid, scene_id, block_id, wwr, cx, ch, band, double(vec(ch)), ...
+            string(extra.scene_name), string(extra.SceneID), string(extra.ExperienceGroup), string(extra.SportFreqGroup), ...
+            double(extra.Order), double(extra.Position), double(extra.Repetition), double(extra.RepetitionC), ...
+            double(extra.IPQ_mean), double(extra.SAM_Valence), double(extra.Bmean)}; %#ok<AGROW>
     end
 end
-T = cell2table(out, 'VariableNames', {'subject_id','scene_id','block_id','WWR','Complexity','chan_idx','band','value'});
+T = cell2table(out, 'VariableNames', {'subject_id','scene_id','block_id','WWR','Complexity','chan_idx','band','value', ...
+    'scene_name','SceneID','ExperienceGroup','SportFreqGroup','Order','Position','Repetition','RepetitionC','IPQ_mean','SAM_Valence','Bmean'});
 writetable(T, fp);
+end
+
+function extra = extract_scene_meta_row(S, scene_id, block_id, wwrn, cx)
+extra = default_scene_meta_struct();
+if isempty(S)
+    return;
+end
+try
+    mask = double(S.scene_id)==double(scene_id) & double(S.Block)==double(block_id) & normalize_wwr_local(S.WWR)==string(wwrn) & normalize_complexity_local(S.Complexity)==string(cx);
+    idx = find(mask, 1, 'first');
+    if isempty(idx)
+        return;
+    end
+    extra = fill_scene_meta_from_row(extra, S, idx);
+catch
+end
+end
+
+function extra = default_scene_meta_struct()
+extra = struct('scene_name',"",'SceneID',"",'ExperienceGroup',"",'SportFreqGroup',"", ...
+    'Order',NaN,'Position',NaN,'Repetition',NaN,'RepetitionC',NaN,'IPQ_mean',NaN,'SAM_Valence',NaN,'Bmean',NaN);
+end
+
+function extra = fill_scene_meta_from_row(extra, S, idx)
+fieldsStr = {'scene_name','SceneID','ExperienceGroup','SportFreqGroup'};
+for i = 1:numel(fieldsStr)
+    f = fieldsStr{i};
+    if ismember(f, S.Properties.VariableNames)
+        extra.(f) = string(S.(f)(idx));
+    end
+end
+fieldsNum = {'Order','Position','Repetition','RepetitionC','IPQ_mean','SAM_Valence','Bmean'};
+for i = 1:numel(fieldsNum)
+    f = fieldsNum{i};
+    if ismember(f, S.Properties.VariableNames)
+        try
+            extra.(f) = double(S.(f)(idx));
+        catch
+        end
+    end
+end
 end
 
 function ord = normalize_wwr_local(x)
