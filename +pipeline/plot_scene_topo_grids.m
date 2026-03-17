@@ -470,6 +470,10 @@ cxLevels = ["ComplexityLow","ComplexityHigh"];
 rows = {};
 meta.WWRn = normalize_wwr_local(meta.WWRn);
 meta.CX = normalize_complexity_local(meta.CX);
+hasSceneId = ismember('scene_id', meta.Properties.VariableNames);
+if ~hasSceneId
+    meta.scene_id = nan(height(meta), 1);
+end
 try
     meta = sortrows(meta, {'CX','WWRn','scene_id'});
 catch
