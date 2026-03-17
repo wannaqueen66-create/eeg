@@ -203,9 +203,9 @@ for fi=1:numel(factors)
         end
         title(sprintf('%s: %s across scenes%s', fac, met, ttag), 'Interpreter','none');
         try
-            legend(hLines, 'Location','best');
+            legend(hLines, 'Location','northeastoutside');
         catch
-            legend('Location','best');
+            legend('Location','northeastoutside');
         end
 
         fn = sprintf('group_scene_sequence_%s_%s', lower(fac), char(met));

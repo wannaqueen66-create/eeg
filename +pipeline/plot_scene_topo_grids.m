@@ -149,8 +149,8 @@ for bi = 1:3
             end
             topoplot(comboTopo{idx}, EEG.chanlocs, 'electrodes','labels', 'maplimits', clim);
             apply_topo_colormap(ax, false);
-            title(sprintf('combined | WWR%s | %s', char(orderTbl.WWRn(k)), short_cx(orderTbl.CX(k))), 'Interpreter','none', 'FontSize',10);
-            cb = colorbar; cb.Color = [0.2 0.2 0.2];
+            title(sprintf('combined | WWR%s | %s', char(orderTbl.WWRn(k)), short_cx(orderTbl.CX(k))), 'Interpreter','none', 'FontSize',9);
+            cb = colorbar; cb.Color = [0.2 0.2 0.2]; cb.FontSize = 8;
         end
         fn = pipeline.sanitize_filename(sprintf('%s_scene_topogrid_%s_allblocks.png', base, bandName));
         saveas(fig, fullfile(fp_fig, fn));
@@ -353,8 +353,8 @@ for bi = 1:3
                 end
                 topoplot(vec, chanlocs, 'electrodes','labels', 'maplimits', compute_panel_clim_from_rows(Tb, Gd, bandName, blk, false));
                 apply_topo_colormap(ax, false);
-                title(sprintf('scene%02d | WWR%s | %s', orderTbl.scene_id(k), char(orderTbl.WWRn(k)), short_cx(orderTbl.CX(k))), 'Interpreter','none', 'FontSize',10);
-                cb = colorbar; cb.Color = [0.2 0.2 0.2];
+                title(sprintf('scene%02d | WWR%s | %s', orderTbl.scene_id(k), char(orderTbl.WWRn(k)), short_cx(orderTbl.CX(k))), 'Interpreter','none', 'FontSize',9);
+                cb = colorbar; cb.Color = [0.2 0.2 0.2]; cb.FontSize = 8;
             end
             fn = pipeline.sanitize_filename(sprintf('%s_scene_topogrid_%s_block%d.png', Gd.name, bandName, blk));
             saveas(fig, fullfile(fp_fig, fn));
@@ -410,8 +410,8 @@ for bi = 1:3
                 isDiff = strcmp(Gd.mode,'diff');
                 topoplot(vec, chanlocs, 'electrodes','labels', 'maplimits', compute_panel_clim_from_rows(Tb, Gd, bandName, NaN, isDiff));
                 apply_topo_colormap(ax, isDiff);
-                title(sprintf('combined | WWR%s | %s', char(orderTbl.WWRn(k)), short_cx(orderTbl.CX(k))), 'Interpreter','none', 'FontSize',10);
-                cb = colorbar; cb.Color = [0.2 0.2 0.2];
+                title(sprintf('combined | WWR%s | %s', char(orderTbl.WWRn(k)), short_cx(orderTbl.CX(k))), 'Interpreter','none', 'FontSize',9);
+                cb = colorbar; cb.Color = [0.2 0.2 0.2]; cb.FontSize = 8;
             end
             fn = pipeline.sanitize_filename(sprintf('%s_scene_topogrid_%s_allblocks.png', Gd.name, bandName));
             saveas(fig, fullfile(fp_fig, fn));

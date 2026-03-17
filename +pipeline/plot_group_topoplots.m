@@ -377,23 +377,23 @@ for fi=1:numel(factors)
         end
 
         % Plot Low
-        fig = figure('Name', sprintf('%s %s %s Low', fac, band, metricName), 'Position',[100 100 700 520]);
+        fig = figure('Name', sprintf('%s %s %s Low', fac, band, metricName), 'Position',[100 100 820 600]);
         ax = axes(fig);
         topoplot(topo.Low, chanlocs, 'electrodes','labels', 'maplimits', climAbs);
         colormap(ax, parula(256));
         title(sprintf('%s | %s | %s | Low', fac, band, metricName), 'Interpreter','none');
-        cb = colorbar; cb.Color = [0.2 0.2 0.2];
+        cb = colorbar; cb.Color = [0.2 0.2 0.2]; cb.FontSize = 8;
         f1 = fullfile(fp_fig, pipeline.sanitize_filename(sprintf('group_topo_%s_%s_%s_Low.png', lower(fac), band, metricName)));
         saveas(fig, f1);
         try; close(fig); catch; end
 
         % Plot High
-        fig = figure('Name', sprintf('%s %s %s High', fac, band, metricName), 'Position',[100 100 700 520]);
+        fig = figure('Name', sprintf('%s %s %s High', fac, band, metricName), 'Position',[100 100 820 600]);
         ax = axes(fig);
         topoplot(topo.High, chanlocs, 'electrodes','labels', 'maplimits', climAbs);
         colormap(ax, parula(256));
         title(sprintf('%s | %s | %s | High', fac, band, metricName), 'Interpreter','none');
-        cb = colorbar; cb.Color = [0.2 0.2 0.2];
+        cb = colorbar; cb.Color = [0.2 0.2 0.2]; cb.FontSize = 8;
         f2 = fullfile(fp_fig, pipeline.sanitize_filename(sprintf('group_topo_%s_%s_%s_High.png', lower(fac), band, metricName)));
         saveas(fig, f2);
         try; close(fig); catch; end
@@ -412,7 +412,7 @@ for fi=1:numel(factors)
         topoplot(dvec, chanlocs, 'electrodes','labels', 'maplimits', climDiff);
         colormap(ax, interp1([0 0.5 1], [0.23 0.30 0.75; 0.97 0.97 0.97; 0.72 0.19 0.16], linspace(0,1,256)));
         title(sprintf('%s | %s | %s | High - Low', fac, band, metricName), 'Interpreter','none');
-        cb = colorbar; cb.Color = [0.2 0.2 0.2];
+        cb = colorbar; cb.Color = [0.2 0.2 0.2]; cb.FontSize = 8;
         f3 = fullfile(fp_fig, pipeline.sanitize_filename(sprintf('group_topo_%s_%s_%s_HighMinusLow.png', lower(fac), band, metricName)));
         saveas(fig, f3);
         try; close(fig); catch; end
