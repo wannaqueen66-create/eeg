@@ -126,6 +126,7 @@ run_eeg_bandpower_pipeline('path/to/data.set', 'config.json');
 - 每个被试的结果文件夹名 = 输入 `.set` 的**文件名（去掉扩展名）**，便于对照核对。
 - 如果在 `config.json` 里设置了 `output_dir`，输出会写到 `<output_dir>/...`。
 - 在迁移期间，一些旧式输出仍可能出现在 `summary/`、`fig/`、`paper_fig/` 等旧路径下。对 `main` 分支来说，**`batch/` 才是规范的批量输出主入口**；`summary/` 现在仅作为向后兼容概念，保留在部分 helper 和旧路径中。
+- 当前 `main` 默认不再自动生成较重的 curated descriptive/inferential 镜像层；只有在显式设置 `enable_curated_main_outputs=true` 时才会额外生成。
 - 单被试输出正在迁移到：
   - `subjects/<subject_id>/tables/`
   - `subjects/<subject_id>/figures/`
