@@ -362,7 +362,9 @@ catch
 end
 
 try
-    build_batch_unified_surface(fp_sum, out);
+    if isfield(cfg,'enable_unified_mirror_surface') && logical(cfg.enable_unified_mirror_surface)
+        build_batch_unified_surface(fp_sum, out);
+    end
 catch
 end
 

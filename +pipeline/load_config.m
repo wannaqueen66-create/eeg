@@ -29,6 +29,7 @@ if ~isfield(cfg,'figure_visible'); cfg.figure_visible = false; end
 if ~isfield(cfg,'batch_summaries'); cfg.batch_summaries = true; end
 if ~isfield(cfg,'design_path'); cfg.design_path = ''; end
 if ~isfield(cfg,'enable_curated_main_outputs'); cfg.enable_curated_main_outputs = false; end
+if ~isfield(cfg,'enable_unified_mirror_surface'); cfg.enable_unified_mirror_surface = false; end
 
 % Output-layout migration defaults / aliases
 if ~isfield(cfg,'timestamp_output_root'); cfg.timestamp_output_root = false; end

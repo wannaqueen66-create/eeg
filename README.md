@@ -145,6 +145,7 @@ Additional options:
 - `strict_structure` (default `true`): if enabled, the pipeline will **error & skip** any dataset whose global segment counts do not match the expected structure.
 - `design_path` (default empty): optional path to a CSV (or folder containing a CSV) describing the per-subject trial order and/or per-scene ratings. Supports both wide and long formats.
 - `enable_curated_main_outputs` (default `false`): when enabled, additionally generate the heavier curated descriptive/inferential output surface. In current `main`, this is disabled by default to avoid output-layer duplication.
+- `enable_unified_mirror_surface` (default `false`): when enabled together with curated outputs, also generate the unified mirror-entry layer (`batch/tables`, `batch/figures`, `analysis/task_outputs`). Current `main` keeps this off by default.
 
 ```json
 {
