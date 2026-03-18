@@ -47,7 +47,7 @@ try
             fprintf(fid, '2. `descriptive/experience/`\n');
             fprintf(fid, '3. `inferential/overall/`\n');
             fprintf(fid, '4. `inferential/experience/`\n\n');
-            fprintf(fid, 'The detailed task-based outputs remain available under `analysis/`, but the redesigned main branch intentionally prioritizes only two visible branches by default: `overall` and `experience`.\n\n');
+            fprintf(fid, 'The detailed task-based outputs remain available under `analysis/`. This curated surface is optional and only appears when explicitly enabled.\n\n');
             fprintf(fid, 'Note: Only ExperienceGroup is exposed in current main-branch grouped outputs.\n');
             fclose(fid);
         end
@@ -2058,6 +2058,10 @@ if fid>0
     fprintf(fid, '- task6_coremetric_special\n');
     fprintf(fid, '- task7_individual_checks\n\n');
     fprintf(fid, 'SportFreq outputs remain available in the detailed analysis tree, but are not elevated to a first-class curated branch in the redesigned main output surface.\n');
+    fclose(fid);
+end
+end
+n output surface.\n');
     fclose(fid);
 end
 end

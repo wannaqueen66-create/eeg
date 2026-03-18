@@ -17,13 +17,17 @@ try
     if fid < 0
         return;
     end
-    fprintf(fid, '# Main Output Entry\n\n');
-    fprintf(fid, 'Recommended reading order for the redesigned main branch:\n\n');
+    fprintf(fid, '# Curated Output Entry\n\n');
+    fprintf(fid, 'Recommended reading order for the optional curated output surface:\n\n');
     fprintf(fid, '1. `../descriptive/overall/`\n');
     fprintf(fid, '2. `../descriptive/experience/`\n');
     fprintf(fid, '3. `../inferential/overall/`\n');
     fprintf(fid, '4. `../inferential/experience/`\n\n');
     fprintf(fid, 'Detailed task outputs still exist under `../analysis/` for deep inspection, but the default curated surface now prioritizes the four folders above.\n');
+    fclose(fid);
+catch
+end
+end
     fclose(fid);
 catch
 end

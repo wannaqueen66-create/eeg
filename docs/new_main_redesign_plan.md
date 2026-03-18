@@ -1,5 +1,9 @@
 # New Main Redesign Plan
 
+> Historical planning document: this file captures an earlier redesign direction and is **not** the current default-output policy of `main`.
+> 当前历史规划文档仅记录早期重构思路，**不代表** 当前 `main` 的默认输出策略。
+
+
 > Goal: freeze the current repository state into a `raw` branch, then rebuild a cleaner, more focused `main` branch without radically changing the core MATLAB EEG processing logic.
 
 ---
