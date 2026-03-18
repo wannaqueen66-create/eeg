@@ -15,17 +15,13 @@ If you only want the most useful places to inspect results, use this order:
 
 如果你只想快速找到最重要的结果，建议按这个顺序看：
 
-1. `runs/current/batch/reports/README_CURATED_MAIN.md`
-   - curated main entry / 新 main 主入口说明
-2. `runs/current/batch/descriptive/overall/`
-   - main descriptive results / 主描述性结果
-3. `runs/current/batch/descriptive/experience/`
-   - grouped descriptive results / 分组描述性结果
-4. `runs/current/batch/inferential/overall/`
-   - main inferential results / 主显著性结果
-5. `runs/current/batch/inferential/experience/`
-   - grouped inferential results / 分组显著性结果
-6. `runs/current/batch/analysis/`
+1. `runs/current/batch/merged/`
+   - canonical merged batch tables / 规范批量主表
+2. `runs/current/batch/qc/`
+   - QC exclusions and QC-filtered outputs / QC 排除与过滤后输出
+3. `runs/current/batch/reports/`
+   - batch reports and navigation notes / 批量报告与导航说明
+4. `runs/current/batch/analysis/`
    - detailed task-oriented outputs / 详细 task 输出
 7. `runs/current/batch/paper/`
    - paper-ready figures/tables / 面向论文与汇报的整理输出
@@ -514,6 +510,23 @@ Look here first:
 Look here first:
 - `runs/current/batch/analysis/task*/raw/`
 - `runs/current/batch/analysis/task*/qc/`
+
+---
+
+# 10. Short summary / 一句话总结
+
+The current `main` branch is moving toward a staged output design:
+- `subjects/` for per-subject outputs
+- `batch/` for merged/QC/report/audit outputs
+- `analysis/` for task-based inferential outputs
+- `paper/` for manuscript-facing deliverables
+
+当前 `main` 分支正在迁移到如下分阶段输出结构：
+- `subjects/`：单被试输出
+- `batch/`：合并/QC/报告/审计输出
+- `analysis/`：按 task 组织的正式统计输出
+- `paper/`：面向论文与汇报的整理输出
+ask*/qc/`
 
 ---
 

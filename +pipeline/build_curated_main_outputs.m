@@ -34,26 +34,25 @@ fp_inf  = fullfile(fp_sum, 'inferential');
 mkdir_if_needed(fp_desc);
 mkdir_if_needed(fp_inf);
 
-% Batch-level guide for the redesigned main output surface
+% Batch-level guide for the optional curated output surface
 try
-    fp_batch_rep = fullfile(fp_sum, 'reports');
-    mkdir_if_needed(fp_batch_rep);
-    fid = fopen(fullfile(fp_batch_rep, 'README_CURATED_MAIN.md'),'w');
-    if fid>0
-        fprintf(fid, '# Curated Main Output Surface\n\n');
-        fprintf(fid, 'Priority reading order for the redesigned main branch:\n');
-        fprintf(fid, '1. `descriptive/overall/`\n');
-        fprintf(fid, '2. `descriptive/experience/`\n');
-        fprintf(fid, '3. `inferential/overall/`\n');
-        fprintf(fid, '4. `inferential/experience/`\n\n');
-        fprintf(fid, 'The detailed task-based outputs remain available under `analysis/`, but the redesigned main branch intentionally prioritizes only two visible branches by default: `overall` and `experience`.\n\n');
-        fprintf(fid, 'Note: Only ExperienceGroup is exposed in current main-branch grouped outputs.\n');
-        fclose(fid);
+    if isfield(cfg,'enable_curated_main_outputs') && logical(cfg.enable_curated_main_outputs)
+        fp_batch_rep = fullfile(fp_sum, 'reports');
+        mkdir_if_needed(fp_batch_rep);
+        fid = fopen(fullfile(fp_batch_rep, 'README_CURATED_MAIN.md'),'w');
+        if fid>0
+            fprintf(fid, '# Curated Main Output Surface\n\n');
+            fprintf(fid, 'Priority reading order for the redesigned main branch:\n');
+            fprintf(fid, '1. `descriptive/overall/`\n');
+            fprintf(fid, '2. `descriptive/experience/`\n');
+            fprintf(fid, '3. `inferential/overall/`\n');
+            fprintf(fid, '4. `inferential/experience/`\n\n');
+            fprintf(fid, 'The detailed task-based outputs remain available under `analysis/`, but the redesigned main branch intentionally prioritizes only two visible branches by default: `overall` and `experience`.\n\n');
+            fprintf(fid, 'Note: Only ExperienceGroup is exposed in current main-branch grouped outputs.\n');
+            fclose(fid);
+        end
+        pipeline.write_curated_readme_index(fp_sum);
     end
-catch
-end
-try
-    pipeline.write_curated_readme_index(fp_sum);
 catch
 end
 
