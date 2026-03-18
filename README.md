@@ -215,7 +215,9 @@ Notes:
 - Subject folder name equals the input `.set` **base filename** (without extension) for easy verification.
 - If `output_dir` is set in `config.json`, outputs go to `<output_dir>/...` instead.
 - During migration, some legacy outputs may still appear under older `summary/`, `fig/`, or `paper_fig/` paths. In `main`, treat **`batch/` as the canonical batch-level surface**; `summary/` is now only a backward-compatibility concept retained by helper code and legacy paths.
-- By default, `main` no longer auto-generates the heavier curated descriptive/inferential mirror layer unless `enable_curated_main_outputs=true` is explicitly set.
+- **Default reading order in current `main`:** `batch/merged/` → `batch/qc/` → `batch/reports/` → `batch/analysis/` → `batch/paper/`.
+- By default, `main` no longer auto-generates the heavier curated descriptive/inferential layer unless `enable_curated_main_outputs=true` is explicitly set.
+- By default, `main` also keeps the unified mirror-entry layer off; `batch/tables`, `batch/figures`, and `analysis/task_outputs` are only expected when `enable_unified_mirror_surface=true` is explicitly enabled.
 - Historical task-heavy QC snapshots and ad-hoc helper scripts have been moved under `archive/legacy/` so they remain traceable without cluttering the default main surface.
 - Single-subject outputs are being organized under:
   - `subjects/<subject_id>/tables/`

@@ -271,13 +271,13 @@ README / 目录索引 / file index / task count 一类，不直接承载科研�
 当前 `main` 的输出结构，可以简单理解为：
 
 ```text
-源结果层：
-  merged / qc / analysis / paper / audit / subjects
+源结果层（默认主入口）：
+  merged / qc / reports / analysis / paper / audit / subjects
 
-摘要层：
+摘要层（仅在显式开启 curated 时出现）：
   descriptive / inferential
 
-镜像层：
+镜像层（仅在显式开启 unified mirror surface 时出现）：
   tables / figures / analysis/task_outputs
 
 导航层：
@@ -286,4 +286,4 @@ README / 目录索引 / file index / task count 一类，不直接承载科研�
 
 所以后续 main 去重的正确方向就是：
 
-> 保留源层，保留摘要层，把镜像层逐步改成索引层。
+> 保留源层，保留可选摘要层，把镜像层默认关闭，并逐步改成索引层。
