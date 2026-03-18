@@ -44,15 +44,25 @@ bandpower_outputs/
     current/
       subjects/
       batch/
-        descriptive/
-        inferential/
+        merged/
+        qc/
+        reports/
+        audit/
+        analysis/
+        paper/
+        descriptive/   (optional)
+        inferential/   (optional)
 ```
 
 Meaning:
 - `subjects/` = per-subject outputs / 单被试输出
 - `batch/` = cross-subject outputs / 跨被试输出
-- `descriptive/` = cleaner descriptive result surface / 更简洁的描述性结果层
-- `inferential/` = cleaner inferential result surface / 更简洁的显著性分析层
+- `merged/` = canonical batch tables / 规范批量主表
+- `qc/` = QC outputs / QC 结果
+- `analysis/` = detailed task outputs / task 详细输出
+- `paper/` = paper-facing outputs / 面向论文/汇报输出
+- `descriptive/` = optional curated descriptive layer / 可选摘要描述层
+- `inferential/` = optional curated inferential layer / 可选摘要推断层
 
 ---
 

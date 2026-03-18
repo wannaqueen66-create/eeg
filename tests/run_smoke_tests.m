@@ -94,13 +94,14 @@ assert(contains(nodeText, 'Folder rule'), 'Node guide folder rule missing');
 assert(contains(nodeText, 'Recommended reading order'), 'Node guide reading order missing');
 fprintf('[OK] curated node report writer\n');
 
-% Test 7: curated main builder should call node-level report generation
+% Test 7: curated builder remains structurally available, but is optional in current main
 curatedBuilder = fileread(fullfile(fileparts(mfilename('fullpath')), '..', '+pipeline', 'build_curated_main_outputs.m'));
 assert(contains(curatedBuilder, "write_curated_node_report(fp_do, 'descriptive', 'overall')"), 'Missing descriptive/overall node report call');
 assert(contains(curatedBuilder, "write_curated_node_report(fp_de, 'descriptive', 'experience')"), 'Missing descriptive/experience node report call');
 assert(contains(curatedBuilder, "write_curated_node_report(fp_io, 'inferential', 'overall')"), 'Missing inferential/overall node report call');
 assert(contains(curatedBuilder, "write_curated_node_report(fp_ie, 'inferential', 'experience')"), 'Missing inferential/experience node report call');
-fprintf('[OK] curated main builder node report hooks\n');
+assert(contains(mainScript, 'enable_curated_main_outputs') || contains(fileread(fullfile(fileparts(mfilename('fullpath')), '..', '+pipeline', 'load_config.m')), 'enable_curated_main_outputs'), 'Expected curated output gating in current main');
+fprintf('[OK] curated main builder available + gated by config\n');
 
 fprintf('All smoke tests passed.\n');
 end

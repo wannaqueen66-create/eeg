@@ -21,8 +21,8 @@ run('tests/run_smoke_tests.m');
   - batch dirs
 - static schema checks for key scene-level exports
 - low-gamma denominator mapping checks
-- curated main node report generation (`report/README_NODE.md`)
-- curated main builder hook checks for all 4 main nodes
+- curated main node report generation (`report/README_NODE.md`) when curated output helpers are present
+- curated main builder hook checks for all 4 main nodes (structure-level check only; curated outputs are disabled by default in current `main` unless explicitly enabled)
 
 ## Notes
 
