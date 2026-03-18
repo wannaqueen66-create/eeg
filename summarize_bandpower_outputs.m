@@ -537,9 +537,11 @@ catch ME
     fprintf(2, '[WARN] write_analysis2_master_report failed: %s\n', ME.message);
 end
 
-% Build a cleaner public-facing output surface for the redesigned main branch
+% Optional curated output surface (disabled by default to avoid mirror-layer bloat in main)
 try
-    pipeline.build_curated_main_outputs(fp_batch, cfg, AllScene, AllPairs, AllScene_qc, AllPairs_qc);
+    if isfield(cfg,'enable_curated_main_outputs') && logical(cfg.enable_curated_main_outputs)
+        pipeline.build_curated_main_outputs(fp_batch, cfg, AllScene, AllPairs, AllScene_qc, AllPairs_qc);
+    end
 catch ME
     fprintf(2, '[WARN] build_curated_main_outputs failed: %s\n', ME.message);
 end

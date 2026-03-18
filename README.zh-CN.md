@@ -89,6 +89,7 @@ run_eeg_bandpower_pipeline('path/to/data.set', 'config.json');
 `config.json` 关键项：
 - `strict_structure`（默认 true）：若开启，则只要全局分段计数与理想结构不一致，就会**直接报错并跳过该被试**（批量模式下继续处理其他人）。
 - `design_path`（默认空）：可选，传入一个 CSV（或包含 CSV 的文件夹），描述每个被试的 trial 顺序/场景信息/以及每个场景的主观评分。支持“宽表 trial01_*”和“长表（含 SubjectID/Block/Position/SceneID 等）”两种格式。
+- `enable_curated_main_outputs`（默认 `false`）：若开启，会额外生成较重的 curated descriptive/inferential 输出层。当前 `main` 默认关闭它，以避免输出层重复膨胀。
 - `pairing_mode`：`strict` 或 `lenient`
 - `zip_output`：是否打包输出 zip
 - `global_summary`：是否导出批量汇总
