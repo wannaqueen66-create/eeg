@@ -6,6 +6,14 @@
 > 因此你在实际运行结果里，可能会同时看到：
 > - 新结构（推荐优先看）
 > - 旧结构兼容路径（过渡期保留）
+>
+> **Current default policy / 当前默认策略：**
+> - Default main entry = `merged/` → `qc/` → `reports/` → `analysis/` → `paper/`
+> - `descriptive/` and `inferential/` are now optional curated layers, not the default required reading path
+> - `batch/tables` / `batch/figures` / `analysis/task_outputs` are optional mirror-entry surfaces, not default outputs
+> - 默认主入口 = `merged/` → `qc/` → `reports/` → `analysis/` → `paper/`
+> - `descriptive/` 与 `inferential/` 现在是可选摘要层，不再是默认必看的主路径
+> - `batch/tables` / `batch/figures` / `analysis/task_outputs` 现在是可选镜像入口层，不再是默认输出
 
 ---
 
